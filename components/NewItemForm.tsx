@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { QuestionMarkIcon, ImageIcon, CloseIcon } from './Icons';
 
 interface FormLabelProps {
@@ -21,6 +21,18 @@ const FormLabel: React.FC<FormLabelProps> = ({ htmlFor, label, required = false,
 
 const ProductsScreen: React.FC = () => {
   const [itemType, setItemType] = useState('goods');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleBrowseClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      console.log('Selected files:', event.target.files);
+      // File handling logic can be added here
+    }
+  };
   
   return (
     <>
@@ -99,12 +111,24 @@ const ProductsScreen: React.FC = () => {
 
                   {/* Right side image dropzone */}
                   <div className="lg:col-span-1 mt-8">
+                      <input
+                          type="file"
+                          ref={fileInputRef}
+                          onChange={handleFileChange}
+                          className="hidden"
+                          accept="image/*"
+                          multiple
+                      />
                       <div className="flex justify-center items-center w-full h-52 border-2 border-gray-300 border-dashed rounded-lg">
                           <div className="text-center">
                               <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
                               <p className="mt-2 text-sm text-gray-600">
-                                  Drag image(s) here or {' '}
-                                  <button className="font-medium text-blue-600 hover:text-blue-500">
+                                  Drag image(s) here or{' '}
+                                  <button 
+                                      type="button" 
+                                      onClick={handleBrowseClick} 
+                                      className="font-medium text-blue-600 hover:text-blue-500 focus:outline-none"
+                                  >
                                       Browse images
                                   </button>
                               </p>
