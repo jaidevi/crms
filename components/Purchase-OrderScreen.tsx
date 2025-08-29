@@ -104,4 +104,5 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({ purchaseOrder
   );
 };
 
+// FIX: Added default export to the component.
 export default PurchaseOrderScreen;

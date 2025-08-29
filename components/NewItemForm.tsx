@@ -1,5 +1,7 @@
+
 import React, { useState, useRef } from 'react';
 import { QuestionMarkIcon, ImageIcon, CloseIcon } from './Icons';
+import AddShopModal from './AddShopModal';
 
 interface FormLabelProps {
   htmlFor: string;
@@ -19,8 +21,15 @@ const FormLabel: React.FC<FormLabelProps> = ({ htmlFor, label, required = false,
   );
 };
 
-const ProductsScreen: React.FC = () => {
+interface ProductsScreenProps {
+    shopNames: string[];
+    onAddShopName: (newShopName: string) => void;
+}
+
+const ProductsScreen: React.FC<ProductsScreenProps> = ({ shopNames, onAddShopName }) => {
   const [itemType, setItemType] = useState('goods');
+  const [selectedShopName, setSelectedShopName] = useState(shopNames[0] || '');
+  const [showAddShopModal, setShowAddShopModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleBrowseClick = () => {
@@ -33,9 +42,27 @@ const ProductsScreen: React.FC = () => {
       // File handling logic can be added here
     }
   };
+
+  const handleSaveShop = (newShop: string) => {
+    onAddShopName(newShop);
+    setSelectedShopName(newShop);
+    setShowAddShopModal(false);
+  };
+
+  const handleShopNameChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    if (value === '_add_new_') {
+        setShowAddShopModal(true);
+    } else {
+        setSelectedShopName(value);
+    }
+  };
+
+  const commonInputClasses = "block w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500";
   
   return (
     <>
+      {showAddShopModal && <AddShopModal onClose={() => setShowAddShopModal(false)} onSave={handleSaveShop} existingShopNames={shopNames} />}
       <div className="bg-white rounded-lg shadow-sm">
           {/* Form Header */}
           <div className="flex items-center justify-between p-5 border-b border-gray-200">
@@ -76,6 +103,14 @@ const ProductsScreen: React.FC = () => {
                                   <span className="ml-2 text-sm text-gray-700">Service</span>
                               </label>
                           </div>
+                      </div>
+
+                      <div>
+                          <FormLabel htmlFor="shopName" label="Shop Name" required />
+                           <select id="shopName" value={selectedShopName} onChange={handleShopNameChange} className={commonInputClasses}>
+                                {shopNames.map(c => <option key={c} value={c}>{c}</option>)}
+                                <option value="_add_new_" className="text-blue-600 font-semibold">++ Add New Shop ++</option>
+                            </select>
                       </div>
                       
                       <div>

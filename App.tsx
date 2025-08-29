@@ -1,82 +1,65 @@
+
 import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import ProductsScreen from './components/NewItemForm';
 import PurchaseOrderScreen from './components/PurchaseOrderScreen';
 
-// Define a type for a single purchase order
+// Define types for the new structure
+export interface LineItem {
+  id: string; // For React keys
+  name: string;
+  description?: string;
+  quantity: number;
+  rate: number;
+  amount: number;
+}
+
+export type PaymentMode = 'Cash' | 'Cheque' | 'NEFT' | 'GPay' | 'Credit Card' | 'Bank Transfer' | 'Other';
+export type OrderStatus = 'Paid' | 'Unpaid';
+
 export interface PurchaseOrder {
   poNumber: string;
-  orderDate: string;
+  poDate: string;
   shopName: string;
+  items: LineItem[];
+  totalAmount: number;
   gstNo: string;
-  itemDescription: string;
-  quantity: number;
-  gstPercentage: number | null;
-  paymentMode: string;
-  status: 'Pending' | 'Approved' | 'Shipped' | 'Delivered' | 'Cancelled';
+  paymentMode: PaymentMode;
+  status: OrderStatus;
   bankName?: string;
   chequeDate?: string;
 }
 
 // Sample data for initial state
+const initialShopNames: string[] = ['Global Pharma Inc.', 'Fine Fabrics Ltd.', 'Weavers United', 'Global Textiles Inc.', 'Fabric Depot'];
+const initialBankNames: string[] = ['HDFC Bank', 'ICICI Bank', 'State Bank of India'];
+
 const initialPurchaseOrders: PurchaseOrder[] = [
   {
     poNumber: 'PO-1682899200',
-    orderDate: '2023-05-01',
-    shopName: 'Fine Fabrics Ltd.',
-    gstNo: '33AAAAA0000A1Z5',
-    itemDescription: 'Linen Fabric, 200m',
-    quantity: 200,
-    gstPercentage: 12,
-    paymentMode: 'Cheque',
-    status: 'Pending',
-    bankName: 'City Bank',
-    chequeDate: '2023-05-05',
+    poDate: '2025-08-29',
+    shopName: 'Global Pharma Inc.',
+    items: [
+      { id: '1', name: 'Master Item A', description: 'High-quality cotton blend', quantity: 2, rate: 150.00, amount: 300.00 },
+      { id: '2', name: 'Master Item B', description: 'Pure silk, 50m roll', quantity: 5, rate: 75.50, amount: 377.50 },
+    ],
+    totalAmount: 677.50,
+    gstNo: '27ABCDE1234F1Z5',
+    paymentMode: 'Credit Card',
+    status: 'Paid',
   },
   {
     poNumber: 'PO-1672531200',
-    orderDate: '2023-01-01',
-    shopName: 'Global Textiles Inc.',
-    gstNo: '29ABCDE1234F1Z5',
-    itemDescription: '100% Cotton Yarn, 500kg',
-    quantity: 500,
-    gstPercentage: 5,
-    paymentMode: 'NEFT',
-    status: 'Delivered',
-  },
-  {
-    poNumber: 'PO-1675209600',
-    orderDate: '2023-02-01',
-    shopName: 'Fabric Depot',
-    gstNo: '27FGHIJ5678K1Z4',
-    itemDescription: 'Polyester Fabric, 1000m',
-    quantity: 1000,
-    gstPercentage: 12,
-    paymentMode: 'GPay',
-    status: 'Shipped',
-  },
-  {
-    poNumber: 'PO-1677628800',
-    orderDate: '2023-03-01',
-    shopName: 'Weavers United',
-    gstNo: '36LMNOP9012Q1Z3',
-    itemDescription: 'Silk Thread, 50 spools',
-    quantity: 50,
-    gstPercentage: 5,
-    paymentMode: 'Cash',
-    status: 'Approved',
-  },
-   {
-    poNumber: 'PO-1680307200',
-    orderDate: '2023-04-01',
-    shopName: 'The Yarn Barn',
-    gstNo: '24RSTUV3456W1Z2',
-    itemDescription: 'Wool Roving, 100kg',
-    quantity: 100,
-    gstPercentage: 12,
-    paymentMode: 'GPay',
-    status: 'Pending',
+    poDate: '2025-07-15',
+    shopName: 'Fine Fabrics Ltd.',
+    items: [
+      { id: '1', name: 'Linen Fabric, 200m', description: 'Beige, 54 inch width', quantity: 200, rate: 12.00, amount: 2400.00 },
+    ],
+    totalAmount: 2400.00,
+    gstNo: '29FABCD5678G1Z6',
+    paymentMode: 'Bank Transfer',
+    status: 'Unpaid',
   },
 ];
 
@@ -91,23 +74,30 @@ const ScreenPlaceholder: React.FC<{title: string; description: string}> = ({titl
 const App: React.FC = () => {
   const [activeScreen, setActiveScreen] = useState('Purchase Orders');
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(initialPurchaseOrders);
-  const [banks, setBanks] = useState<string[]>(['City Bank', 'State Bank of India', 'HDFC Bank', 'ICICI Bank']);
+  const [shopNames, setShopNames] = useState<string[]>(initialShopNames);
+  const [bankNames, setBankNames] = useState<string[]>(initialBankNames);
 
   const addPurchaseOrder = (newOrder: PurchaseOrder) => {
     setPurchaseOrders(prevOrders => [newOrder, ...prevOrders]);
   };
-  
-  const addBank = (newBank: string) => {
-    if (newBank && !banks.includes(newBank)) {
-        setBanks(prevBanks => [...prevBanks, newBank].sort());
+
+  const addShopName = (newShop: string) => {
+    if (!shopNames.includes(newShop)) {
+        setShopNames(prev => [...prev, newShop].sort());
     }
   };
 
+  const addBankName = (newBank: string) => {
+    if (!bankNames.includes(newBank)) {
+        setBankNames(prev => [...prev, newBank].sort());
+    }
+  };
+  
   const screenComponents: { [key: string]: React.FC } = {
     'Dashboard': () => <ScreenPlaceholder title="Dashboard" description="Welcome to your Textile ERP Dashboard. Key metrics will be displayed here." />,
     'Vendors': () => <ScreenPlaceholder title="Vendors" description="Manage vendor profiles, contact information, and product catalogs." />,
-    'Products': ProductsScreen,
-    'Purchase Orders': () => <PurchaseOrderScreen purchaseOrders={purchaseOrders} onAddOrder={addPurchaseOrder} banks={banks} onAddBank={addBank} />,
+    'Products': () => <ProductsScreen shopNames={shopNames} onAddShopName={addShopName} />,
+    'Purchase Orders': () => <PurchaseOrderScreen purchaseOrders={purchaseOrders} onAddOrder={addPurchaseOrder} shopNames={shopNames} onAddShopName={addShopName} bankNames={bankNames} onAddBankName={addBankName} />,
     'Delivery Challans': () => <ScreenPlaceholder title="Delivery Challans" description="Generate and track delivery challans for product movements." />,
     'Data Entry': () => <ScreenPlaceholder title="Data Entry" description="Perform various data entry tasks, including creating new challans and records." />,
     'Salary & Payslips': () => <ScreenPlaceholder title="Salary & Payslips" description="Calculate monthly salaries, manage payments, and generate employee payslips." />,
