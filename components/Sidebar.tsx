@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import {
   InvoiceIcon, HomeIcon, CustomersIcon, ItemsIcon, QuotesIcon,
   DeliveryIcon, InvoicesIcon, PaymentsIcon, CreditNotesIcon, ExpensesIcon,
-  ReportsIcon, ChevronRightIcon, ChevronLeftIcon
+  ReportsIcon, ChevronRightIcon, ChevronLeftIcon, SettingsIcon,
+  DatabaseIcon, ChevronUpIcon, ChevronDownIcon, PlusIcon, EditIcon, WalletIcon,
+  SearchIcon
 } from './Icons';
 
 interface NavItemProps {
@@ -10,22 +12,23 @@ interface NavItemProps {
   label: string;
   active?: boolean;
   onClick: () => void;
+  isSubItem?: boolean;
 }
 
-const NavItem: React.FC<NavItemProps> = ({ icon, label, active = false, onClick }) => {
-  const baseClasses = "flex items-center justify-between w-full px-4 py-2.5 rounded-lg text-sm text-left";
+const NavItem: React.FC<NavItemProps> = ({ icon, label, active = false, onClick, isSubItem = false }) => {
+  const baseClasses = "flex items-center w-full px-4 py-2.5 rounded-lg text-sm text-left transition-colors duration-200";
   const activeClasses = "bg-blue-600 text-white";
   const inactiveClasses = "text-gray-300 hover:bg-slate-700";
+  const subItemClasses = isSubItem ? "pl-12" : "";
 
   return (
-    <button onClick={onClick} className={`${baseClasses} ${active ? activeClasses : inactiveClasses}`}>
-      <div className="flex items-center">
-        <span className="w-5 h-5 mr-3">{icon}</span>
-        <span>{label}</span>
-      </div>
+    <button onClick={onClick} className={`${baseClasses} ${active ? activeClasses : inactiveClasses} ${subItemClasses}`}>
+      <span className="w-5 h-5 mr-3">{icon}</span>
+      <span>{label}</span>
     </button>
   );
 };
+
 
 interface SidebarProps {
   activeScreen: string;
@@ -34,18 +37,45 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ activeScreen, setActiveScreen }) => {
   const [collapsed, setCollapsed] = useState(false);
+  const [mastersOpen, setMastersOpen] = useState(true);
+  const [transactionsOpen, setTransactionsOpen] = useState(true);
+  const [masterSearch, setMasterSearch] = useState('');
 
-  const navItems = [
-    { icon: <HomeIcon />, label: "Dashboard" },
-    { icon: <CustomersIcon />, label: "Vendors" },
-    { icon: <ItemsIcon />, label: "Products" },
-    { icon: <QuotesIcon />, label: "Purchase Orders" },
-    { icon: <DeliveryIcon />, label: "Delivery Challans" },
-    { icon: <InvoicesIcon />, label: "Data Entry" },
-    { icon: <PaymentsIcon />, label: "Salary & Payslips" },
-    { icon: <CreditNotesIcon />, label: "Attendance" },
+  const masterScreens = ['Add Client', 'Add Purchase Shop', 'Employee Master', 'Type of Process Master'];
+  const transactionScreens = ['Expenses', 'Delivery Challans', 'Invoices', 'Payment Received', 'Salary & Payslips', 'Attendance'];
+  
+  const isMastersActive = masterScreens.includes(activeScreen);
+  const isTransactionsActive = transactionScreens.includes(activeScreen);
+
+  const handleNavClick = (screen: string) => {
+    setActiveScreen(screen);
+  };
+  
+  const transactionNavItems = [
     { icon: <ExpensesIcon />, label: "Expenses" },
+    { icon: <DeliveryIcon />, label: "Delivery Challans" },
+    { icon: <InvoiceIcon />, label: "Invoices" },
+    { icon: <PaymentsIcon />, label: "Payment Received" },
+    { icon: <CreditNotesIcon />, label: "Attendance" },
+    { icon: <WalletIcon />, label: "Salary & Payslips" },
+  ];
+  
+  const masterNavItems = [
+      { icon: <CustomersIcon />, label: "Add Client" },
+      { icon: <CustomersIcon />, label: "Add Purchase Shop" },
+      { icon: <CustomersIcon />, label: "Employee Master" },
+      { icon: <InvoicesIcon />, label: "Type of Process Master" },
+  ];
+  
+  const filteredMasterNavItems = masterNavItems.filter(item => 
+    item.label.toLowerCase().includes(masterSearch.toLowerCase())
+  );
+
+  const mainNavItems = [
+    { icon: <PlusIcon />, label: "New Screen" },
     { icon: <ReportsIcon />, label: "Reports" },
+    { icon: <CustomersIcon />, label: "User Admin" },
+    { icon: <SettingsIcon />, label: "Settings" },
   ];
 
   return (
@@ -58,21 +88,90 @@ const Sidebar: React.FC<SidebarProps> = ({ activeScreen, setActiveScreen }) => {
       </div>
 
       <nav className="flex-1 px-4 py-4 space-y-2">
-        {navItems.map(item => (
-           collapsed ? (
-            <button key={item.label} title={item.label} onClick={() => setActiveScreen(item.label)} className={`flex items-center justify-center w-full h-11 rounded-lg ${item.label === activeScreen ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-slate-700'}`}>
-               <span className="w-5 h-5">{item.icon}</span>
-            </button>
-           ) : (
-            <NavItem 
-              key={item.label} 
-              icon={item.icon} 
-              label={item.label} 
-              active={item.label === activeScreen}
-              onClick={() => setActiveScreen(item.label)}
-            />
-           )
-        ))}
+        {collapsed ? (
+            <>
+                {[
+                    { icon: <HomeIcon />, label: "Dashboard" },
+                    ...transactionNavItems,
+                    ...masterNavItems,
+                    ...mainNavItems
+                ].map(item => (
+                    <button key={item.label} title={item.label} onClick={() => setActiveScreen(item.label)} className={`flex items-center justify-center w-full h-11 rounded-lg ${item.label === activeScreen ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-slate-700'}`}>
+                       <span className="w-5 h-5">{item.icon}</span>
+                    </button>
+                ))}
+            </>
+        ) : (
+            <>
+                <NavItem icon={<HomeIcon />} label="Dashboard" active={activeScreen === 'Dashboard'} onClick={() => handleNavClick('Dashboard')} />
+                
+                {/* Transactions Dropdown */}
+                <div>
+                  <button
+                    onClick={() => setTransactionsOpen(!transactionsOpen)}
+                    className={`flex items-center justify-between w-full px-4 py-2.5 rounded-lg text-sm text-left transition-colors duration-200 ${isTransactionsActive ? 'text-white bg-slate-700/50' : 'text-gray-300'} hover:bg-slate-700`}
+                  >
+                    <div className="flex items-center">
+                      <span className="w-5 h-5 mr-3"><DatabaseIcon /></span>
+                      <span>Transactions</span>
+                    </div>
+                    {transactionsOpen ? <ChevronUpIcon className="w-4 h-4" /> : <ChevronDownIcon className="w-4 h-4" />}
+                  </button>
+                  {transactionsOpen && (
+                    <div className="pt-2 space-y-2">
+                      {transactionNavItems.map(item => (
+                        <NavItem key={item.label} icon={item.icon} label={item.label} active={activeScreen === item.label} onClick={() => handleNavClick(item.label)} isSubItem />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Masters Dropdown */}
+                <div>
+                  <button
+                    onClick={() => setMastersOpen(!mastersOpen)}
+                    className={`flex items-center justify-between w-full px-4 py-2.5 rounded-lg text-sm text-left transition-colors duration-200 ${isMastersActive ? 'text-white bg-slate-700/50' : 'text-gray-300'} hover:bg-slate-700`}
+                  >
+                    <div className="flex items-center">
+                      <span className="w-5 h-5 mr-3"><DatabaseIcon /></span>
+                      <span>Masters</span>
+                    </div>
+                    {mastersOpen ? <ChevronUpIcon className="w-4 h-4" /> : <ChevronDownIcon className="w-4 h-4" />}
+                  </button>
+                  {mastersOpen && (
+                    <div className="pt-2 space-y-2">
+                      <div className="px-4 pb-2">
+                        <div className="relative">
+                           <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <SearchIcon className="w-4 h-4 text-gray-400" />
+                          </span>
+                          <input
+                            type="text"
+                            placeholder="Search masters..."
+                            value={masterSearch}
+                            onChange={(e) => setMasterSearch(e.target.value)}
+                            className="w-full bg-slate-700 text-white text-sm rounded-md pl-9 pr-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none placeholder-gray-400"
+                          />
+                        </div>
+                      </div>
+                      {filteredMasterNavItems.map(item => (
+                        <NavItem key={item.label} icon={item.icon} label={item.label} active={activeScreen === item.label} onClick={() => handleNavClick(item.label)} isSubItem />
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
+                {mainNavItems.map(item => (
+                    <NavItem 
+                      key={item.label} 
+                      icon={item.icon} 
+                      label={item.label} 
+                      active={item.label === activeScreen}
+                      onClick={() => handleNavClick(item.label)}
+                    />
+                ))}
+            </>
+        )}
       </nav>
 
       <div className="px-4 py-4 border-t border-slate-700">

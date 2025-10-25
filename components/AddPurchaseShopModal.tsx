@@ -1,52 +1,51 @@
-
 import React, { useState } from 'react';
 import { CloseIcon } from './Icons';
 
-interface AddBankModalProps {
+interface AddPurchaseShopModalProps {
     onClose: () => void;
-    onSave: (bankName: string) => void;
-    existingBankNames: string[];
+    onSave: (shopName: string) => void;
+    existingShopNames: string[];
 }
 
-const AddBankModal: React.FC<AddBankModalProps> = ({ onClose, onSave, existingBankNames }) => {
-    const [bankName, setBankName] = useState('');
+const AddPurchaseShopModal: React.FC<AddPurchaseShopModalProps> = ({ onClose, onSave, existingShopNames }) => {
+    const [shopName, setShopName] = useState('');
     const [error, setError] = useState('');
 
     const handleSave = () => {
-        const trimmedName = bankName.trim();
+        const trimmedName = shopName.trim();
         if (!trimmedName) {
-            setError('Bank name cannot be empty.');
-        } else if (existingBankNames.map(name => name.toLowerCase()).includes(trimmedName.toLowerCase())) {
-            setError('This bank name already exists.');
+            setError('Shop name cannot be empty.');
+        } else if (existingShopNames.map(name => name.toLowerCase()).includes(trimmedName.toLowerCase())) {
+            setError('This shop name already exists.');
         } else {
             onSave(trimmedName);
         }
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center" role="dialog" aria-modal="true" aria-labelledby="add-bank-modal-title">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center" role="dialog" aria-modal="true" aria-labelledby="add-shop-modal-title">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 animate-fade-in-down">
                 <div className="flex items-center justify-between p-4 border-b">
-                    <h2 id="add-bank-modal-title" className="text-lg font-semibold text-gray-800">Add New Bank</h2>
+                    <h2 id="add-shop-modal-title" className="text-lg font-semibold text-gray-800">Add New Shop</h2>
                     <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-200" aria-label="Close">
                         <CloseIcon className="w-5 h-5 text-gray-600" />
                     </button>
                 </div>
                 <div className="p-6">
                     <div>
-                        <label htmlFor="new-bank-name" className="block text-sm font-medium text-gray-700 mb-1">
-                            Bank Name
+                        <label htmlFor="new-shop-name" className="block text-sm font-medium text-gray-700 mb-1">
+                            Shop Name
                         </label>
                         <input
-                            id="new-bank-name"
+                            id="new-shop-name"
                             type="text"
-                            value={bankName}
+                            value={shopName}
                             onChange={(e) => {
-                                setBankName(e.target.value);
+                                setShopName(e.target.value);
                                 if (error) setError('');
                             }}
                             className={`w-full px-3 py-2.5 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${error ? 'border-red-500' : 'border-gray-300'}`}
-                            placeholder="Enter bank name"
+                            placeholder="Enter shop name"
                             autoFocus
                         />
                         {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
@@ -65,7 +64,7 @@ const AddBankModal: React.FC<AddBankModalProps> = ({ onClose, onSave, existingBa
                         type="button"
                         className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
-                        Save Bank
+                        Save Shop
                     </button>
                 </div>
             </div>
@@ -73,4 +72,4 @@ const AddBankModal: React.FC<AddBankModalProps> = ({ onClose, onSave, existingBa
     );
 };
 
-export default AddBankModal;
+export default AddPurchaseShopModal;

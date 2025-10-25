@@ -1,7 +1,8 @@
 
 import React, { useState, useRef } from 'react';
 import { QuestionMarkIcon, ImageIcon, CloseIcon } from './Icons';
-import AddShopModal from './AddShopModal';
+import ShopMasterModal from './ShopMasterModal';
+import type { Client, ProcessType } from '../App';
 
 interface FormLabelProps {
   htmlFor: string;
@@ -22,14 +23,17 @@ const FormLabel: React.FC<FormLabelProps> = ({ htmlFor, label, required = false,
 };
 
 interface ProductsScreenProps {
-    shopNames: string[];
-    onAddShopName: (newShopName: string) => void;
+    clients: Client[];
+    onAddClient: (newClient: Omit<Client, 'id'>) => void;
+    processTypes: ProcessType[];
+    onAddProcessType: (process: { name: string, rate: number }) => void;
 }
 
-const ProductsScreen: React.FC<ProductsScreenProps> = ({ shopNames, onAddShopName }) => {
+const ProductsScreen: React.FC<ProductsScreenProps> = ({ clients, onAddClient, processTypes, onAddProcessType }) => {
   const [itemType, setItemType] = useState('goods');
-  const [selectedShopName, setSelectedShopName] = useState(shopNames[0] || '');
-  const [showAddShopModal, setShowAddShopModal] = useState(false);
+  const clientNames = clients.map(s => s.name);
+  const [selectedClientName, setSelectedClientName] = useState(clientNames[0] || '');
+  const [showClientMasterModal, setShowClientMasterModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleBrowseClick = () => {
@@ -43,30 +47,31 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ shopNames, onAddShopNam
     }
   };
 
-  const handleSaveShop = (newShop: string) => {
-    onAddShopName(newShop);
-    setSelectedShopName(newShop);
-    setShowAddShopModal(false);
+  const handleSaveClient = (newClient: Client) => {
+    const { id, ...newClientData } = newClient;
+    onAddClient(newClientData);
+    setSelectedClientName(newClient.name);
+    setShowClientMasterModal(false);
   };
 
-  const handleShopNameChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleClientNameChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     if (value === '_add_new_') {
-        setShowAddShopModal(true);
+        setShowClientMasterModal(true);
     } else {
-        setSelectedShopName(value);
+        setSelectedClientName(value);
     }
   };
 
-  const commonInputClasses = "block w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500";
+  const commonInputClasses = "block w-full px-3 py-2.5 text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500";
   
   return (
     <>
-      {showAddShopModal && <AddShopModal onClose={() => setShowAddShopModal(false)} onSave={handleSaveShop} existingShopNames={shopNames} />}
+      {showClientMasterModal && <ShopMasterModal onClose={() => setShowClientMasterModal(false)} onSave={handleSaveClient} existingClientNames={clientNames} processTypes={processTypes} onAddProcessType={onAddProcessType} />}
       <div className="bg-white rounded-lg shadow-sm">
           {/* Form Header */}
           <div className="flex items-center justify-between p-5 border-b border-gray-200">
-              <h1 className="text-xl font-semibold text-gray-800">New Product</h1>
+              <h1 className="text-xl font-semibold text-gray-800">New Item</h1>
               <button className="p-1 rounded-full hover:bg-gray-100">
                   <CloseIcon className="w-5 h-5 text-gray-500" />
               </button>
@@ -106,21 +111,21 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ shopNames, onAddShopNam
                       </div>
 
                       <div>
-                          <FormLabel htmlFor="shopName" label="Shop Name" required />
-                           <select id="shopName" value={selectedShopName} onChange={handleShopNameChange} className={commonInputClasses}>
-                                {shopNames.map(c => <option key={c} value={c}>{c}</option>)}
-                                <option value="_add_new_" className="text-blue-600 font-semibold">++ Add New Shop ++</option>
+                          <FormLabel htmlFor="clientName" label="Client Name" />
+                           <select id="clientName" value={selectedClientName} onChange={handleClientNameChange} className={commonInputClasses}>
+                                {clientNames.map(c => <option key={c} value={c}>{c}</option>)}
+                                <option value="_add_new_" className="text-blue-600 font-semibold">++ Add New Client ++</option>
                             </select>
                       </div>
                       
                       <div>
                           <FormLabel htmlFor="name" label="Name" required />
-                          <input id="name" type="text" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" />
+                          <input id="name" type="text" className={commonInputClasses} />
                       </div>
 
                       <div>
                           <FormLabel htmlFor="unit" label="Unit" hasInfo />
-                          <select id="unit" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                          <select id="unit" className={commonInputClasses}>
                               <option>Select or type to add</option>
                               <option>PCS</option>
                               <option>BOX</option>
@@ -134,13 +139,13 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ shopNames, onAddShopNam
                               <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">
                                   INR
                               </span>
-                              <input type="text" id="selling-price" className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm border-gray-300" />
+                              <input type="text" id="selling-price" className="flex-1 min-w-0 block w-full px-3 py-2.5 rounded-none rounded-r-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm border-gray-300" />
                           </div>
                       </div>
 
                       <div>
                           <FormLabel htmlFor="description" label="Description" />
-                          <textarea id="description" rows={3} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"></textarea>
+                          <textarea id="description" rows={3} className={commonInputClasses}></textarea>
                       </div>
                   </div>
 

@@ -1,0 +1,460 @@
+-- Enable the UUID extension if not already enabled
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 1. Clients Table
+-- Stores information about clients.
+CREATE TABLE IF NOT EXISTS clients (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    name TEXT NOT NULL UNIQUE,
+    phone TEXT,
+    email TEXT,
+    address TEXT,
+    city TEXT,
+    state TEXT,
+    pincode TEXT,
+    gst_no TEXT,
+    pan_no TEXT,
+    payment_terms TEXT,
+    processes JSONB
+);
+ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public clients are viewable by everyone." ON clients FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own clients." ON clients FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own clients." ON clients FOR UPDATE USING (true);
+CREATE POLICY "Users can delete their own clients." ON clients FOR DELETE USING (true);
+
+
+-- 2. Purchase Shops Table
+-- Stores information about shops from which purchases are made.
+CREATE TABLE IF NOT EXISTS purchase_shops (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    name TEXT NOT NULL UNIQUE,
+    phone TEXT,
+    email TEXT,
+    address TEXT,
+    city TEXT,
+    state TEXT,
+    pincode TEXT,
+    gst_no TEXT,
+    pan_no TEXT,
+    payment_terms TEXT
+);
+-- Safely remove obsolete contact_person column if it exists
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'purchase_shops' AND column_name = 'contact_person'
+    ) THEN
+        ALTER TABLE purchase_shops DROP COLUMN contact_person;
+    END IF;
+END $$;
+ALTER TABLE purchase_shops ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public purchase_shops are viewable by everyone." ON purchase_shops FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own purchase_shops." ON purchase_shops FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own purchase_shops." ON purchase_shops FOR UPDATE USING (true);
+CREATE POLICY "Users can delete their own purchase_shops." ON purchase_shops FOR DELETE USING (true);
+
+
+-- 3. Employees Table
+-- Stores employee information.
+CREATE TABLE IF NOT EXISTS employees (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    name TEXT NOT NULL UNIQUE,
+    designation TEXT,
+    phone TEXT,
+    daily_wage NUMERIC DEFAULT 0
+);
+-- Safely add rate_per_meter column if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'employees' AND column_name = 'rate_per_meter'
+    ) THEN
+        ALTER TABLE employees ADD COLUMN rate_per_meter NUMERIC DEFAULT 0;
+    END IF;
+END $$;
+ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public employees are viewable by everyone." ON employees FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own employees." ON employees FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own employees." ON employees FOR UPDATE USING (true);
+CREATE POLICY "Users can delete their own employees." ON employees FOR DELETE USING (true);
+
+
+-- 4. Process Types Table
+-- Master list of all textile process types.
+CREATE TABLE IF NOT EXISTS process_types (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    name TEXT NOT NULL UNIQUE,
+    rate NUMERIC
+);
+ALTER TABLE process_types ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public process_types are viewable by everyone." ON process_types FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own process_types." ON process_types FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own process_types." ON process_types FOR UPDATE USING (true);
+CREATE POLICY "Users can delete their own process_types." ON process_types FOR DELETE USING (true);
+
+
+-- 5. Master Items Table
+-- Master list of items that can be purchased.
+CREATE TABLE IF NOT EXISTS master_items (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    name TEXT NOT NULL UNIQUE,
+    rate NUMERIC
+);
+ALTER TABLE master_items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public master_items are viewable by everyone." ON master_items FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own master_items." ON master_items FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own master_items." ON master_items FOR UPDATE USING (true);
+CREATE POLICY "Users can delete their own master_items." ON master_items FOR DELETE USING (true);
+
+-- 6. Delivery Challans Table
+-- Stores delivery challan information.
+CREATE TABLE IF NOT EXISTS delivery_challans (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    challan_number TEXT NOT NULL UNIQUE,
+    date DATE NOT NULL,
+    party_name TEXT NOT NULL,
+    party_dc_no TEXT,
+    process TEXT,
+    design_no TEXT,
+    pcs NUMERIC,
+    mtr NUMERIC,
+    width NUMERIC,
+    shrinkage TEXT,
+    pin TEXT,
+    pick TEXT,
+    extra_work TEXT,
+    status TEXT,
+    worker_name TEXT,
+    dc_image TEXT,
+    sample_image TEXT
+);
+ALTER TABLE delivery_challans ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public delivery_challans are viewable by everyone." ON delivery_challans FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own delivery_challans." ON delivery_challans FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own delivery_challans." ON delivery_challans FOR UPDATE USING (true);
+CREATE POLICY "Users can delete their own delivery_challans." ON delivery_challans FOR DELETE USING (true);
+
+-- 7. Purchase Orders Table
+-- Stores main purchase order details. Items are in a separate table.
+CREATE TABLE IF NOT EXISTS purchase_orders (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    po_number TEXT NOT NULL UNIQUE,
+    po_date DATE NOT NULL,
+    shop_name TEXT,
+    total_amount NUMERIC,
+    gst_no TEXT,
+    payment_mode TEXT,
+    status TEXT,
+    bank_name TEXT,
+    cheque_date DATE
+);
+-- Safely add payment_terms column if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'purchase_orders' AND column_name = 'payment_terms'
+    ) THEN
+        ALTER TABLE purchase_orders ADD COLUMN payment_terms TEXT;
+    END IF;
+END $$;
+ALTER TABLE purchase_orders ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public purchase_orders are viewable by everyone." ON purchase_orders FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own purchase_orders." ON purchase_orders FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own purchase_orders." ON purchase_orders FOR UPDATE USING (true);
+CREATE POLICY "Users can delete their own purchase_orders." ON purchase_orders FOR DELETE USING (true);
+
+-- 8. Purchase Order Items Table
+-- Line items for each purchase order.
+CREATE TABLE IF NOT EXISTS purchase_order_items (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    po_id UUID NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    description TEXT,
+    quantity NUMERIC,
+    rate NUMERIC,
+    amount NUMERIC
+);
+ALTER TABLE purchase_order_items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public purchase_order_items are viewable by everyone." ON purchase_order_items FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own purchase_order_items." ON purchase_order_items FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own purchase_order_items." ON purchase_order_items FOR UPDATE USING (true);
+CREATE POLICY "Users can delete their own purchase_order_items." ON purchase_order_items FOR DELETE USING (true);
+
+-- 9. Invoices Table
+-- Stores main invoice details. Items are in a separate table.
+CREATE TABLE IF NOT EXISTS invoices (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    invoice_number TEXT NOT NULL UNIQUE,
+    invoice_date DATE NOT NULL,
+    client_name TEXT,
+    sub_total NUMERIC,
+    total_cgst NUMERIC,
+    total_sgst NUMERIC,
+    total_tax_amount NUMERIC,
+    rounded_off NUMERIC,
+    total_amount NUMERIC
+);
+ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public invoices are viewable by everyone." ON invoices FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own invoices." ON invoices FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own invoices." ON invoices FOR UPDATE USING (true);
+CREATE POLICY "Users can delete their own invoices." ON invoices FOR DELETE USING (true);
+
+-- 10. Invoice Items Table
+-- Line items for each invoice.
+CREATE TABLE IF NOT EXISTS invoice_items (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    invoice_id UUID NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+    challan_number TEXT,
+    challan_date DATE,
+    process TEXT,
+    description TEXT,
+    design_no TEXT,
+    hsn_sac TEXT,
+    pcs NUMERIC,
+    mtr NUMERIC,
+    rate NUMERIC,
+    amount NUMERIC,
+    subtotal NUMERIC,
+    cgst NUMERIC,
+    sgst NUMERIC
+);
+ALTER TABLE invoice_items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public invoice_items are viewable by everyone." ON invoice_items FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own invoice_items." ON invoice_items FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own invoice_items." ON invoice_items FOR UPDATE USING (true);
+CREATE POLICY "Users can delete their own invoice_items." ON invoice_items FOR DELETE USING (true);
+
+-- 11. Payments Received Table
+-- Stores payment records from clients.
+CREATE TABLE IF NOT EXISTS payments_received (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    client_name TEXT NOT NULL,
+    payment_date DATE NOT NULL,
+    amount NUMERIC NOT NULL,
+    payment_mode TEXT NOT NULL,
+    reference_number TEXT,
+    notes TEXT
+);
+ALTER TABLE payments_received ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public payments_received are viewable by everyone." ON payments_received FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own payments." ON payments_received FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own payments." ON payments_received FOR UPDATE USING (true);
+CREATE POLICY "Users can delete their own payments." ON payments_received FOR DELETE USING (true);
+
+-- 12. Company Details Table
+-- Stores a single row of company information.
+CREATE TABLE IF NOT EXISTS company_details (
+    id INT PRIMARY KEY CHECK (id = 1), -- Ensures only one row can exist
+    name TEXT,
+    address_line_1 TEXT,
+    address_line_2 TEXT,
+    phone TEXT,
+    email TEXT,
+    gstin TEXT,
+    bank_name TEXT,
+    bank_account_number TEXT,
+    bank_ifsc_code TEXT
+);
+ALTER TABLE company_details ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public company_details are viewable by everyone." ON company_details FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own company_details." ON company_details FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own company_details." ON company_details FOR UPDATE USING (true);
+
+-- 13. Numbering Configs Table
+-- Stores configuration for auto-numbering of documents.
+CREATE TABLE IF NOT EXISTS numbering_configs (
+    id TEXT PRIMARY KEY, -- e.g., 'po', 'data_entry', 'invoice'
+    prefix TEXT,
+    next_number INT,
+    mode TEXT -- For invoices (auto/manual)
+);
+ALTER TABLE numbering_configs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public numbering_configs are viewable by everyone." ON numbering_configs FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own numbering_configs." ON numbering_configs FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own numbering_configs." ON numbering_configs FOR UPDATE USING (true);
+
+-- 14. Attendance Table
+-- Stores daily attendance records for employees.
+CREATE TABLE IF NOT EXISTS attendance (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    employee_name TEXT,
+    morning_status TEXT NOT NULL DEFAULT 'Present',
+    evening_status TEXT NOT NULL DEFAULT 'Present',
+    morning_overtime_hours NUMERIC DEFAULT 0,
+    evening_overtime_hours NUMERIC DEFAULT 0,
+    CONSTRAINT unique_attendance_per_day UNIQUE (employee_id, date)
+);
+
+-- Safely add timestamp columns if they don't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='attendance' AND column_name='created_at') THEN
+        ALTER TABLE attendance ADD COLUMN created_at TIMESTAMPTZ DEFAULT now();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='attendance' AND column_name='updated_at') THEN
+        ALTER TABLE attendance ADD COLUMN updated_at TIMESTAMPTZ DEFAULT now();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='attendance' AND column_name='meters_produced') THEN
+        ALTER TABLE attendance ADD COLUMN meters_produced NUMERIC DEFAULT 0;
+    END IF;
+END $$;
+
+-- Create a trigger function to automatically update the updated_at timestamp
+CREATE OR REPLACE FUNCTION handle_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Drop the trigger if it already exists to avoid errors on re-run
+DROP TRIGGER IF EXISTS on_attendance_update ON attendance;
+
+-- Create the trigger
+CREATE TRIGGER on_attendance_update
+BEFORE UPDATE ON attendance
+FOR EACH ROW
+EXECUTE FUNCTION handle_updated_at();
+
+ALTER TABLE attendance ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public attendance records are viewable by everyone." ON attendance FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own attendance." ON attendance FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own attendance." ON attendance FOR UPDATE USING (true);
+CREATE POLICY "Users can delete their own attendance." ON attendance FOR DELETE USING (true);
+
+
+-- 15. Employee Advances Table
+-- Stores advance payments given to employees.
+CREATE TABLE IF NOT EXISTS employee_advances (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    amount NUMERIC NOT NULL CHECK (amount > 0),
+    paid_amount NUMERIC NOT NULL DEFAULT 0 CHECK (paid_amount >= 0),
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE employee_advances ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public employee_advances are viewable by everyone." ON employee_advances FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own advances." ON employee_advances FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own advances." ON employee_advances FOR UPDATE USING (true);
+CREATE POLICY "Users can delete their own advances." ON employee_advances FOR DELETE USING (true);
+
+-- 16. Payslips Table
+-- Stores finalized salary calculations as payslips.
+CREATE TABLE IF NOT EXISTS payslips (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    employee_name TEXT NOT NULL,
+    pay_period_start DATE NOT NULL,
+    pay_period_end DATE NOT NULL,
+    payslip_date DATE NOT NULL,
+    total_working_days NUMERIC NOT NULL,
+    ot_hours NUMERIC DEFAULT 0,
+    wage_earnings NUMERIC DEFAULT 0,
+    production_earnings NUMERIC DEFAULT 0,
+    gross_salary NUMERIC NOT NULL,
+    advance_deduction NUMERIC DEFAULT 0,
+    net_salary NUMERIC NOT NULL,
+    total_outstanding_advance NUMERIC
+);
+ALTER TABLE payslips ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public payslips are viewable by everyone." ON payslips FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own payslips." ON payslips FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own payslips." ON payslips FOR UPDATE USING (true);
+CREATE POLICY "Users can delete their own payslips." ON payslips FOR DELETE USING (true);
+
+-- 17. Other Expenses Table
+CREATE TABLE IF NOT EXISTS other_expenses (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    date DATE NOT NULL,
+    item_name TEXT NOT NULL,
+    amount NUMERIC NOT NULL CHECK (amount >= 0),
+    notes TEXT
+);
+-- Safely add payment_mode column if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'other_expenses' AND column_name = 'payment_mode'
+    ) THEN
+        ALTER TABLE other_expenses ADD COLUMN payment_mode TEXT;
+    END IF;
+END $$;
+-- Safely add payment_status column if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'other_expenses' AND column_name = 'payment_status'
+    ) THEN
+        ALTER TABLE other_expenses ADD COLUMN payment_status TEXT;
+    END IF;
+END $$;
+-- Safely add bank_name column if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'other_expenses' AND column_name = 'bank_name'
+    ) THEN
+        ALTER TABLE other_expenses ADD COLUMN bank_name TEXT;
+    END IF;
+END $$;
+-- Safely add cheque_date column if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'other_expenses' AND column_name = 'cheque_date'
+    ) THEN
+        ALTER TABLE other_expenses ADD COLUMN cheque_date DATE;
+    END IF;
+END $$;
+-- Safely add payment_terms column if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'other_expenses' AND column_name = 'payment_terms'
+    ) THEN
+        ALTER TABLE other_expenses ADD COLUMN payment_terms TEXT;
+    END IF;
+END $$;
+ALTER TABLE other_expenses ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public other_expenses are viewable by everyone." ON other_expenses FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own other_expenses." ON other_expenses FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own other_expenses." ON other_expenses FOR UPDATE USING (true);
+CREATE POLICY "Users can delete their own other_expenses." ON other_expenses FOR DELETE USING (true);
+
+-- 18. Expense Categories Table
+CREATE TABLE IF NOT EXISTS expense_categories (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    name TEXT NOT NULL UNIQUE
+);
+ALTER TABLE expense_categories ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public expense_categories are viewable by everyone." ON expense_categories FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own expense_categories." ON expense_categories FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own expense_categories." ON expense_categories FOR UPDATE USING (true);
+CREATE POLICY "Users can delete their own expense_categories." ON expense_categories FOR DELETE USING (true);
