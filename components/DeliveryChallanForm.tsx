@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { CloseIcon, CalendarIcon, ChevronDownIcon, ImageIcon, SpinnerIcon, CheckIcon } from './Icons';
 import DatePicker from './DatePicker';
@@ -34,7 +33,7 @@ const BLANK_CHALLAN: Omit<DeliveryChallan, 'id' | 'challanNumber'> = {
     pin: '',
     pick: '',
     extraWork: '',
-    status: 'Ready to Invoice',
+    status: '',
     workerName: '',
     dcImage: [],
     sampleImage: [],
@@ -191,6 +190,7 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSa
         if (challan.process.length === 0) newErrors.process = "At least one process is required.";
         if (challan.pcs <= 0) newErrors.pcs = "No of pcs must be positive.";
         if (challan.mtr <= 0) newErrors.mtr = "Mtr must be positive.";
+        if (!challan.status) newErrors.status = "Status is required.";
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -272,25 +272,19 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSa
                                 {errors.partyName && <p className="mt-1 text-sm text-red-500">{errors.partyName}</p>}
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                                <div className="flex rounded-md border border-gray-300 overflow-hidden shadow-sm">
-                                    {statusOptions.map((status, index) => (
-                                        <button
-                                            key={status}
-                                            type="button"
-                                            onClick={() => {
-                                                setChallan(prev => ({ ...prev, status: status }));
-                                            }}
-                                            className={`flex-1 px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-blue-500 focus:z-10 ${
-                                                challan.status === status
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                                            } ${index < statusOptions.length - 1 ? 'border-r border-gray-300' : ''}`}
-                                        >
-                                            {status}
-                                        </button>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Status <span className="text-red-500">*</span></label>
+                                <select
+                                    name="status"
+                                    value={challan.status}
+                                    onChange={handleChange}
+                                    className={`${commonInputClasses} ${errors.status ? 'border-red-500' : ''}`}
+                                >
+                                    <option value="" disabled>Select a status</option>
+                                    {statusOptions.map(status => (
+                                        <option key={status} value={status}>{status}</option>
                                     ))}
-                                </div>
+                                </select>
+                                {errors.status && <p className="mt-1 text-sm text-red-500">{errors.status}</p>}
                             </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
