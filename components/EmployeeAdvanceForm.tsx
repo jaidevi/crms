@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { CloseIcon, CalendarIcon } from './Icons';
 import DatePicker from './DatePicker';
@@ -5,7 +6,7 @@ import type { EmployeeAdvance, Employee } from '../App';
 
 interface EmployeeAdvanceFormProps {
     onClose: () => void;
-    onSave: (advance: EmployeeAdvance) => void;
+    onSave: (advance: Omit<EmployeeAdvance, 'id'> | EmployeeAdvance) => void;
     employees: Employee[];
     advanceToEdit?: EmployeeAdvance | null;
 }
@@ -27,6 +28,8 @@ const formatDateForInput = (isoDate: string) => {
 const EmployeeAdvanceForm: React.FC<EmployeeAdvanceFormProps> = ({ onClose, onSave, employees, advanceToEdit }) => {
     const isEditing = !!advanceToEdit;
     const [advance, setAdvance] = useState<Omit<EmployeeAdvance, 'id'>>(BLANK_ADVANCE);
+    const [amountInput, setAmountInput] = useState('0');
+    const [paidAmountInput, setPaidAmountInput] = useState('0');
     const [isDatePickerOpen, setDatePickerOpen] = useState(false);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
@@ -34,20 +37,41 @@ const EmployeeAdvanceForm: React.FC<EmployeeAdvanceFormProps> = ({ onClose, onSa
         if (advanceToEdit) {
             const { id, ...rest } = advanceToEdit;
             setAdvance(rest);
+            setAmountInput(String(rest.amount || '0'));
+            setPaidAmountInput(String(rest.paidAmount || '0'));
         } else {
-            setAdvance({
+            const newAdvance = {
                 ...BLANK_ADVANCE,
                 date: new Date().toISOString().split('T')[0],
                 employeeId: '',
-            });
+            };
+            setAdvance(newAdvance);
+            setAmountInput(String(newAdvance.amount));
+            setPaidAmountInput(String(newAdvance.paidAmount));
         }
     }, [advanceToEdit]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const { name, value, type } = e.target;
-        const isNumber = type === 'number';
-        setAdvance(prev => ({ ...prev, [name]: isNumber ? (value === '' ? '' : Number(value)) : value }));
+        const { name, value } = e.target;
+        setAdvance(prev => ({ ...prev, [name]: value }));
         if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+    };
+
+    const handleNumericChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'amount' | 'paidAmount') => {
+        const { value } = e.target;
+        if (value === '' || /^\d*\.?\d*$/.test(value)) {
+            if (field === 'amount') {
+                setAmountInput(value);
+            } else {
+                setPaidAmountInput(value);
+            }
+
+            setAdvance(prev => ({ ...prev, [field]: parseFloat(value) || 0 }));
+            
+            if (errors[field]) {
+                setErrors(prev => ({ ...prev, [field]: '' }));
+            }
+        }
     };
 
     const validate = (): boolean => {
@@ -67,7 +91,13 @@ const EmployeeAdvanceForm: React.FC<EmployeeAdvanceFormProps> = ({ onClose, onSa
 
     const handleSubmit = () => {
         if (!validate()) return;
-        onSave({ ...advance, amount: Number(advance.amount), paidAmount: Number(advance.paidAmount) || 0, id: advanceToEdit?.id || `adv-temp-${Date.now()}` });
+        const finalAdvanceData = { ...advance, amount: Number(advance.amount), paidAmount: Number(advance.paidAmount) || 0 };
+
+        if (isEditing && advanceToEdit) {
+            onSave({ ...finalAdvanceData, id: advanceToEdit.id });
+        } else {
+            onSave(finalAdvanceData);
+        }
     };
 
     const modalTitle = isEditing ? 'Edit Employee Advance' : 'Record New Advance';
@@ -106,12 +136,12 @@ const EmployeeAdvanceForm: React.FC<EmployeeAdvanceFormProps> = ({ onClose, onSa
                         </div>
                         <div>
                             <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">Advance Amount <span className="text-red-500">*</span></label>
-                            <input id="amount" name="amount" type="number" value={advance.amount || ''} onChange={handleChange} className={`${commonInputClasses} ${errors.amount ? 'border-red-500' : ''}`} placeholder="0.00" />
+                            <input id="amount" name="amount" type="number" min="0" value={amountInput} onChange={(e) => handleNumericChange(e, 'amount')} className={`${commonInputClasses} ${errors.amount ? 'border-red-500' : ''}`} placeholder="0.00" />
                             {errors.amount && <p className="mt-1 text-sm text-red-500">{errors.amount}</p>}
                         </div>
                         <div>
                             <label htmlFor="paidAmount" className="block text-sm font-medium text-gray-700 mb-1">Paid Amount</label>
-                            <input id="paidAmount" name="paidAmount" type="number" value={advance.paidAmount || ''} onChange={handleChange} className={`${commonInputClasses} ${errors.paidAmount ? 'border-red-500' : ''}`} placeholder="0.00" />
+                            <input id="paidAmount" name="paidAmount" type="number" min="0" value={paidAmountInput} onChange={(e) => handleNumericChange(e, 'paidAmount')} className={`${commonInputClasses} ${errors.paidAmount ? 'border-red-500' : ''}`} placeholder="0.00" />
                             {errors.paidAmount && <p className="mt-1 text-sm text-red-500">{errors.paidAmount}</p>}
                         </div>
                         <div className="md:col-span-2">

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { CloseIcon } from './Icons';
 import type { Employee } from '../App';
@@ -19,24 +20,39 @@ const BLANK_EMPLOYEE: Omit<Employee, 'id'> = {
 
 const EmployeeModal: React.FC<EmployeeModalProps> = ({ onClose, onSave, existingEmployees, employeeToEdit }) => {
     const [employee, setEmployee] = useState(BLANK_EMPLOYEE);
+    const [dailyWageInput, setDailyWageInput] = useState('0');
+    const [ratePerMeterInput, setRatePerMeterInput] = useState('0');
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
     useEffect(() => {
         if (employeeToEdit) {
             setEmployee(employeeToEdit);
+            setDailyWageInput(String(employeeToEdit.dailyWage || '0'));
+            setRatePerMeterInput(String(employeeToEdit.ratePerMeter || '0'));
         } else {
             setEmployee(BLANK_EMPLOYEE);
+            setDailyWageInput(String(BLANK_EMPLOYEE.dailyWage));
+            setRatePerMeterInput(String(BLANK_EMPLOYEE.ratePerMeter));
         }
     }, [employeeToEdit]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value, type } = e.target;
-        setEmployee(prev => ({ 
-            ...prev, 
-            [name]: type === 'number' ? (value === '' ? '' : Number(value)) : value 
-        }));
+        const { name, value } = e.target;
+        setEmployee(prev => ({ ...prev, [name]: value }));
         if (errors[name]) {
              setErrors(prev => ({ ...prev, [name]: '' }));
+        }
+    };
+
+    const handleNumericChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'dailyWage' | 'ratePerMeter') => {
+        const { value } = e.target;
+        if (value === '' || /^\d*\.?\d*$/.test(value)) {
+            if (field === 'dailyWage') {
+                setDailyWageInput(value);
+            } else {
+                setRatePerMeterInput(value);
+            }
+            setEmployee(prev => ({ ...prev, [field]: parseFloat(value) || 0 }));
         }
     };
 
@@ -108,11 +124,11 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ onClose, onSave, existing
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label htmlFor="dailyWage" className="block text-sm font-medium text-gray-700 mb-1">Daily Wage</label>
-                            <input id="dailyWage" name="dailyWage" type="number" value={employee.dailyWage || ''} onChange={handleChange} className={commonInputClasses} placeholder="e.g., 500" />
+                            <input id="dailyWage" name="dailyWage" type="number" min="0" value={dailyWageInput} onChange={(e) => handleNumericChange(e, 'dailyWage')} className={commonInputClasses} placeholder="e.g., 500" />
                         </div>
                         <div>
                             <label htmlFor="ratePerMeter" className="block text-sm font-medium text-gray-700 mb-1">Rate per Meter</label>
-                            <input id="ratePerMeter" name="ratePerMeter" type="number" step="0.01" value={employee.ratePerMeter || ''} onChange={handleChange} className={commonInputClasses} placeholder="e.g., 1.25" />
+                            <input id="ratePerMeter" name="ratePerMeter" type="number" min="0" step="0.01" value={ratePerMeterInput} onChange={(e) => handleNumericChange(e, 'ratePerMeter')} className={commonInputClasses} placeholder="e.g., 1.25" />
                         </div>
                     </div>
                 </div>

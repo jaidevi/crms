@@ -7,6 +7,8 @@ type PayslipData = Pick<Payslip,
     'payPeriodEnd' | 
     'totalWorkingDays' | 
     'otHours' | 
+    'wageEarnings' |
+    'productionEarnings' |
     'grossSalary' | 
     'advanceDeduction' | 
     'netSalary' | 
@@ -95,14 +97,14 @@ const PayslipView: React.FC<PayslipViewProps> = ({ employee, payslip, companyDet
                         </thead>
                         <tbody>
                             <tr className="border-b">
-                                <td className="p-2 border-l">Basic Wages</td>
-                                <td className="p-2 text-right border-r">₹{numberFormat(payslip.grossSalary)}</td>
+                                <td className="p-2 border-l">Wage Earnings</td>
+                                <td className="p-2 text-right border-r">₹{numberFormat(payslip.wageEarnings)}</td>
                                 <td className="p-2 border-l">Advance Deduction</td>
                                 <td className="p-2 text-right border-r">₹{numberFormat(payslip.advanceDeduction)}</td>
                             </tr>
                              <tr className="border-b">
-                                <td className="p-2 border-l">Overtime</td>
-                                <td className="p-2 text-right border-r">₹0.00</td>
+                                <td className="p-2 border-l">Production Earnings</td>
+                                <td className="p-2 text-right border-r">₹{numberFormat(payslip.productionEarnings)}</td>
                                 <td className="p-2 border-l"></td>
                                 <td className="p-2 text-right border-r"></td>
                             </tr>

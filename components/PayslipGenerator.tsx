@@ -18,6 +18,9 @@ export interface PayslipData {
     payPeriodEnd: string;
     totalWorkingDays: number;
     otHours: number;
+    // FIX: Added missing properties to match PayslipView's expected type.
+    wageEarnings: number;
+    productionEarnings: number;
     grossSalary: number;
     totalOutstandingAdvance: number;
     advanceDeduction: number;
@@ -80,6 +83,7 @@ const PayslipGenerator: React.FC<PayslipGeneratorProps> = ({ employees, attendan
 
         let totalPresentDays = 0;
         let totalOvertimeHours = 0;
+        let totalMetersProduced = 0;
 
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
             const dateString = toYMDString(d);
@@ -90,6 +94,7 @@ const PayslipGenerator: React.FC<PayslipGeneratorProps> = ({ employees, attendan
                 if (record.morningStatus === 'Present' || record.morningStatus === 'Holiday') totalPresentDays += 0.5;
                 if (record.eveningStatus === 'Present' || record.eveningStatus === 'Holiday') totalPresentDays += 0.5;
                 totalOvertimeHours += (record.morningOvertimeHours || 0) + (record.eveningOvertimeHours || 0);
+                totalMetersProduced += record.metersProduced || 0;
             }
         }
 
@@ -106,7 +111,9 @@ const PayslipGenerator: React.FC<PayslipGeneratorProps> = ({ employees, attendan
         // The outstanding balance shown on the payslip should be the remaining balance *after* this deduction.
         const finalOutstandingBalance = totalOutstandingBefore - advanceDeduction;
 
-        const grossSalary = totalPresentDays * selectedEmployee.dailyWage;
+        const wageEarnings = totalPresentDays * selectedEmployee.dailyWage;
+        const productionEarnings = totalMetersProduced * (selectedEmployee.ratePerMeter || 0);
+        const grossSalary = wageEarnings + productionEarnings;
         const netSalary = grossSalary - advanceDeduction;
         
         setPayslipData({
@@ -115,6 +122,8 @@ const PayslipGenerator: React.FC<PayslipGeneratorProps> = ({ employees, attendan
             payPeriodEnd: endDate,
             totalWorkingDays: totalPresentDays,
             otHours: totalOvertimeHours,
+            wageEarnings,
+            productionEarnings,
             grossSalary,
             totalOutstandingAdvance: finalOutstandingBalance,
             advanceDeduction,

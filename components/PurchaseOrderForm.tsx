@@ -5,6 +5,7 @@ import PurchaseShopModal from './PurchaseShopModal';
 import AddBankModal from './AddBankModal';
 import DatePicker from './DatePicker';
 import AddItemModal from './AddItemModal';
+import CustomSelect from './CustomSelect';
 
 interface PurchaseOrderFormProps {
     onClose: () => void;
@@ -291,6 +292,21 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onClose, onSave, 
         return options;
     }, [paymentTerms]);
 
+    const paymentModeOptions = [
+        { value: 'Cash', label: 'Cash' },
+        { value: 'Cheque', label: 'Cheque' },
+        { value: 'NEFT', label: 'NEFT' },
+        { value: 'GPay', label: 'GPay' },
+        { value: 'Credit Card', label: 'Credit Card' },
+        { value: 'Bank Transfer', label: 'Bank Transfer' },
+        { value: 'Other', label: 'Other' },
+    ];
+
+    const statusOptions = [
+        { value: 'Unpaid', label: 'Unpaid' },
+        { value: 'Paid', label: 'Paid' },
+    ];
+
     const commonInputClasses = "block w-full px-3 py-2.5 text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500";
 
     const modalTitle = isEditing ? 'Edit Purchase Order' : 'Create New Purchase Order';
@@ -385,20 +401,20 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onClose, onSave, 
                                 </select>
                             </div>
                             <div>
-                                <label htmlFor="paymentMode" className="block text-sm font-medium text-gray-700 mb-1">Payment Mode</label>
-                                <select id="paymentMode" value={paymentMode} onChange={e => setPaymentMode(e.target.value as PaymentMode)} className={commonInputClasses}>
-                                    <option value="Cash">Cash</option>
-                                    <option value="Cheque">Cheque</option>
-                                    <option value="NEFT">NEFT</option>
-                                    <option value="GPay">GPay</option>
-                                </select>
+                                <CustomSelect
+                                    label="Payment Mode"
+                                    options={paymentModeOptions}
+                                    value={paymentMode}
+                                    onChange={(val) => setPaymentMode(val as PaymentMode)}
+                                />
                             </div>
                              <div>
-                                <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                                <select id="status" value={status} onChange={e => setStatus(e.target.value as OrderStatus)} className={commonInputClasses}>
-                                    <option value="Unpaid">Unpaid</option>
-                                    <option value="Paid">Paid</option>
-                                </select>
+                                <CustomSelect
+                                    label="Status"
+                                    options={statusOptions}
+                                    value={status}
+                                    onChange={(val) => setStatus(val as OrderStatus)}
+                                />
                             </div>
                         </div>
 

@@ -323,6 +323,8 @@ const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecord
             payPeriodEnd: viewingPayslip.payPeriodEnd,
             totalWorkingDays: viewingPayslip.totalWorkingDays,
             otHours: viewingPayslip.otHours,
+            wageEarnings: viewingPayslip.wageEarnings,
+            productionEarnings: viewingPayslip.productionEarnings,
             grossSalary: viewingPayslip.grossSalary,
             advanceDeduction: viewingPayslip.advanceDeduction,
             netSalary: viewingPayslip.netSalary,

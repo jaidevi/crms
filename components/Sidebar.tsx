@@ -18,7 +18,7 @@ interface NavItemProps {
 const NavItem: React.FC<NavItemProps> = ({ icon, label, active = false, onClick, isSubItem = false }) => {
   const baseClasses = "flex items-center w-full px-4 py-2.5 rounded-lg text-sm text-left transition-colors duration-200";
   const activeClasses = "bg-blue-600 text-white";
-  const inactiveClasses = "text-gray-300 hover:bg-slate-700";
+  const inactiveClasses = "text-gray-300 hover:bg-gray-800";
   const subItemClasses = isSubItem ? "pl-12" : "";
 
   return (
@@ -41,7 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeScreen, setActiveScreen }) => {
   const [transactionsOpen, setTransactionsOpen] = useState(true);
   const [masterSearch, setMasterSearch] = useState('');
 
-  const masterScreens = ['Add Client', 'Add Purchase Shop', 'Employee Master', 'Type of Process Master'];
+  const masterScreens = ['Add Client', 'Add Purchase Shop', 'Add Employee', 'Add Process'];
   const transactionScreens = ['Expenses', 'Delivery Challans', 'Invoices', 'Payment Received', 'Salary & Payslips', 'Attendance'];
   
   const isMastersActive = masterScreens.includes(activeScreen);
@@ -63,8 +63,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeScreen, setActiveScreen }) => {
   const masterNavItems = [
       { icon: <CustomersIcon />, label: "Add Client" },
       { icon: <CustomersIcon />, label: "Add Purchase Shop" },
-      { icon: <CustomersIcon />, label: "Employee Master" },
-      { icon: <InvoicesIcon />, label: "Type of Process Master" },
+      { icon: <CustomersIcon />, label: "Add Employee" },
+      { icon: <InvoicesIcon />, label: "Add Process" },
   ];
   
   const filteredMasterNavItems = masterNavItems.filter(item => 
@@ -75,19 +75,18 @@ const Sidebar: React.FC<SidebarProps> = ({ activeScreen, setActiveScreen }) => {
     { icon: <PlusIcon />, label: "New Screen" },
     { icon: <ReportsIcon />, label: "Reports" },
     { icon: <CustomersIcon />, label: "User Admin" },
-    { icon: <SettingsIcon />, label: "Settings" },
   ];
 
   return (
-    <aside className={`bg-slate-800 text-white flex flex-col transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'}`}>
-      <div className="flex items-center justify-between h-16 border-b border-slate-700 px-4">
+    <aside className={`bg-gray-900 text-white flex flex-col transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'}`}>
+      <div className="flex items-center justify-between h-16 border-b border-gray-800 px-4">
         <div className="flex items-center">
           <InvoiceIcon className="w-8 h-8 mr-2 text-blue-400" />
           {!collapsed && <span className="font-bold text-lg">TextileERP</span>}
         </div>
       </div>
 
-      <nav className="flex-1 px-4 py-4 space-y-2">
+      <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
         {collapsed ? (
             <>
                 {[
@@ -96,7 +95,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeScreen, setActiveScreen }) => {
                     ...masterNavItems,
                     ...mainNavItems
                 ].map(item => (
-                    <button key={item.label} title={item.label} onClick={() => setActiveScreen(item.label)} className={`flex items-center justify-center w-full h-11 rounded-lg ${item.label === activeScreen ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-slate-700'}`}>
+                    <button key={item.label} title={item.label} onClick={() => setActiveScreen(item.label)} className={`flex items-center justify-center w-full h-11 rounded-lg ${item.label === activeScreen ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800'}`}>
                        <span className="w-5 h-5">{item.icon}</span>
                     </button>
                 ))}
@@ -109,7 +108,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeScreen, setActiveScreen }) => {
                 <div>
                   <button
                     onClick={() => setTransactionsOpen(!transactionsOpen)}
-                    className={`flex items-center justify-between w-full px-4 py-2.5 rounded-lg text-sm text-left transition-colors duration-200 ${isTransactionsActive ? 'text-white bg-slate-700/50' : 'text-gray-300'} hover:bg-slate-700`}
+                    className={`flex items-center justify-between w-full px-4 py-2.5 rounded-lg text-sm text-left transition-colors duration-200 ${isTransactionsActive ? 'text-white bg-gray-800/50' : 'text-gray-300'} hover:bg-gray-800`}
                   >
                     <div className="flex items-center">
                       <span className="w-5 h-5 mr-3"><DatabaseIcon /></span>
@@ -130,7 +129,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeScreen, setActiveScreen }) => {
                 <div>
                   <button
                     onClick={() => setMastersOpen(!mastersOpen)}
-                    className={`flex items-center justify-between w-full px-4 py-2.5 rounded-lg text-sm text-left transition-colors duration-200 ${isMastersActive ? 'text-white bg-slate-700/50' : 'text-gray-300'} hover:bg-slate-700`}
+                    className={`flex items-center justify-between w-full px-4 py-2.5 rounded-lg text-sm text-left transition-colors duration-200 ${isMastersActive ? 'text-white bg-gray-800/50' : 'text-gray-300'} hover:bg-gray-800`}
                   >
                     <div className="flex items-center">
                       <span className="w-5 h-5 mr-3"><DatabaseIcon /></span>
@@ -150,7 +149,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeScreen, setActiveScreen }) => {
                             placeholder="Search masters..."
                             value={masterSearch}
                             onChange={(e) => setMasterSearch(e.target.value)}
-                            className="w-full bg-slate-700 text-white text-sm rounded-md pl-9 pr-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none placeholder-gray-400"
+                            className="w-full bg-gray-800 text-white text-sm rounded-md pl-9 pr-3 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none placeholder-gray-400"
                           />
                         </div>
                       </div>
@@ -174,10 +173,26 @@ const Sidebar: React.FC<SidebarProps> = ({ activeScreen, setActiveScreen }) => {
         )}
       </nav>
 
-      <div className="px-4 py-4 border-t border-slate-700">
-        <button onClick={() => setCollapsed(!collapsed)} className="p-2 rounded-full hover:bg-slate-700">
-          {collapsed ? <ChevronRightIcon className="w-5 h-5" /> : <ChevronLeftIcon className="w-5 h-5" />}
-        </button>
+      <div>
+        <div className="px-4 py-2">
+           {collapsed ? (
+                <button title="Settings" onClick={() => handleNavClick('Settings')} className={`flex items-center justify-center w-full h-11 rounded-lg ${activeScreen === 'Settings' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800'}`}>
+                    <span className="w-5 h-5"><SettingsIcon/></span>
+                </button>
+           ) : (
+                <NavItem 
+                    icon={<SettingsIcon />} 
+                    label="Settings" 
+                    active={activeScreen === 'Settings'}
+                    onClick={() => handleNavClick('Settings')}
+                />
+           )}
+        </div>
+        <div className="px-4 py-4 border-t border-gray-800">
+          <button onClick={() => setCollapsed(!collapsed)} className="p-2 rounded-full hover:bg-gray-800">
+            {collapsed ? <ChevronRightIcon className="w-5 h-5" /> : <ChevronLeftIcon className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
     </aside>
   );

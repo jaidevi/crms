@@ -149,13 +149,12 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
   }, [advances, advanceSearchTerm, employeeMap]);
 
   // Handlers for Employee Advances
-  const handleSaveAdvance = useCallback(async (advanceData: EmployeeAdvance) => {
+  const handleSaveAdvance = useCallback(async (advanceData: Omit<EmployeeAdvance, 'id'> | EmployeeAdvance) => {
       try {
-          if (advanceToEdit) {
-              await onUpdateAdvance(advanceData);
+          if ('id' in advanceData && advanceToEdit) {
+              await onUpdateAdvance(advanceData as EmployeeAdvance);
           } else {
-              const { id, ...newAdvanceData } = advanceData;
-              await onAddAdvance(newAdvanceData);
+              await onAddAdvance(advanceData as Omit<EmployeeAdvance, 'id'>);
           }
           setIsAdvanceFormOpen(false);
           setAdvanceToEdit(null);
@@ -177,13 +176,12 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
   }, [otherExpenses, otherExpenseSearchTerm]);
 
   // Handlers for Other Expenses
-  const handleSaveOtherExpense = useCallback(async (expenseData: OtherExpense) => {
+  const handleSaveOtherExpense = useCallback(async (expenseData: Omit<OtherExpense, 'id'> | OtherExpense) => {
     try {
-        if (expenseToEdit) {
-            await onUpdateOtherExpense(expenseData);
+        if ('id' in expenseData && expenseToEdit) {
+            await onUpdateOtherExpense(expenseData as OtherExpense);
         } else {
-            const { id, ...newExpenseData } = expenseData;
-            await onAddOtherExpense(newExpenseData);
+            await onAddOtherExpense(expenseData as Omit<OtherExpense, 'id'>);
         }
         setIsOtherExpenseFormOpen(false);
         setExpenseToEdit(null);

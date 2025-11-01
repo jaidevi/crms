@@ -94,7 +94,7 @@ const EmployeeMasterScreen: React.FC<EmployeeMasterScreenProps> = ({ employees, 
       )}
       <div className="bg-white rounded-lg shadow-sm">
         <div className="flex flex-col md:flex-row items-center justify-between p-5 border-b border-gray-200 gap-4">
-          <h1 className="text-xl font-semibold text-gray-800">Employee Master</h1>
+          <h1 className="text-xl font-semibold text-gray-800">Add Employee</h1>
           <div className="flex items-center gap-4 w-full md:w-auto">
             <div className="relative flex-grow md:flex-grow-0">
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />

@@ -106,7 +106,7 @@ const MonthYearPicker: React.FC<MonthYearPickerProps> = ({ currentDate, onSelect
 };
 
 const getStatusSelectClasses = (status: AttendanceStatus | 'N/A') => {
-    const baseClasses = "w-full p-1 text-xs border-transparent rounded focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-200 disabled:cursor-not-allowed font-medium";
+    const baseClasses = "flex-1 p-1 text-xs border-transparent rounded focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-200 disabled:cursor-not-allowed font-medium";
     switch (status) {
         case 'Present':
             return `${baseClasses} bg-green-100 text-green-800`;

@@ -1,5 +1,4 @@
 
-
 import React, { useState, useCallback, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -527,7 +526,7 @@ const mapOtherExpenseToDb = (appData: Omit<OtherExpense, 'id'>) => ({
   payment_mode: appData.paymentMode,
   payment_status: appData.paymentStatus,
   bank_name: appData.bankName,
-  cheque_date: appData.chequeDate,
+  cheque_date: appData.chequeDate || null,
   payment_terms: appData.paymentTerms,
 });
 
@@ -861,7 +860,7 @@ const App: React.FC = () => {
         payment_mode: orderData.paymentMode,
         status: orderData.status,
         bank_name: orderData.bankName,
-        cheque_date: orderData.chequeDate,
+        cheque_date: orderData.chequeDate || null,
         payment_terms: orderData.paymentTerms,
       })
       .select()
@@ -870,7 +869,7 @@ const App: React.FC = () => {
     if (poError) throw poError;
 
     // 2. Insert line items
-    const itemsToInsert = items.map(item => ({
+    const itemsToInsert = items.map(({ id, ...item }) => ({
       po_id: poInsertData.id,
       ...item
     }));
@@ -898,7 +897,7 @@ const App: React.FC = () => {
         payment_mode: orderData.paymentMode,
         status: orderData.status,
         bank_name: orderData.bankName,
-        cheque_date: orderData.chequeDate,
+        cheque_date: orderData.chequeDate || null,
         payment_terms: orderData.paymentTerms,
       })
       .eq('po_number', poNumberToUpdate)
@@ -912,7 +911,10 @@ const App: React.FC = () => {
     if (deleteError) throw deleteError;
     
     // 3. Insert new items
-    const itemsToInsert = items.map(item => ({ po_id: orderData.id, ...item }));
+    const itemsToInsert = items.map(({ id, ...item }) => ({ 
+        po_id: orderData.id, 
+        ...item 
+    }));
     const { error: itemsError } = await supabase.from('purchase_order_items').insert(itemsToInsert);
     if (itemsError) throw itemsError;
 
@@ -1057,20 +1059,42 @@ const App: React.FC = () => {
     const { data, error } = await supabase.from('payslips').insert(mapPayslipToDb(payslipData)).select().single();
     if (error) throw error;
 
-    // 2. Create a new "payment" entry in advances to account for the deduction
+    // 2. Apply advance deduction to existing advances
     if (payslipData.advanceDeduction > 0) {
-        const advancePayment: Omit<EmployeeAdvance, 'id'> = {
-            employeeId: payslipData.employeeId,
-            date: payslipData.payslipDate,
-            amount: 0,
-            paidAmount: payslipData.advanceDeduction,
-            notes: `Paid via salary deduction for period ${formatDateForDisplay(payslipData.payPeriodStart)} - ${formatDateForDisplay(payslipData.payPeriodEnd)}`,
-        };
-        const { error: advanceError } = await supabase.from('employee_advances').insert(mapAdvanceToDb(advancePayment));
-        if (advanceError) {
-            // This is tricky, maybe should be a transaction. For now, log and alert.
-            console.error("Failed to record advance deduction payment:", advanceError);
-            alert("Warning: Payslip was saved, but failed to automatically record the advance deduction payment. Please check employee advances.");
+        let deductionToApply = payslipData.advanceDeduction;
+
+        // Get outstanding advances for the employee, sorted oldest first
+        const outstandingAdvances = advances
+            .filter(a => a.employeeId === payslipData.employeeId && a.amount > a.paidAmount)
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        for (const advance of outstandingAdvances) {
+            if (deductionToApply <= 0) break;
+
+            const remainingBalance = advance.amount - advance.paidAmount;
+            const amountToPay = Math.min(deductionToApply, remainingBalance);
+
+            if (amountToPay > 0) {
+                const newPaidAmount = advance.paidAmount + amountToPay;
+                
+                const { error: updateError } = await supabase
+                    .from('employee_advances')
+                    .update({ paid_amount: newPaidAmount })
+                    .eq('id', advance.id);
+
+                if (updateError) {
+                    console.error(`Failed to update advance ID ${advance.id}:`, updateError);
+                    alert(`Warning: Payslip was saved, but failed to fully apply advance deduction. Please manually check employee advances. Error: ${updateError.message}`);
+                    break; 
+                }
+
+                deductionToApply -= amountToPay;
+            }
+        }
+        
+        if (deductionToApply > 0) {
+            console.warn(`Could not apply full deduction of ${payslipData.advanceDeduction}. Remaining amount: ${deductionToApply}`);
+             alert(`Warning: Payslip saved, but only part of the advance deduction could be applied automatically. There might not have been enough outstanding advance balance. Please check employee advances.`);
         }
     }
 
@@ -1123,15 +1147,16 @@ const App: React.FC = () => {
         return <ShopMasterScreen clients={clients} onAddClient={handleAddClient} onUpdateClient={handleUpdateClient} processTypes={processTypes} onAddProcessType={handleAddProcessType} />;
       case 'Add Purchase Shop':
         return <PurchaseShopMasterScreen shops={purchaseShops} onAddShop={handleAddPurchaseShop} onUpdateShop={handleUpdatePurchaseShop} />;
-      case 'Employee Master':
+      case 'Add Employee':
         return <EmployeeMasterScreen employees={employees} onAddEmployee={handleAddEmployee} onUpdateEmployee={handleUpdateEmployee} onDeleteEmployee={handleDeleteEmployee} />;
-      case 'Type of Process Master':
+      case 'Add Process':
         return <ProcessTypeMasterScreen processTypes={processTypes} onAddProcessType={handleAddProcessType} onUpdateProcessType={handleUpdateProcessType} onDeleteProcessType={handleDeleteProcessType}/>;
       case 'Expenses':
         return <PurchaseOrderScreen
           purchaseOrders={purchaseOrders}
           onAddOrder={handleAddPurchaseOrder}
           onUpdateOrder={handleUpdatePurchaseOrder}
+          // FIX: Corrected handler name from handleDeleteOrder to handleDeletePurchaseOrder.
           onDeleteOrder={handleDeletePurchaseOrder}
           purchaseShops={purchaseShops}
           onAddPurchaseShop={handleAddPurchaseShop}
@@ -1157,8 +1182,11 @@ const App: React.FC = () => {
       case 'Delivery Challans':
         return <DeliveryChallanScreen 
           deliveryChallans={deliveryChallans}
+          // FIX: Corrected handler name from handleAddChallan to handleAddDeliveryChallan.
           onAddChallan={handleAddDeliveryChallan}
+          // FIX: Corrected handler name from handleUpdateChallan to handleUpdateDeliveryChallan.
           onUpdateChallan={handleUpdateDeliveryChallan}
+          // FIX: Corrected handler name from handleDeleteChallan to handleDeleteDeliveryChallan.
           onDeleteChallan={handleDeleteDeliveryChallan}
           clients={clients}
           onAddClient={handleAddClient}

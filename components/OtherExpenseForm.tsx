@@ -7,7 +7,7 @@ import AddBankModal from './AddBankModal';
 
 interface OtherExpenseFormProps {
     onClose: () => void;
-    onSave: (expense: OtherExpense) => void;
+    onSave: (expense: Omit<OtherExpense, 'id'> | OtherExpense) => void;
     expenseToEdit?: OtherExpense | null;
     expenseCategories: ExpenseCategory[];
     onAddExpenseCategory: (name: string) => Promise<ExpenseCategory | null>;
@@ -20,11 +20,8 @@ const BLANK_EXPENSE: Omit<OtherExpense, 'id'> = {
     itemName: '',
     amount: 0,
     notes: '',
-    paymentMode: undefined,
-    paymentStatus: undefined,
     bankName: '',
     chequeDate: '',
-    paymentTerms: 'Due on receipt',
 };
 
 const formatDateForInput = (isoDate?: string) => {
@@ -36,6 +33,7 @@ const formatDateForInput = (isoDate?: string) => {
 const OtherExpenseForm: React.FC<OtherExpenseFormProps> = ({ onClose, onSave, expenseToEdit, expenseCategories, onAddExpenseCategory, bankNames, onAddBankName }) => {
     const isEditing = !!expenseToEdit;
     const [expense, setExpense] = useState<Omit<OtherExpense, 'id'>>(BLANK_EXPENSE);
+    const [amountInput, setAmountInput] = useState('0');
     const [isDatePickerOpen, setDatePickerOpen] = useState(false);
     const [isChequeDatePickerOpen, setChequeDatePickerOpen] = useState(false);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -46,22 +44,36 @@ const OtherExpenseForm: React.FC<OtherExpenseFormProps> = ({ onClose, onSave, ex
         if (expenseToEdit) {
             const { id, ...rest } = expenseToEdit;
             setExpense(rest);
+            setAmountInput(String(rest.amount || '0'));
         } else {
-            setExpense({ ...BLANK_EXPENSE, date: new Date().toISOString().split('T')[0] });
+            const newExpense = { ...BLANK_EXPENSE, date: new Date().toISOString().split('T')[0] };
+            setExpense(newExpense);
+            setAmountInput(String(newExpense.amount));
         }
     }, [expenseToEdit]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value, type } = e.target;
-        
+        const { name, value } = e.target;
+
         if (name === 'itemName' && value === '_add_new_') {
             setShowAddCategoryModal(true);
             return;
         }
-
-        const isNumber = type === 'number';
-        setExpense(prev => ({ ...prev, [name]: isNumber ? (value === '' ? '' : Number(value)) : value }));
+        
+        setExpense(prev => ({ ...prev, [name]: value }));
+        
         if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+    };
+
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { value } = e.target;
+        if (value === '' || /^\d*\.?\d*$/.test(value)) {
+            setAmountInput(value);
+            setExpense(prev => ({ ...prev, amount: parseFloat(value) || 0 }));
+            if (errors.amount) {
+                setErrors(prev => ({ ...prev, amount: '' }));
+            }
+        }
     };
 
     const handleSaveCategory = async (name: string) => {
@@ -110,7 +122,13 @@ const OtherExpenseForm: React.FC<OtherExpenseFormProps> = ({ onClose, onSave, ex
 
     const handleSubmit = () => {
         if (!validate()) return;
-        onSave({ ...expense, amount: Number(expense.amount), id: expenseToEdit?.id || `exp-temp-${Date.now()}` });
+        const finalExpenseData = { ...expense, amount: Number(expense.amount) };
+
+        if (isEditing && expenseToEdit) {
+            onSave({ ...finalExpenseData, id: expenseToEdit.id });
+        } else {
+            onSave(finalExpenseData);
+        }
     };
 
     const sortedCategories = useMemo(() => 
@@ -128,7 +146,7 @@ const OtherExpenseForm: React.FC<OtherExpenseFormProps> = ({ onClose, onSave, ex
 
     const modalTitle = isEditing ? 'Edit Expense' : 'Record New Expense';
     const commonInputClasses = "block w-full px-3 py-2.5 text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500";
-    const paymentModes: PaymentMode[] = ['Cash', 'Cheque', 'GPay', 'NEFT'];
+    const paymentModes: PaymentMode[] = ['Cash', 'Cheque', 'GPay', 'NEFT', 'Credit Card', 'Bank Transfer', 'Other'];
     const paymentStatuses: OrderStatus[] = ['Paid', 'Unpaid'];
 
     return (
@@ -179,7 +197,7 @@ const OtherExpenseForm: React.FC<OtherExpenseFormProps> = ({ onClose, onSave, ex
                             </div>
                             <div>
                                 <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">Amount <span className="text-red-500">*</span></label>
-                                <input id="amount" name="amount" type="number" value={expense.amount || ''} onChange={handleChange} className={`${commonInputClasses} ${errors.amount ? 'border-red-500' : ''}`} placeholder="0.00" />
+                                <input id="amount" name="amount" type="number" min="0" value={amountInput} onChange={handleAmountChange} className={`${commonInputClasses} ${errors.amount ? 'border-red-500' : ''}`} placeholder="0.00" />
                                 {errors.amount && <p className="mt-1 text-sm text-red-500">{errors.amount}</p>}
                             </div>
                             <div>
@@ -192,8 +210,8 @@ const OtherExpenseForm: React.FC<OtherExpenseFormProps> = ({ onClose, onSave, ex
                             </div>
                             <div>
                                 <label htmlFor="paymentStatus" className="block text-sm font-medium text-gray-700 mb-1">Payment Status <span className="text-red-500">*</span></label>
-                                <select id="paymentStatus" name="paymentStatus" value={expense.paymentStatus || ''} onChange={handleChange} className={`${commonInputClasses} ${errors.paymentStatus ? 'border-red-500' : ''}`}>
-                                    <option value="" disabled>Select a payment status</option>
+                                 <select id="paymentStatus" name="paymentStatus" value={expense.paymentStatus || ''} onChange={handleChange} className={`${commonInputClasses} ${errors.paymentStatus ? 'border-red-500' : ''}`}>
+                                    <option value="" disabled>Select a status</option>
                                     {paymentStatuses.map(status => <option key={status} value={status}>{status}</option>)}
                                 </select>
                                 {errors.paymentStatus && <p className="mt-1 text-sm text-red-500">{errors.paymentStatus}</p>}
@@ -201,6 +219,7 @@ const OtherExpenseForm: React.FC<OtherExpenseFormProps> = ({ onClose, onSave, ex
                             <div>
                                 <label htmlFor="paymentTerms" className="block text-sm font-medium text-gray-700 mb-1">Payment Terms</label>
                                 <select id="paymentTerms" name="paymentTerms" value={expense.paymentTerms || ''} onChange={handleChange} className={commonInputClasses}>
+                                    <option value="" disabled>Select payment terms</option>
                                     {paymentTermOptions.map(term => (
                                         <option key={term} value={term}>{term}</option>
                                     ))}

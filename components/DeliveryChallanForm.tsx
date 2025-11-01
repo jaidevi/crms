@@ -273,9 +273,24 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSa
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                                <select name="status" value={challan.status} onChange={handleChange} className={commonInputClasses}>
-                                    {statusOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </select>
+                                <div className="flex rounded-md border border-gray-300 overflow-hidden shadow-sm">
+                                    {statusOptions.map((status, index) => (
+                                        <button
+                                            key={status}
+                                            type="button"
+                                            onClick={() => {
+                                                setChallan(prev => ({ ...prev, status: status }));
+                                            }}
+                                            className={`flex-1 px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-blue-500 focus:z-10 ${
+                                                challan.status === status
+                                                    ? 'bg-blue-600 text-white'
+                                                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                                            } ${index < statusOptions.length - 1 ? 'border-r border-gray-300' : ''}`}
+                                        >
+                                            {status}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
