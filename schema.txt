@@ -143,6 +143,17 @@ CREATE POLICY "Users can insert their own delivery_challans." ON delivery_challa
 CREATE POLICY "Users can update their own delivery_challans." ON delivery_challans FOR UPDATE USING (true);
 CREATE POLICY "Users can delete their own delivery_challans." ON delivery_challans FOR DELETE USING (true);
 
+-- Safely add is_outsourcing column if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'delivery_challans' AND column_name = 'is_outsourcing'
+    ) THEN
+        ALTER TABLE delivery_challans ADD COLUMN is_outsourcing BOOLEAN DEFAULT false;
+    END IF;
+END $$;
+
 -- 7. Purchase Orders Table
 -- Stores main purchase order details. Items are in a separate table.
 CREATE TABLE IF NOT EXISTS purchase_orders (

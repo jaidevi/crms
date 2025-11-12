@@ -121,6 +121,7 @@ export interface DeliveryChallan {
   extraWork: string;
   status: string;
   workerName: string;
+  isOutsourcing?: boolean;
   dcImage?: string[] | null;
   sampleImage?: string[] | null;
 }
@@ -387,6 +388,7 @@ const mapDeliveryChallanFromDb = (dbData: any): DeliveryChallan => {
         extraWork: dbData.extra_work || '',
         status: statusFromDb === 'Delivered' ? 'Ready to Invoice' : statusFromDb,
         workerName: dbData.worker_name || '',
+        isOutsourcing: dbData.is_outsourcing || false,
         dcImage: dcImage,
         sampleImage: sampleImage,
     };
@@ -409,6 +411,7 @@ const mapDeliveryChallanToDb = (appData: any) => {
         extra_work: appData.extraWork,
         status: appData.status === 'Ready to Invoice' ? 'Delivered' : appData.status,
         worker_name: appData.workerName,
+        is_outsourcing: appData.isOutsourcing,
         dc_image: appData.dcImage && appData.dcImage.length > 0 ? JSON.stringify(appData.dcImage) : null,
         sample_image: appData.sampleImage && appData.sampleImage.length > 0 ? JSON.stringify(appData.sampleImage) : null,
     };

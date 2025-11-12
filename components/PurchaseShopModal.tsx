@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { CloseIcon } from './Icons';
 import type { PurchaseShop } from '../App';
@@ -52,7 +51,8 @@ const PurchaseShopModal: React.FC<PurchaseShopModalProps> = ({ onClose, onSave, 
             setAvailableCities(stateData ? stateData.cities.sort() : []);
             setShop(prev => ({ ...prev, state: value, city: '' }));
         } else {
-            setShop(prev => ({ ...prev, [name]: value }));
+            const finalValue = name === 'name' ? value.toUpperCase() : value;
+            setShop(prev => ({ ...prev, [name]: finalValue }));
         }
 
         if (errors[name]) {

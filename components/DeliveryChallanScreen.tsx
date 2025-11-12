@@ -7,7 +7,7 @@ import InvoiceView from './InvoiceView';
 
 interface DeliveryChallanScreenProps {
   deliveryChallans: DeliveryChallan[];
-  onAddChallan: (newChallan: Omit<DeliveryChallan, 'id'>, sourceEntryId?: string) => Promise<void>;
+  onAddChallan: (newChallan: Omit<DeliveryChallan, 'id'>) => Promise<void>;
   onUpdateChallan: (id: string, updatedChallan: DeliveryChallan) => Promise<void>;
   onDeleteChallan: (id: string) => void;
   clients: Client[];
@@ -189,23 +189,18 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
   };
 
   const handleSaveChallan = async (challanData: Omit<DeliveryChallan, 'id'>) => {
-    try {
-        if (challanToEdit) {
-            await onUpdateChallan(challanToEdit.id, { ...challanData, id: challanToEdit.id });
-        } else {
-            await onAddChallan(challanData);
-        }
-        
-        if (challanData.status === 'Not Delivered') {
-            setActiveTab('pending');
-        } else {
-            setActiveTab('delivered');
-        }
-        handleCloseChallanForm();
-    } catch (error) {
-        console.error("Failed to save challan:", error);
-        alert(`Error saving challan: ${(error as Error).message}`);
+    if (challanToEdit) {
+        await onUpdateChallan(challanToEdit.id, { ...challanData, id: challanToEdit.id });
+    } else {
+        await onAddChallan(challanData);
     }
+    
+    if (challanData.status === 'Not Delivered') {
+        setActiveTab('pending');
+    } else {
+        setActiveTab('delivered');
+    }
+    handleCloseChallanForm();
   };
   
   const handleOpenFormForNewChallan = () => {
@@ -357,14 +352,23 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
                       <td className="px-4 py-3">{formatDateForDisplay(challan.date)}</td>
                       <td className="px-4 py-3 font-medium">{challan.partyName}</td>
                       <td className="px-4 py-3">
-                        <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
-                            challan.status === 'Ready to Invoice' ? 'bg-green-100 text-green-800' : 
-                            challan.status === 'Not Delivered' ? 'bg-yellow-100 text-yellow-800' :
-                            challan.status === 'Delivered' ? 'bg-green-100 text-green-800' : // backward compatibility
-                            'bg-red-100 text-red-800'
-                        }`}>
-                            {challan.status}
-                        </span>
+                        <div>
+                            <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
+                                challan.status === 'Ready to Invoice' ? 'bg-green-100 text-green-800' : 
+                                challan.status === 'Not Delivered' ? 'bg-yellow-100 text-yellow-800' :
+                                challan.status === 'Delivered' ? 'bg-green-100 text-green-800' : // backward compatibility
+                                'bg-red-100 text-red-800'
+                            }`}>
+                                {challan.status}
+                            </span>
+                        </div>
+                        {challan.isOutsourcing && (
+                            <div className="mt-1">
+                                <span className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800">
+                                    Outsourcing
+                                </span>
+                            </div>
+                        )}
                       </td>
                       <td className="px-4 py-3">{challan.partyDCNo || '-'}</td>
                       <td className="px-4 py-3">{challan.process.join(', ')}</td>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { CloseIcon, CalendarIcon, ChevronDownIcon, ImageIcon, SpinnerIcon, CheckIcon } from './Icons';
 import DatePicker from './DatePicker';
@@ -35,6 +34,7 @@ const BLANK_CHALLAN: Omit<DeliveryChallan, 'id' | 'challanNumber'> = {
     extraWork: '',
     status: '',
     workerName: '',
+    isOutsourcing: false,
     dcImage: [],
     sampleImage: [],
 };
@@ -203,9 +203,11 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSa
                 setTimeout(() => {
                     onClose();
                 }, 1500);
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Save failed, resetting button state", error);
                 setSaveState('idle');
+                const errorMessage = error?.message || 'An unknown error occurred. Please check the console for details.';
+                alert(`Failed to save challan:\n${errorMessage}`);
             }
         }
     };
@@ -287,6 +289,18 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSa
                                     </select>
                                     {errors.status && <p className="mt-1 text-sm text-red-500">{errors.status}</p>}
                                 </div>
+                            </div>
+                            <div className="pt-4">
+                                <label className="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        name="isOutsourcing"
+                                        checked={challan.isOutsourcing || false}
+                                        onChange={(e) => setChallan(prev => ({ ...prev, isOutsourcing: e.target.checked }))}
+                                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                    />
+                                    <span className="ml-2 text-sm text-gray-700">This is an Outsourcing Challan</span>
+                                </label>
                             </div>
                         </fieldset>
 

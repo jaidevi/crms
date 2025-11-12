@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo } from 'react';
 import type { PurchaseShop } from '../App';
 import { indianStates } from '../data/indian-locations';
@@ -39,7 +37,8 @@ const NewPartyScreen: React.FC<NewPartyScreenProps> = ({ shops, onAddShop, setAc
             setAvailableCities(stateData ? stateData.cities.sort() : []);
             setShop(prev => ({ ...prev, state: value, city: '' }));
         } else {
-            setShop(prev => ({ ...prev, [name]: value }));
+            const finalValue = name === 'name' ? value.toUpperCase() : value;
+            setShop(prev => ({ ...prev, [name]: finalValue }));
         }
 
         if (errors[name]) {
