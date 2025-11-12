@@ -63,11 +63,11 @@ const ProcessTypeModal: React.FC<ProcessTypeModalProps> = ({ onClose, onSave, ex
                             type="text"
                             value={name}
                             onChange={(e) => {
-                                setName(e.target.value);
+                                setName(e.target.value.toUpperCase());
                                 if (error) setError('');
                             }}
                             className={`${commonInputClasses} ${error ? 'border-red-500' : 'border-gray-300'}`}
-                            placeholder="e.g., Weaving, Dyeing"
+                            placeholder="e.g., WEAVING, DYEING"
                             autoFocus
                         />
                         {error && <p className="mt-1 text-sm text-red-500">{error}</p>}

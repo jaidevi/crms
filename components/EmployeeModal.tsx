@@ -97,40 +97,49 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ onClose, onSave, existing
                         <CloseIcon className="w-5 h-5 text-gray-600" />
                     </button>
                 </div>
-                <div className="p-6 space-y-4">
-                    <div>
-                        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                            Employee Name <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            id="name"
-                            name="name"
-                            type="text"
-                            value={employee.name}
-                            onChange={handleChange}
-                            className={`${commonInputClasses} ${errors.name ? 'border-red-500' : ''}`}
-                            autoFocus
-                        />
-                        {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
-                    </div>
-                    <div>
-                        <label htmlFor="designation" className="block text-sm font-medium text-gray-700 mb-1">Designation</label>
-                        <input id="designation" name="designation" type="text" value={employee.designation} onChange={handleChange} className={commonInputClasses} />
-                    </div>
-                     <div>
-                        <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                        <input id="phone" name="phone" type="text" value={employee.phone} onChange={handleChange} className={commonInputClasses} />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label htmlFor="dailyWage" className="block text-sm font-medium text-gray-700 mb-1">Daily Wage</label>
-                            <input id="dailyWage" name="dailyWage" type="number" min="0" value={dailyWageInput} onChange={(e) => handleNumericChange(e, 'dailyWage')} className={commonInputClasses} placeholder="e.g., 500" />
+                <div className="p-6 space-y-6">
+                    <fieldset className="border border-gray-200 rounded-lg p-4">
+                        <legend className="text-base font-semibold text-gray-900 px-2">Personal Details</legend>
+                        <div className="space-y-4 pt-4">
+                            <div>
+                                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Employee Name <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    id="name"
+                                    name="name"
+                                    type="text"
+                                    value={employee.name}
+                                    onChange={handleChange}
+                                    className={`${commonInputClasses} ${errors.name ? 'border-red-500' : ''}`}
+                                    autoFocus
+                                />
+                                {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
+                            </div>
+                            <div>
+                                <label htmlFor="designation" className="block text-sm font-medium text-gray-700 mb-1">Designation</label>
+                                <input id="designation" name="designation" type="text" value={employee.designation} onChange={handleChange} className={commonInputClasses} />
+                            </div>
+                             <div>
+                                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                                <input id="phone" name="phone" type="text" value={employee.phone} onChange={handleChange} className={commonInputClasses} />
+                            </div>
                         </div>
-                        <div>
-                            <label htmlFor="ratePerMeter" className="block text-sm font-medium text-gray-700 mb-1">Rate per Meter</label>
-                            <input id="ratePerMeter" name="ratePerMeter" type="number" min="0" step="0.01" value={ratePerMeterInput} onChange={(e) => handleNumericChange(e, 'ratePerMeter')} className={commonInputClasses} placeholder="e.g., 1.25" />
+                    </fieldset>
+                    
+                    <fieldset className="border border-gray-200 rounded-lg p-4">
+                        <legend className="text-base font-semibold text-gray-900 px-2">Compensation</legend>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                            <div>
+                                <label htmlFor="dailyWage" className="block text-sm font-medium text-gray-700 mb-1">Daily Wage</label>
+                                <input id="dailyWage" name="dailyWage" type="number" min="0" value={dailyWageInput} onChange={(e) => handleNumericChange(e, 'dailyWage')} className={commonInputClasses} placeholder="e.g., 500" />
+                            </div>
+                            <div>
+                                <label htmlFor="ratePerMeter" className="block text-sm font-medium text-gray-700 mb-1">Rate per Meter</label>
+                                <input id="ratePerMeter" name="ratePerMeter" type="number" min="0" step="0.01" value={ratePerMeterInput} onChange={(e) => handleNumericChange(e, 'ratePerMeter')} className={commonInputClasses} placeholder="e.g., 1.25" />
+                            </div>
                         </div>
-                    </div>
+                    </fieldset>
                 </div>
                 <div className="flex justify-end items-center p-4 bg-gray-50 border-t rounded-b-lg space-x-3">
                     <button onClick={onClose} type="button" className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-semibold hover:bg-gray-300">

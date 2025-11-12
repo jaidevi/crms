@@ -1,10 +1,10 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { CloseIcon, CalendarIcon, ChevronDownIcon, ImageIcon, SpinnerIcon, CheckIcon } from './Icons';
 import DatePicker from './DatePicker';
 import AddShopModal from './AddShopModal';
 import EmployeeModal from './EmployeeModal';
 import ProcessTypeModal from './PartyDCProcessModal';
-// FIX: Removed unused 'DataEntry' type which is not exported from App.tsx
 import type { DeliveryChallan, Client, ProcessType, DeliveryChallanNumberConfig, Employee } from '../App';
 
 interface DeliveryChallanFormProps {
@@ -121,7 +121,6 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSa
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'dcImage' | 'sampleImage') => {
         if (e.target.files && e.target.files.length > 0) {
-            // FIX: Iterate directly over the FileList to ensure correct type inference for File objects.
             for (const file of e.target.files) {
                 const reader = new FileReader();
                 reader.onloadend = () => {
@@ -235,194 +234,213 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSa
                         </button>
                     </div>
 
-                    <div className="p-6 max-h-[70vh] overflow-y-auto space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Challan Number</label>
-                                <input
-                                    type="text"
-                                    value={challanNumber}
-                                    readOnly
-                                    className={`${commonInputClasses} bg-gray-100`}
-                                />
-                            </div>
-                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                                <div className="relative">
-                                    <button type="button" onClick={() => setDatePickerOpen(p => !p)} className={`block w-full text-sm rounded-md border shadow-sm bg-white px-3 py-2.5 flex items-center justify-between text-left font-normal ${errors.date ? 'border-red-500' : 'border-gray-300'}`}>
-                                        <span className={challan.date ? 'text-gray-900' : 'text-gray-500'}>{formatDateForInput(challan.date) || 'Select a date'}</span>
-                                        <CalendarIcon className="w-5 h-5 text-gray-400" />
-                                    </button>
-                                    {isDatePickerOpen && (
-                                        <DatePicker
-                                            value={challan.date}
-                                            onChange={date => { setChallan(p => ({...p, date})); setDatePickerOpen(false); }}
-                                            onClose={() => setDatePickerOpen(false)}
-                                        />
-                                    )}
+                    <div className="p-6 max-h-[70vh] overflow-y-auto space-y-6">
+                        <fieldset className="border border-gray-200 rounded-lg p-4">
+                            <legend className="text-base font-semibold text-gray-900 px-2">Challan Information</legend>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Challan Number</label>
+                                    <input
+                                        type="text"
+                                        value={challanNumber}
+                                        readOnly
+                                        className={`${commonInputClasses} bg-gray-100`}
+                                    />
+                                </div>
+                                 <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                                    <div className="relative">
+                                        <button type="button" onClick={() => setDatePickerOpen(p => !p)} className={`block w-full text-sm rounded-md border shadow-sm bg-white px-3 py-2.5 flex items-center justify-between text-left font-normal ${errors.date ? 'border-red-500' : 'border-gray-300'}`}>
+                                            <span className={challan.date ? 'text-gray-900' : 'text-gray-500'}>{formatDateForInput(challan.date) || 'Select a date'}</span>
+                                            <CalendarIcon className="w-5 h-5 text-gray-400" />
+                                        </button>
+                                        {isDatePickerOpen && (
+                                            <DatePicker
+                                                value={challan.date}
+                                                onChange={date => { setChallan(p => ({...p, date})); setDatePickerOpen(false); }}
+                                                onClose={() => setDatePickerOpen(false)}
+                                            />
+                                        )}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Party Name <span className="text-red-500">*</span></label>
+                                    <select name="partyName" value={challan.partyName} onChange={handlePartyNameChange} className={`${commonInputClasses} ${errors.partyName ? 'border-red-500' : ''}`}>
+                                        <option value="">Select a party</option>
+                                        {clientNames.map(name => <option key={name} value={name}>{name}</option>)}
+                                        <option value="_add_new_">++ Add New Party ++</option>
+                                    </select>
+                                    {errors.partyName && <p className="mt-1 text-sm text-red-500">{errors.partyName}</p>}
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Status <span className="text-red-500">*</span></label>
+                                    <select
+                                        name="status"
+                                        value={challan.status}
+                                        onChange={handleChange}
+                                        className={`${commonInputClasses} ${errors.status ? 'border-red-500' : ''}`}
+                                    >
+                                        <option value="" disabled>Select a status</option>
+                                        {statusOptions.map(status => (
+                                            <option key={status} value={status}>{status}</option>
+                                        ))}
+                                    </select>
+                                    {errors.status && <p className="mt-1 text-sm text-red-500">{errors.status}</p>}
                                 </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Party Name <span className="text-red-500">*</span></label>
-                                <select name="partyName" value={challan.partyName} onChange={handlePartyNameChange} className={`${commonInputClasses} ${errors.partyName ? 'border-red-500' : ''}`}>
-                                    <option value="">Select a party</option>
-                                    {clientNames.map(name => <option key={name} value={name}>{name}</option>)}
-                                    <option value="_add_new_">++ Add New Party ++</option>
-                                </select>
-                                {errors.partyName && <p className="mt-1 text-sm text-red-500">{errors.partyName}</p>}
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Status <span className="text-red-500">*</span></label>
-                                <select
-                                    name="status"
-                                    value={challan.status}
-                                    onChange={handleChange}
-                                    className={`${commonInputClasses} ${errors.status ? 'border-red-500' : ''}`}
-                                >
-                                    <option value="" disabled>Select a status</option>
-                                    {statusOptions.map(status => (
-                                        <option key={status} value={status}>{status}</option>
-                                    ))}
-                                </select>
-                                {errors.status && <p className="mt-1 text-sm text-red-500">{errors.status}</p>}
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Party DC No</label>
-                                <input name="partyDCNo" type="text" value={challan.partyDCNo} onChange={handleChange} className={commonInputClasses} />
-                            </div>
-                            <div ref={processDropdownRef} className="relative">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Process <span className="text-red-500">*</span></label>
-                                <button type="button" onClick={() => setProcessDropdownOpen(p => !p)} className={`flex items-center justify-between w-full text-left ${commonInputClasses} ${errors.process ? 'border-red-500' : ''}`}>
-                                    <span className="truncate pr-8">{challan.process.length > 0 ? challan.process.join(', ') : 'Select processes'}</span>
-                                    <ChevronDownIcon className="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
-                                </button>
-                                {isProcessDropdownOpen && (
-                                    <div className="absolute top-full mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg z-10 max-h-60 overflow-y-auto">
-                                        {processNames.map(p => (
-                                            <label key={p} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
-                                                <input type="checkbox" checked={challan.process.includes(p)} onChange={() => handleProcessToggle(p)} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                                                <span className="ml-3">{p}</span>
-                                            </label>
-                                        ))}
-                                        <div className="border-t border-gray-200">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setProcessDropdownOpen(false);
-                                                    setShowAddProcessModal(true);
-                                                }}
-                                                className="w-full text-left px-4 py-2 text-sm text-blue-600 font-semibold hover:bg-gray-100"
-                                            >
-                                                ++ Add New Process ++
-                                            </button>
-                                        </div>
+                        </fieldset>
+
+                        <fieldset className="border border-gray-200 rounded-lg p-4">
+                            <legend className="text-base font-semibold text-gray-900 px-2">Fabric &amp; Process Details</legend>
+                            <div className="space-y-4 pt-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Party DC No</label>
+                                        <input name="partyDCNo" type="text" value={challan.partyDCNo} onChange={handleChange} className={commonInputClasses} />
                                     </div>
-                                )}
-                                {errors.process && <p className="mt-1 text-sm text-red-500">{errors.process}</p>}
+                                    <div ref={processDropdownRef} className="relative">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Process <span className="text-red-500">*</span></label>
+                                        <button type="button" onClick={() => setProcessDropdownOpen(p => !p)} className={`flex items-center justify-between w-full text-left ${commonInputClasses} ${errors.process ? 'border-red-500' : ''}`}>
+                                            <span className="truncate pr-8">{challan.process.length > 0 ? challan.process.join(', ') : 'Select processes'}</span>
+                                            <ChevronDownIcon className="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
+                                        </button>
+                                        {isProcessDropdownOpen && (
+                                            <div className="absolute top-full mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg z-10 max-h-60 overflow-y-auto">
+                                                {processNames.map(p => (
+                                                    <label key={p} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
+                                                        <input type="checkbox" checked={challan.process.includes(p)} onChange={() => handleProcessToggle(p)} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                                        <span className="ml-3">{p}</span>
+                                                    </label>
+                                                ))}
+                                                <div className="border-t border-gray-200">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setProcessDropdownOpen(false);
+                                                            setShowAddProcessModal(true);
+                                                        }}
+                                                        className="w-full text-left px-4 py-2 text-sm text-blue-600 font-semibold hover:bg-gray-100"
+                                                    >
+                                                        ++ Add New Process ++
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {errors.process && <p className="mt-1 text-sm text-red-500">{errors.process}</p>}
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Design No</label>
+                                        <input name="designNo" type="text" value={challan.designNo} onChange={handleChange} className={commonInputClasses} />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">No of pcs</label>
+                                        <input name="pcs" type="number" value={challan.pcs || ''} onChange={handleChange} className={`${commonInputClasses} ${errors.pcs ? 'border-red-500' : ''}`} />
+                                        {errors.pcs && <p className="mt-1 text-sm text-red-500">{errors.pcs}</p>}
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Mtr</label>
+                                        <input name="mtr" type="number" value={challan.mtr || ''} onChange={handleChange} className={`${commonInputClasses} ${errors.mtr ? 'border-red-500' : ''}`} />
+                                        {errors.mtr && <p className="mt-1 text-sm text-red-500">{errors.mtr}</p>}
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Width</label>
+                                        <input name="width" type="number" value={challan.width || ''} onChange={handleChange} className={commonInputClasses} />
+                                    </div>
+                                     <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Shrinkage</label>
+                                        <input name="shrinkage" type="text" value={challan.shrinkage || ''} onChange={handleChange} className={commonInputClasses} />
+                                    </div>
+                                     <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Pin</label>
+                                        <input name="pin" type="text" value={challan.pin || ''} onChange={handleChange} className={commonInputClasses} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Pick</label>
+                                        <input name="pick" type="text" value={challan.pick || ''} onChange={handleChange} className={commonInputClasses} />
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Design No</label>
-                                <input name="designNo" type="text" value={challan.designNo} onChange={handleChange} className={commonInputClasses} />
+                        </fieldset>
+
+                        <fieldset className="border border-gray-200 rounded-lg p-4">
+                            <legend className="text-base font-semibold text-gray-900 px-2">Production Details</legend>
+                            <div className="space-y-4 pt-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Worker Name</label>
+                                    <select name="workerName" value={challan.workerName} onChange={handleWorkerNameChange} className={commonInputClasses}>
+                                        <option value="">Select a worker</option>
+                                        {employees.map(e => <option key={e.id} value={e.name}>{e.name}</option>)}
+                                        <option value="_add_new_">++ Add New Worker ++</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Extra work</label>
+                                    <textarea name="extraWork" rows={2} value={challan.extraWork} onChange={handleChange} className={commonInputClasses} />
+                                </div>
                             </div>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">No of pcs</label>
-                                <input name="pcs" type="number" value={challan.pcs || ''} onChange={handleChange} className={`${commonInputClasses} ${errors.pcs ? 'border-red-500' : ''}`} />
-                                {errors.pcs && <p className="mt-1 text-sm text-red-500">{errors.pcs}</p>}
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Mtr</label>
-                                <input name="mtr" type="number" value={challan.mtr || ''} onChange={handleChange} className={`${commonInputClasses} ${errors.mtr ? 'border-red-500' : ''}`} />
-                                {errors.mtr && <p className="mt-1 text-sm text-red-500">{errors.mtr}</p>}
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Width</label>
-                                <input name="width" type="number" value={challan.width || ''} onChange={handleChange} className={commonInputClasses} />
-                            </div>
-                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Shrinkage</label>
-                                <input name="shrinkage" type="text" value={challan.shrinkage || ''} onChange={handleChange} className={commonInputClasses} />
-                            </div>
-                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Pin</label>
-                                <input name="pin" type="text" value={challan.pin || ''} onChange={handleChange} className={commonInputClasses} />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Pick</label>
-                                <input name="pick" type="text" value={challan.pick || ''} onChange={handleChange} className={commonInputClasses} />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Worker Name</label>
-                            <select name="workerName" value={challan.workerName} onChange={handleWorkerNameChange} className={commonInputClasses}>
-                                <option value="">Select a worker</option>
-                                {employees.map(e => <option key={e.id} value={e.name}>{e.name}</option>)}
-                                <option value="_add_new_">++ Add New Worker ++</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Extra work</label>
-                            <textarea name="extraWork" rows={2} value={challan.extraWork} onChange={handleChange} className={commonInputClasses} />
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-                             <div>
-                                 <label className="block text-sm font-medium text-gray-700 mb-1">DC Images</label>
-                                 <input type="file" ref={dcImageInputRef} onChange={e => handleImageChange(e, 'dcImage')} className="hidden" accept="image/*" multiple />
-                                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
-                                     {(challan.dcImage || []).map((imgSrc, index) => (
-                                         <div key={index} className="relative group aspect-square border rounded-md overflow-hidden">
-                                             <img src={imgSrc} alt={`DC Image ${index + 1}`} className="w-full h-full object-cover" />
-                                             <button
-                                                 type="button"
-                                                 onClick={() => handleRemoveImage('dcImage', index)}
-                                                 className="absolute top-1 right-1 bg-black bg-opacity-50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100"
-                                                 aria-label="Remove image"
-                                             >
-                                                 <CloseIcon className="w-3 h-3" />
-                                             </button>
-                                         </div>
-                                     ))}
-                                     <button
-                                         type="button"
-                                         onClick={() => dcImageInputRef.current?.click()}
-                                         className="flex items-center justify-center w-full aspect-square border-2 border-dashed border-gray-300 rounded-md hover:border-blue-500 transition-colors"
-                                         aria-label="Add DC images"
-                                     >
-                                         <ImageIcon className="w-8 h-8 text-gray-400" />
-                                     </button>
+                        </fieldset>
+                        
+                        <fieldset className="border border-gray-200 rounded-lg p-4">
+                            <legend className="text-base font-semibold text-gray-900 px-2">Attachments</legend>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                                 <div>
+                                     <label className="block text-sm font-medium text-gray-700 mb-1">DC Images</label>
+                                     <input type="file" ref={dcImageInputRef} onChange={e => handleImageChange(e, 'dcImage')} className="hidden" accept="image/*" multiple />
+                                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
+                                         {(challan.dcImage || []).map((imgSrc, index) => (
+                                             <div key={index} className="relative group aspect-square border rounded-md overflow-hidden">
+                                                 <img src={imgSrc} alt={`DC Image ${index + 1}`} className="w-full h-full object-cover" />
+                                                 <button
+                                                     type="button"
+                                                     onClick={() => handleRemoveImage('dcImage', index)}
+                                                     className="absolute top-1 right-1 bg-black bg-opacity-50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100"
+                                                     aria-label="Remove image"
+                                                 >
+                                                     <CloseIcon className="w-3 h-3" />
+                                                 </button>
+                                             </div>
+                                         ))}
+                                         <button
+                                             type="button"
+                                             onClick={() => dcImageInputRef.current?.click()}
+                                             className="flex items-center justify-center w-full aspect-square border-2 border-dashed border-gray-300 rounded-md hover:border-blue-500 transition-colors"
+                                             aria-label="Add DC images"
+                                         >
+                                             <ImageIcon className="w-8 h-8 text-gray-400" />
+                                         </button>
+                                     </div>
                                  </div>
-                             </div>
-                             <div>
-                                 <label className="block text-sm font-medium text-gray-700 mb-1">Sample Images</label>
-                                 <input type="file" ref={sampleImageInputRef} onChange={e => handleImageChange(e, 'sampleImage')} className="hidden" accept="image/*" multiple />
-                                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
-                                     {(challan.sampleImage || []).map((imgSrc, index) => (
-                                         <div key={index} className="relative group aspect-square border rounded-md overflow-hidden">
-                                             <img src={imgSrc} alt={`Sample Image ${index + 1}`} className="w-full h-full object-cover" />
-                                             <button
-                                                 type="button"
-                                                 onClick={() => handleRemoveImage('sampleImage', index)}
-                                                 className="absolute top-1 right-1 bg-black bg-opacity-50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100"
-                                                 aria-label="Remove image"
-                                             >
-                                                 <CloseIcon className="w-3 h-3" />
-                                             </button>
-                                         </div>
-                                     ))}
-                                     <button
-                                         type="button"
-                                         onClick={() => sampleImageInputRef.current?.click()}
-                                         className="flex items-center justify-center w-full aspect-square border-2 border-dashed border-gray-300 rounded-md hover:border-blue-500 transition-colors"
-                                         aria-label="Add sample images"
-                                     >
-                                         <ImageIcon className="w-8 h-8 text-gray-400" />
-                                     </button>
+                                 <div>
+                                     <label className="block text-sm font-medium text-gray-700 mb-1">Sample Images</label>
+                                     <input type="file" ref={sampleImageInputRef} onChange={e => handleImageChange(e, 'sampleImage')} className="hidden" accept="image/*" multiple />
+                                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
+                                         {(challan.sampleImage || []).map((imgSrc, index) => (
+                                             <div key={index} className="relative group aspect-square border rounded-md overflow-hidden">
+                                                 <img src={imgSrc} alt={`Sample Image ${index + 1}`} className="w-full h-full object-cover" />
+                                                 <button
+                                                     type="button"
+                                                     onClick={() => handleRemoveImage('sampleImage', index)}
+                                                     className="absolute top-1 right-1 bg-black bg-opacity-50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100"
+                                                     aria-label="Remove image"
+                                                 >
+                                                     <CloseIcon className="w-3 h-3" />
+                                                 </button>
+                                             </div>
+                                         ))}
+                                         <button
+                                             type="button"
+                                             onClick={() => sampleImageInputRef.current?.click()}
+                                             className="flex items-center justify-center w-full aspect-square border-2 border-dashed border-gray-300 rounded-md hover:border-blue-500 transition-colors"
+                                             aria-label="Add sample images"
+                                         >
+                                             <ImageIcon className="w-8 h-8 text-gray-400" />
+                                         </button>
+                                     </div>
                                  </div>
-                             </div>
-                        </div>
+                            </div>
+                        </fieldset>
                     </div>
                     
                     <div className="flex items-center justify-end p-5 bg-gray-50 border-t space-x-3">

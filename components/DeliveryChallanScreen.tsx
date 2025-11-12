@@ -1,7 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import DeliveryChallanForm from './DeliveryChallanForm';
 import { PlusIcon, SearchIcon, EditIcon, TrashIcon, CameraIcon } from './Icons';
-// FIX: Removed unused 'DataEntry' type which is not exported from App.tsx
 import type { DeliveryChallan, Client, ProcessType, DeliveryChallanNumberConfig, Invoice, CompanyDetails, Employee } from '../App';
 import ConfirmationModal from './ConfirmationModal';
 import InvoiceView from './InvoiceView';
@@ -28,6 +27,44 @@ const formatDateForDisplay = (isoDate: string) => {
     return `${day}-${month}-${year}`;
 };
 
+const PaginationControls: React.FC<{
+    currentPage: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+    startItem: number;
+    endItem: number;
+    totalItems: number;
+}> = ({ currentPage, totalPages, onPageChange, startItem, endItem, totalItems }) => {
+    if (!totalItems || totalPages <= 1) {
+        return null;
+    }
+
+    return (
+        <div className="flex items-center justify-between p-4 border-t">
+            <span className="text-sm text-gray-700">
+                Showing <span className="font-semibold">{startItem}</span> to <span className="font-semibold">{endItem}</span> of <span className="font-semibold">{totalItems}</span> results
+            </span>
+            <div className="flex items-center space-x-2">
+                <button
+                    onClick={() => onPageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Previous
+                </button>
+                <span className="text-sm text-gray-700">Page {currentPage} of {totalPages}</span>
+                <button
+                    onClick={() => onPageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Next
+                </button>
+            </div>
+        </div>
+    );
+};
+
 const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({ 
     deliveryChallans,
     onAddChallan, 
@@ -50,6 +87,13 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
   const [challanToEdit, setChallanToEdit] = useState<DeliveryChallan | null>(null);
   const [challanToDelete, setChallanToDelete] = useState<DeliveryChallan | null>(null);
   const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null);
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchTerm]);
 
   const clientForInvoice = useMemo(() => {
     if (!viewingInvoice) return null;
@@ -110,6 +154,34 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
         invoice.clientName.toLowerCase().includes(lowercasedTerm)
     );
   }, [invoices, searchTerm]);
+
+  const { paginatedChallans, totalChallanPages, challanStartItem, challanEndItem } = useMemo(() => {
+    const totalItems = filteredChallans.length;
+    if (totalItems === 0) return { paginatedChallans: [], totalChallanPages: 1, challanStartItem: 0, challanEndItem: 0 };
+    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const paginatedItems = filteredChallans.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    return { 
+        paginatedChallans: paginatedItems, 
+        totalChallanPages: totalPages,
+        challanStartItem: startIndex + 1,
+        challanEndItem: startIndex + paginatedItems.length
+    };
+  }, [filteredChallans, currentPage]);
+
+  const { paginatedInvoices, totalInvoicePages, invoiceStartItem, invoiceEndItem } = useMemo(() => {
+    const totalItems = filteredInvoices.length;
+    if (totalItems === 0) return { paginatedInvoices: [], totalInvoicePages: 1, invoiceStartItem: 0, invoiceEndItem: 0 };
+    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const paginatedItems = filteredInvoices.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    return {
+        paginatedInvoices: paginatedItems,
+        totalInvoicePages: totalPages,
+        invoiceStartItem: startIndex + 1,
+        invoiceEndItem: startIndex + paginatedItems.length
+    };
+  }, [filteredInvoices, currentPage]);
 
   const handleCloseChallanForm = () => {
     setIsChallanFormOpen(false);
@@ -227,7 +299,7 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredInvoices.map(invoice => (
+                        {paginatedInvoices.map(invoice => (
                             <tr key={invoice.id} className="bg-white border-b hover:bg-gray-50">
                                 <td className="px-6 py-4">
                                     <button onClick={() => setViewingInvoice(invoice)} className="font-medium text-blue-600 hover:underline">
@@ -246,6 +318,14 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
                         No invoices found.
                     </div>
                 )}
+                <PaginationControls
+                    currentPage={currentPage}
+                    totalPages={totalInvoicePages}
+                    onPageChange={setCurrentPage}
+                    startItem={invoiceStartItem}
+                    endItem={invoiceEndItem}
+                    totalItems={filteredInvoices.length}
+                />
             </div>
         ) : (
             <div className="overflow-x-auto border rounded-lg">
@@ -271,7 +351,7 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredChallans.map((challan) => (
+                  {paginatedChallans.map((challan) => (
                     <tr key={challan.id} className="bg-white border-b hover:bg-gray-50 whitespace-nowrap">
                       <td className="px-4 py-3 font-medium text-gray-900">{challan.challanNumber}</td>
                       <td className="px-4 py-3">{formatDateForDisplay(challan.date)}</td>
@@ -341,6 +421,14 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
                 </tbody>
               </table>
               {filteredChallans.length === 0 && <div className="text-center p-8 text-gray-500">No challans found for this tab.</div>}
+              <PaginationControls
+                currentPage={currentPage}
+                totalPages={totalChallanPages}
+                onPageChange={setCurrentPage}
+                startItem={challanStartItem}
+                endItem={challanEndItem}
+                totalItems={filteredChallans.length}
+              />
             </div>
         )}
       </div>

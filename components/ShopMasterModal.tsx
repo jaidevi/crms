@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { CloseIcon, PlusIcon, TrashIcon } from './Icons';
 import type { Client, ProcessType } from '../App';
@@ -80,7 +81,8 @@ const ShopMasterModal: React.FC<ShopMasterModalProps> = ({ onClose, onSave, exis
             setAvailableCities(stateData ? stateData.cities.sort() : []);
             setClient(prev => ({ ...prev, state: value, city: '' }));
         } else {
-            setClient(prev => ({ ...prev, [name]: value }));
+            const finalValue = name === 'name' ? value.toUpperCase() : value;
+            setClient(prev => ({ ...prev, [name]: finalValue }));
         }
 
         if (errors[name]) {
@@ -164,11 +166,14 @@ const ShopMasterModal: React.FC<ShopMasterModalProps> = ({ onClose, onSave, exis
         if (!trimmedName) {
             newErrors.name = 'Client name cannot be empty.';
         } else {
+            const normalize = (name: string) => name.toLowerCase().replace(/[\s&'.,-/]/g, '').replace(/s$/, '');
+            const normalizedTrimmedName = normalize(trimmedName);
             const otherClientNames = clientToEdit
                 ? existingClientNames.filter(name => name.toLowerCase() !== clientToEdit.name.toLowerCase())
                 : existingClientNames;
-            if (otherClientNames.map(name => name.toLowerCase()).includes(trimmedName.toLowerCase())) {
-                newErrors.name = 'This client name already exists.';
+
+            if (otherClientNames.some(name => normalize(name) === normalizedTrimmedName)) {
+                newErrors.name = 'A client with this name or a very similar name already exists.';
             }
         }
 
@@ -221,122 +226,139 @@ const ShopMasterModal: React.FC<ShopMasterModalProps> = ({ onClose, onSave, exis
                         <CloseIcon className="w-5 h-5 text-gray-600" />
                     </button>
                 </div>
-                <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-                    <div>
-                        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                            Client Name <span className="text-red-500">*</span>
-                        </label>
-                        <input id="name" name="name" type="text" value={client.name} onChange={handleChange} className={`${inputClasses} ${errors.name ? 'border-red-500' : ''}`} autoFocus />
-                        {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
-                    </div>
-                    <div>
-                        <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                        <input id="phone" name="phone" type="tel" value={client.phone} onChange={handleChange} className={`${inputClasses} ${errors.phone ? 'border-red-500' : ''}`} />
-                        {errors.phone && <p className="mt-1 text-sm text-red-500">{errors.phone}</p>}
-                    </div>
-                    <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input id="email" name="email" type="email" value={client.email} onChange={handleChange} className={`${inputClasses} ${errors.email ? 'border-red-500' : ''}`} />
-                        {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
-                    </div>
-                    <div>
-                        <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                        <textarea id="address" name="address" rows={2} value={client.address} onChange={handleChange} className={inputClasses}></textarea>
-                    </div>
-                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                            <select id="state" name="state" value={client.state} onChange={handleChange} className={inputClasses}>
-                                <option value="">Select a state</option>
-                                {indianStates.map(s => (
-                                    <option key={s.state} value={s.state}>{s.state}</option>
-                                ))}
-                            </select>
+                <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+                    <fieldset className="border border-gray-200 rounded-lg p-4">
+                        <legend className="text-base font-semibold text-gray-900 px-2">Basic Information</legend>
+                        <div className="space-y-4 pt-4">
+                            <div>
+                                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Client Name <span className="text-red-500">*</span>
+                                </label>
+                                <input id="name" name="name" type="text" value={client.name} onChange={handleChange} className={`${inputClasses} ${errors.name ? 'border-red-500' : ''}`} autoFocus />
+                                {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
+                            </div>
+                            <div>
+                                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                                <input id="phone" name="phone" type="tel" value={client.phone} onChange={handleChange} className={`${inputClasses} ${errors.phone ? 'border-red-500' : ''}`} />
+                                {errors.phone && <p className="mt-1 text-sm text-red-500">{errors.phone}</p>}
+                            </div>
+                            <div>
+                                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                <input id="email" name="email" type="email" value={client.email} onChange={handleChange} className={`${inputClasses} ${errors.email ? 'border-red-500' : ''}`} />
+                                {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
+                            </div>
                         </div>
-                        <div>
-                            <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">District</label>
-                            <select id="city" name="city" value={client.city} onChange={handleChange} className={inputClasses} disabled={!client.state || availableCities.length === 0}>
-                                <option value="">{client.state ? 'Select a district' : 'Select a state first'}</option>
-                                {availableCities.map(city => (
-                                    <option key={city} value={city}>{city}</option>
-                                ))}
-                            </select>
-                        </div>
-                         <div>
-                            <label htmlFor="pincode" className="block text-sm font-medium text-gray-700 mb-1">Pincode</label>
-                            <input id="pincode" name="pincode" type="text" value={client.pincode} onChange={handleChange} className={inputClasses} />
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label htmlFor="gstNo" className="block text-sm font-medium text-gray-700 mb-1">GST NO</label>
-                            <input id="gstNo" name="gstNo" type="text" value={client.gstNo} onChange={handleChange} className={`${inputClasses} ${errors.gstNo ? 'border-red-500' : ''}`} />
-                             {errors.gstNo && <p className="mt-1 text-sm text-red-500">{errors.gstNo}</p>}
-                        </div>
-                        <div>
-                            <label htmlFor="panNo" className="block text-sm font-medium text-gray-700 mb-1">PAN No</label>
-                            <input id="panNo" name="panNo" type="text" value={client.panNo || ''} onChange={handleChange} className={`${inputClasses} ${errors.panNo ? 'border-red-500' : ''}`} />
-                            {errors.panNo && <p className="mt-1 text-sm text-red-500">{errors.panNo}</p>}
-                        </div>
-                        <div>
-                            <label htmlFor="paymentTerms" className="block text-sm font-medium text-gray-700 mb-1">Payment Terms</label>
-                            <select id="paymentTerms" name="paymentTerms" value={client.paymentTerms || ''} onChange={handleChange} className={inputClasses}>
-                                {paymentTermOptions.map(term => (
-                                    <option key={term} value={term}>{term}</option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="space-y-2 pt-4 border-t mt-4">
-                        <h3 className="text-base font-semibold text-gray-800">Associated Processes</h3>
-                        <div className="grid grid-cols-12 gap-4 px-3 py-2 bg-gray-50 rounded-md text-xs font-medium text-gray-500 tracking-wider uppercase">
-                            <div className="col-span-5">Type of Process</div>
-                            <div className="col-span-2 text-right">Quantity</div>
-                            <div className="col-span-2 text-right">Rate</div>
-                            <div className="col-span-2 text-right">Amount</div>
-                            <div className="col-span-1"></div>
-                        </div>
-
-                        <div className="space-y-3 pt-2">
-                            {processes.map((item) => (
-                                <div key={item.id} className="grid grid-cols-12 gap-4 items-center">
-                                    <div className="col-span-5">
-                                        <select value={item.processName} onChange={e => handleProcessSelection(item.id, e.target.value)} className={inputClasses}>
-                                            <option value="">Select a process</option>
-                                            {processTypes.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-                                            <option value="_add_new_" className="text-blue-600 font-semibold">++ Add New Process ++</option>
-                                        </select>
-                                    </div>
-                                    <div className="col-span-2">
-                                        <input type="number" value={item.quantity} min="0" readOnly className={`${inputClasses} text-right bg-gray-100`} aria-label="Quantity" />
-                                    </div>
-                                    <div className="col-span-2">
-                                        <input type="number" value={item.rate} min="0" step="0.01" onChange={e => updateProcessLineItem(item.id, { rate: Number(e.target.value) })} className={`${inputClasses} text-right`} aria-label="Rate" />
-                                    </div>
-                                    <div className="col-span-2 text-right text-sm text-gray-800 font-medium">
-                                        ₹{item.amount.toFixed(2)}
-                                    </div>
-                                    <div className="col-span-1 flex justify-end">
-                                        <button onClick={() => removeProcessLineItem(item.id)} className="p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50" aria-label="Remove item">
-                                            <TrashIcon className="w-5 h-5" />
-                                        </button>
-                                    </div>
+                    </fieldset>
+                    
+                    <fieldset className="border border-gray-200 rounded-lg p-4">
+                        <legend className="text-base font-semibold text-gray-900 px-2">Address</legend>
+                        <div className="space-y-4 pt-4">
+                            <div>
+                                <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                                <textarea id="address" name="address" rows={2} value={client.address} onChange={handleChange} className={inputClasses}></textarea>
+                            </div>
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                                    <select id="state" name="state" value={client.state} onChange={handleChange} className={inputClasses}>
+                                        <option value="">Select a state</option>
+                                        {indianStates.map(s => (
+                                            <option key={s.state} value={s.state}>{s.state}</option>
+                                        ))}
+                                    </select>
                                 </div>
-                            ))}
+                                <div>
+                                    <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">District</label>
+                                    <select id="city" name="city" value={client.city} onChange={handleChange} className={inputClasses} disabled={!client.state || availableCities.length === 0}>
+                                        <option value="">{client.state ? 'Select a district' : 'Select a state first'}</option>
+                                        {availableCities.map(city => (
+                                            <option key={city} value={city}>{city}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                 <div>
+                                    <label htmlFor="pincode" className="block text-sm font-medium text-gray-700 mb-1">Pincode</label>
+                                    <input id="pincode" name="pincode" type="text" value={client.pincode} onChange={handleChange} className={inputClasses} />
+                                </div>
+                            </div>
                         </div>
+                    </fieldset>
 
-                        <div>
-                            <button onClick={addProcessLineItem} className="flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 mt-2">
-                                <PlusIcon className="w-4 h-4 mr-1" />
-                                Add Process
-                            </button>
+                    <fieldset className="border border-gray-200 rounded-lg p-4">
+                        <legend className="text-base font-semibold text-gray-900 px-2">Financial &amp; Tax Details</legend>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                            <div>
+                                <label htmlFor="gstNo" className="block text-sm font-medium text-gray-700 mb-1">GST NO</label>
+                                <input id="gstNo" name="gstNo" type="text" value={client.gstNo} onChange={handleChange} className={`${inputClasses} ${errors.gstNo ? 'border-red-500' : ''}`} />
+                                 {errors.gstNo && <p className="mt-1 text-sm text-red-500">{errors.gstNo}</p>}
+                            </div>
+                            <div>
+                                <label htmlFor="panNo" className="block text-sm font-medium text-gray-700 mb-1">PAN No</label>
+                                <input id="panNo" name="panNo" type="text" value={client.panNo || ''} onChange={handleChange} className={`${inputClasses} ${errors.panNo ? 'border-red-500' : ''}`} />
+                                {errors.panNo && <p className="mt-1 text-sm text-red-500">{errors.panNo}</p>}
+                            </div>
+                            <div>
+                                <label htmlFor="paymentTerms" className="block text-sm font-medium text-gray-700 mb-1">Payment Terms</label>
+                                <select id="paymentTerms" name="paymentTerms" value={client.paymentTerms || ''} onChange={handleChange} className={inputClasses}>
+                                    {paymentTermOptions.map(term => (
+                                        <option key={term} value={term}>{term}</option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
-                         <div className="flex items-center justify-end pt-4 border-t mt-4">
-                            <span className="text-sm text-gray-600">Total Amount: </span>
-                            <span className="text-lg font-bold text-gray-900 ml-2">₹{totalAmount.toFixed(2)}</span>
+                    </fieldset>
+
+                    <fieldset className="border border-gray-200 rounded-lg p-4">
+                        <legend className="text-base font-semibold text-gray-900 px-2">Associated Processes</legend>
+                        <div className="space-y-2 pt-4">
+                            <div className="grid grid-cols-12 gap-4 px-3 py-2 bg-gray-50 rounded-md text-xs font-medium text-gray-500 tracking-wider uppercase">
+                                <div className="col-span-5">Type of Process</div>
+                                <div className="col-span-2 text-right">Quantity</div>
+                                <div className="col-span-2 text-right">Rate</div>
+                                <div className="col-span-2 text-right">Amount</div>
+                                <div className="col-span-1"></div>
+                            </div>
+
+                            <div className="space-y-3 pt-2">
+                                {processes.map((item) => (
+                                    <div key={item.id} className="grid grid-cols-12 gap-4 items-center">
+                                        <div className="col-span-5">
+                                            <select value={item.processName} onChange={e => handleProcessSelection(item.id, e.target.value)} className={inputClasses}>
+                                                <option value="">Select a process</option>
+                                                {processTypes.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                                                <option value="_add_new_" className="text-blue-600 font-semibold">++ Add New Process ++</option>
+                                            </select>
+                                        </div>
+                                        <div className="col-span-2">
+                                            <input type="number" value={item.quantity} min="0" readOnly className={`${inputClasses} text-right bg-gray-100`} aria-label="Quantity" />
+                                        </div>
+                                        <div className="col-span-2">
+                                            <input type="number" value={item.rate} min="0" step="0.01" onChange={e => updateProcessLineItem(item.id, { rate: Number(e.target.value) })} className={`${inputClasses} text-right`} aria-label="Rate" />
+                                        </div>
+                                        <div className="col-span-2 text-right text-sm text-gray-800 font-medium">
+                                            ₹{item.amount.toFixed(2)}
+                                        </div>
+                                        <div className="col-span-1 flex justify-end">
+                                            <button onClick={() => removeProcessLineItem(item.id)} className="p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50" aria-label="Remove item">
+                                                <TrashIcon className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div>
+                                <button onClick={addProcessLineItem} className="flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 mt-2">
+                                    <PlusIcon className="w-4 h-4 mr-1" />
+                                    Add Process
+                                </button>
+                            </div>
+                             <div className="flex items-center justify-end pt-4 border-t mt-4">
+                                <span className="text-sm text-gray-600">Total Amount: </span>
+                                <span className="text-lg font-bold text-gray-900 ml-2">₹{totalAmount.toFixed(2)}</span>
+                            </div>
                         </div>
-                    </div>
+                    </fieldset>
                 </div>
                 <div className="flex justify-end items-center p-4 bg-gray-50 border-t rounded-b-lg space-x-3">
                     <button onClick={onClose} type="button" className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-semibold hover:bg-gray-300">Cancel</button>

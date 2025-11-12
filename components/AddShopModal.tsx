@@ -17,10 +17,14 @@ const AddShopModal: React.FC<AddShopModalProps> = ({ onClose, onSave, existingCl
         const trimmedName = clientName.trim();
         if (!trimmedName) {
             setError('Client name cannot be empty.');
-        } else if (existingClientNames.map(name => name.toLowerCase()).includes(trimmedName.toLowerCase())) {
-            setError('This client name already exists.');
         } else {
-            onSave(trimmedName);
+            const normalize = (name: string) => name.toLowerCase().replace(/[\s&'.,-/]/g, '').replace(/s$/, '');
+            const normalizedTrimmedName = normalize(trimmedName);
+            if (existingClientNames.some(name => normalize(name) === normalizedTrimmedName)) {
+                setError('A client with this name or a very similar name already exists.');
+            } else {
+                onSave(trimmedName);
+            }
         }
     };
 

@@ -55,7 +55,8 @@ const NewClientScreen: React.FC<NewClientScreenProps> = ({ clients, onAddClient,
             setAvailableCities(stateData ? stateData.cities.sort() : []);
             setClient(prev => ({ ...prev, state: value, city: '' }));
         } else {
-            setClient(prev => ({ ...prev, [name]: value }));
+            const finalValue = name === 'name' ? value.toUpperCase() : value;
+            setClient(prev => ({ ...prev, [name]: finalValue }));
         }
 
         if (errors[name]) {
@@ -138,8 +139,12 @@ const NewClientScreen: React.FC<NewClientScreenProps> = ({ clients, onAddClient,
 
         if (!trimmedName) {
             newErrors.name = 'Client name cannot be empty.';
-        } else if (existingClientNames.map(name => name.toLowerCase()).includes(trimmedName.toLowerCase())) {
-            newErrors.name = 'This client name already exists.';
+        } else {
+            const normalize = (name: string) => name.toLowerCase().replace(/[\s&'.,-/]/g, '').replace(/s$/, '');
+            const normalizedTrimmedName = normalize(trimmedName);
+            if (existingClientNames.some(name => normalize(name) === normalizedTrimmedName)) {
+                newErrors.name = 'A client with this name or a very similar name already exists.';
+            }
         }
 
         if (client.phone && !/^(?:\+91)?[6789]\d{9}$/.test(client.phone.trim())) {

@@ -11,7 +11,6 @@ interface PurchaseShopModalProps {
     shopToEdit?: PurchaseShop | null;
 }
 
-// FIX: Removed 'contactPerson' property which does not exist in the 'PurchaseShop' type.
 const BLANK_SHOP: PurchaseShop = {
     id: '',
     name: '',
@@ -111,6 +110,7 @@ const PurchaseShopModal: React.FC<PurchaseShopModalProps> = ({ onClose, onSave, 
     const inputClasses = "block w-full px-3 py-2.5 text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500";
     const modalTitle = shopToEdit ? 'Edit Shop' : 'Add New Shop';
     const saveButtonText = shopToEdit ? 'Update Shop' : 'Save Shop';
+    const paymentTermOptions = ['Due on receipt', 'Net 15', 'Net 30', 'Net 45', 'Net 60'];
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-60 z-[60] flex justify-center items-start p-4 pt-10" role="dialog" aria-modal="true" aria-labelledby="shop-master-modal-title">
@@ -121,66 +121,89 @@ const PurchaseShopModal: React.FC<PurchaseShopModalProps> = ({ onClose, onSave, 
                         <CloseIcon className="w-5 h-5 text-gray-600" />
                     </button>
                 </div>
-                <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-                    <div>
-                        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                            Shop Name <span className="text-red-500">*</span>
-                        </label>
-                        <input id="name" name="name" type="text" value={shop.name} onChange={handleChange} className={`${inputClasses} ${errors.name ? 'border-red-500' : ''}`} autoFocus />
-                        {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                            <input id="phone" name="phone" type="tel" value={shop.phone} onChange={handleChange} className={`${inputClasses} ${errors.phone ? 'border-red-500' : ''}`} />
-                             {errors.phone && <p className="mt-1 text-sm text-red-500">{errors.phone}</p>}
+                <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+                    <fieldset className="border border-gray-200 rounded-lg p-4">
+                        <legend className="text-base font-semibold text-gray-900 px-2">Basic Information</legend>
+                        <div className="space-y-4 pt-4">
+                            <div>
+                                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Shop Name <span className="text-red-500">*</span>
+                                </label>
+                                <input id="name" name="name" type="text" value={shop.name} onChange={handleChange} className={`${inputClasses} ${errors.name ? 'border-red-500' : ''}`} autoFocus />
+                                {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                                    <input id="phone" name="phone" type="tel" value={shop.phone} onChange={handleChange} className={`${inputClasses} ${errors.phone ? 'border-red-500' : ''}`} />
+                                     {errors.phone && <p className="mt-1 text-sm text-red-500">{errors.phone}</p>}
+                                </div>
+                                <div>
+                                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                    <input id="email" name="email" type="email" value={shop.email} onChange={handleChange} className={`${inputClasses} ${errors.email ? 'border-red-500' : ''}`} />
+                                    {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                            <input id="email" name="email" type="email" value={shop.email} onChange={handleChange} className={`${inputClasses} ${errors.email ? 'border-red-500' : ''}`} />
-                            {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
+                    </fieldset>
+                    
+                    <fieldset className="border border-gray-200 rounded-lg p-4">
+                        <legend className="text-base font-semibold text-gray-900 px-2">Address</legend>
+                        <div className="space-y-4 pt-4">
+                            <div>
+                                <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                                <textarea id="address" name="address" rows={2} value={shop.address} onChange={handleChange} className={inputClasses}></textarea>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                                    <select id="state" name="state" value={shop.state} onChange={handleChange} className={inputClasses}>
+                                        <option value="">Select a state</option>
+                                        {indianStates.map(s => (
+                                            <option key={s.state} value={s.state}>{s.state}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">District</label>
+                                    <select id="city" name="city" value={shop.city} onChange={handleChange} className={inputClasses} disabled={!shop.state || availableCities.length === 0}>
+                                        <option value="">{shop.state ? 'Select a district' : 'Select a state first'}</option>
+                                        {availableCities.map(city => (
+                                            <option key={city} value={city}>{city}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                 <div>
+                                    <label htmlFor="pincode" className="block text-sm font-medium text-gray-700 mb-1">Pincode</label>
+                                    <input id="pincode" name="pincode" type="text" value={shop.pincode} onChange={handleChange} className={inputClasses} />
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div>
-                        <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                        <textarea id="address" name="address" rows={2} value={shop.address} onChange={handleChange} className={inputClasses}></textarea>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                            <select id="state" name="state" value={shop.state} onChange={handleChange} className={inputClasses}>
-                                <option value="">Select a state</option>
-                                {indianStates.map(s => (
-                                    <option key={s.state} value={s.state}>{s.state}</option>
-                                ))}
-                            </select>
+                    </fieldset>
+
+                    <fieldset className="border border-gray-200 rounded-lg p-4">
+                        <legend className="text-base font-semibold text-gray-900 px-2">Financial &amp; Tax Details</legend>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                            <div>
+                                <label htmlFor="gstNo" className="block text-sm font-medium text-gray-700 mb-1">GST NO</label>
+                                <input id="gstNo" name="gstNo" type="text" value={shop.gstNo} onChange={handleChange} className={`${inputClasses} ${errors.gstNo ? 'border-red-500' : ''}`} />
+                                 {errors.gstNo && <p className="mt-1 text-sm text-red-500">{errors.gstNo}</p>}
+                            </div>
+                            <div>
+                                <label htmlFor="panNo" className="block text-sm font-medium text-gray-700 mb-1">PAN No</label>
+                                <input id="panNo" name="panNo" type="text" value={shop.panNo || ''} onChange={handleChange} className={`${inputClasses} ${errors.panNo ? 'border-red-500' : ''}`} />
+                                {errors.panNo && <p className="mt-1 text-sm text-red-500">{errors.panNo}</p>}
+                            </div>
+                            <div>
+                                <label htmlFor="paymentTerms" className="block text-sm font-medium text-gray-700 mb-1">Payment Terms</label>
+                                <select id="paymentTerms" name="paymentTerms" value={shop.paymentTerms || ''} onChange={handleChange} className={inputClasses}>
+                                    {paymentTermOptions.map(term => (
+                                        <option key={term} value={term}>{term}</option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
-                        <div>
-                            <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">District</label>
-                            <select id="city" name="city" value={shop.city} onChange={handleChange} className={inputClasses} disabled={!shop.state || availableCities.length === 0}>
-                                <option value="">{shop.state ? 'Select a district' : 'Select a state first'}</option>
-                                {availableCities.map(city => (
-                                    <option key={city} value={city}>{city}</option>
-                                ))}
-                            </select>
-                        </div>
-                         <div>
-                            <label htmlFor="pincode" className="block text-sm font-medium text-gray-700 mb-1">Pincode</label>
-                            <input id="pincode" name="pincode" type="text" value={shop.pincode} onChange={handleChange} className={inputClasses} />
-                        </div>
-                    </div>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label htmlFor="gstNo" className="block text-sm font-medium text-gray-700 mb-1">GST NO</label>
-                            <input id="gstNo" name="gstNo" type="text" value={shop.gstNo} onChange={handleChange} className={`${inputClasses} ${errors.gstNo ? 'border-red-500' : ''}`} />
-                             {errors.gstNo && <p className="mt-1 text-sm text-red-500">{errors.gstNo}</p>}
-                        </div>
-                        <div>
-                            <label htmlFor="panNo" className="block text-sm font-medium text-gray-700 mb-1">PAN No</label>
-                            <input id="panNo" name="panNo" type="text" value={shop.panNo || ''} onChange={handleChange} className={`${inputClasses} ${errors.panNo ? 'border-red-500' : ''}`} />
-                            {errors.panNo && <p className="mt-1 text-sm text-red-500">{errors.panNo}</p>}
-                        </div>
-                    </div>
+                    </fieldset>
                 </div>
                 <div className="flex justify-end items-center p-4 bg-gray-50 border-t rounded-b-lg space-x-3">
                     <button onClick={onClose} type="button" className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-semibold hover:bg-gray-300">Cancel</button>

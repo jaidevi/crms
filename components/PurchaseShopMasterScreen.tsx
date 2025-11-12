@@ -1,19 +1,21 @@
 
-
 import React, { useState, useMemo } from 'react';
-import { PlusIcon } from './Icons';
+import { PlusIcon, EditIcon, TrashIcon } from './Icons';
 import type { PurchaseShop } from '../App';
 import PurchaseShopModal from './PurchaseShopModal';
+import ConfirmationModal from './ConfirmationModal';
 
 interface PurchaseShopMasterScreenProps {
   shops: PurchaseShop[];
   onAddShop: (newShop: Omit<PurchaseShop, 'id'>) => void;
   onUpdateShop: (updatedShop: PurchaseShop) => void;
+  onDeleteShop: (id: string) => void;
 }
 
-const PurchaseShopMasterScreen: React.FC<PurchaseShopMasterScreenProps> = ({ shops, onAddShop, onUpdateShop }) => {
+const PurchaseShopMasterScreen: React.FC<PurchaseShopMasterScreenProps> = ({ shops, onAddShop, onUpdateShop, onDeleteShop }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [shopToEdit, setShopToEdit] = useState<PurchaseShop | null>(null);
+  const [shopToDelete, setShopToDelete] = useState<PurchaseShop | null>(null);
   
   const sortedShops = useMemo(() => [...shops].sort((a, b) => a.name.localeCompare(b.name)), [shops]);
 
@@ -41,6 +43,13 @@ const PurchaseShopMasterScreen: React.FC<PurchaseShopMasterScreenProps> = ({ sho
     }
     handleCloseModal();
   };
+  
+  const handleConfirmDelete = () => {
+    if (shopToDelete) {
+      onDeleteShop(shopToDelete.id);
+      setShopToDelete(null);
+    }
+  };
 
   return (
     <>
@@ -50,6 +59,21 @@ const PurchaseShopMasterScreen: React.FC<PurchaseShopMasterScreenProps> = ({ sho
           onSave={handleSaveShop}
           existingShopNames={shops.map(s => s.name)}
           shopToEdit={shopToEdit}
+        />
+      )}
+      {shopToDelete && (
+        <ConfirmationModal
+          isOpen={!!shopToDelete}
+          onClose={() => setShopToDelete(null)}
+          onConfirm={handleConfirmDelete}
+          title="Delete Purchase Shop"
+          message={
+            <>
+              Are you sure you want to delete the shop{' '}
+              <strong className="font-semibold text-gray-800">{shopToDelete.name}</strong>?
+              This action cannot be undone.
+            </>
+          }
         />
       )}
       <div className="bg-white rounded-lg shadow-sm">
@@ -73,9 +97,7 @@ const PurchaseShopMasterScreen: React.FC<PurchaseShopMasterScreenProps> = ({ sho
                 <th scope="col" className="px-6 py-3">GST No</th>
                 <th scope="col" className="px-6 py-3">PAN No</th>
                 <th scope="col" className="px-6 py-3">Payment Terms</th>
-                <th scope="col" className="px-6 py-3">
-                  <span className="sr-only">Edit</span>
-                </th>
+                <th scope="col" className="px-6 py-3 text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -88,13 +110,15 @@ const PurchaseShopMasterScreen: React.FC<PurchaseShopMasterScreenProps> = ({ sho
                   <td className="px-6 py-4">{shop.gstNo || '-'}</td>
                   <td className="px-6 py-4">{shop.panNo || '-'}</td>
                   <td className="px-6 py-4">{shop.paymentTerms || '-'}</td>
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => handleOpenModalForEdit(shop)}
-                      className="font-medium text-blue-600 hover:underline"
-                    >
-                      Edit
-                    </button>
+                  <td className="px-6 py-4 text-center">
+                    <div className="flex items-center justify-center gap-4">
+                        <button onClick={() => handleOpenModalForEdit(shop)} className="p-1 text-gray-400 hover:text-blue-500 rounded-full hover:bg-blue-50" aria-label="Edit shop">
+                            <EditIcon className="w-5 h-5" />
+                        </button>
+                        <button onClick={() => setShopToDelete(shop)} className="p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50" aria-label="Delete shop">
+                            <TrashIcon className="w-5 h-5" />
+                        </button>
+                    </div>
                   </td>
                 </tr>
               ))}

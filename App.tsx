@@ -18,6 +18,7 @@ import AttendanceScreen from './components/AttendanceScreen';
 import SalaryScreen from './components/SalaryScreen';
 import PurchaseOrderScreen from './components/PurchaseOrderScreen';
 import { supabase } from './supabaseClient';
+import DashboardScreen from './components/DashboardScreen';
 
 
 // Define types for the new structure
@@ -723,6 +724,12 @@ const App: React.FC = () => {
     const finalClient = { ...mappedClient, processes: data.processes || [] };
     setClients(prev => prev.map(c => c.id === finalClient.id ? finalClient : c));
   };
+
+  const handleDeleteClient = async (id: string) => {
+    const { error } = await supabase.from('clients').delete().eq('id', id);
+    if (error) throw error;
+    setClients(prev => prev.filter(c => c.id !== id));
+  };
   
    const handleAddPurchaseShop = async (newShop: Omit<PurchaseShop, 'id'>) => {
     const { data, error } = await supabase
@@ -746,6 +753,12 @@ const App: React.FC = () => {
     
     const mappedShop = mapPurchaseShopFromDb(data);
     setPurchaseShops(prev => prev.map(s => s.id === mappedShop.id ? mappedShop : s));
+  };
+
+  const handleDeletePurchaseShop = async (id: string) => {
+    const { error } = await supabase.from('purchase_shops').delete().eq('id', id);
+    if (error) throw error;
+    setPurchaseShops(prev => prev.filter(s => s.id !== id));
   };
 
   const handleAddEmployee = async (employeeData: Omit<Employee, 'id'>) => {
@@ -1142,11 +1155,18 @@ const App: React.FC = () => {
   const renderScreen = () => {
     switch (activeScreen) {
       case 'Dashboard':
-        return <ScreenPlaceholder title="Dashboard" description="Overview of your business operations." />;
+        return <DashboardScreen 
+          invoices={invoices}
+          paymentsReceived={paymentsReceived}
+          deliveryChallans={deliveryChallans}
+          purchaseOrders={purchaseOrders}
+          otherExpenses={otherExpenses}
+          advances={advances}
+        />;
       case 'Add Client':
-        return <ShopMasterScreen clients={clients} onAddClient={handleAddClient} onUpdateClient={handleUpdateClient} processTypes={processTypes} onAddProcessType={handleAddProcessType} />;
+        return <ShopMasterScreen clients={clients} onAddClient={handleAddClient} onUpdateClient={handleUpdateClient} onDeleteClient={handleDeleteClient} processTypes={processTypes} onAddProcessType={handleAddProcessType} />;
       case 'Add Purchase Shop':
-        return <PurchaseShopMasterScreen shops={purchaseShops} onAddShop={handleAddPurchaseShop} onUpdateShop={handleUpdatePurchaseShop} />;
+        return <PurchaseShopMasterScreen shops={purchaseShops} onAddShop={handleAddPurchaseShop} onUpdateShop={handleUpdatePurchaseShop} onDeleteShop={handleDeletePurchaseShop} />;
       case 'Add Employee':
         return <EmployeeMasterScreen employees={employees} onAddEmployee={handleAddEmployee} onUpdateEmployee={handleUpdateEmployee} onDeleteEmployee={handleDeleteEmployee} />;
       case 'Add Process':

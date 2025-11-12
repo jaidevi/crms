@@ -1,21 +1,24 @@
 
 
 import React, { useState, useMemo } from 'react';
-import { PlusIcon } from './Icons';
+import { PlusIcon, EditIcon, TrashIcon } from './Icons';
 import type { Client, ProcessType } from '../App';
 import ShopMasterModal from './ShopMasterModal';
+import ConfirmationModal from './ConfirmationModal';
 
 interface ClientMasterScreenProps {
   clients: Client[];
   onAddClient: (newClient: Omit<Client, 'id'>) => void;
   onUpdateClient: (updatedClient: Client) => void;
+  onDeleteClient: (id: string) => void;
   processTypes: ProcessType[];
   onAddProcessType: (process: { name: string, rate: number }) => void;
 }
 
-const ClientMasterScreen: React.FC<ClientMasterScreenProps> = ({ clients, onAddClient, onUpdateClient, processTypes, onAddProcessType }) => {
+const ClientMasterScreen: React.FC<ClientMasterScreenProps> = ({ clients, onAddClient, onUpdateClient, onDeleteClient, processTypes, onAddProcessType }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [clientToEdit, setClientToEdit] = useState<Client | null>(null);
+  const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   
   const sortedClients = useMemo(() => [...clients].sort((a, b) => a.name.localeCompare(b.name)), [clients]);
 
@@ -43,6 +46,13 @@ const ClientMasterScreen: React.FC<ClientMasterScreenProps> = ({ clients, onAddC
     }
     handleCloseModal();
   };
+  
+  const handleConfirmDelete = () => {
+    if (clientToDelete) {
+      onDeleteClient(clientToDelete.id);
+      setClientToDelete(null);
+    }
+  };
 
   return (
     <>
@@ -54,6 +64,21 @@ const ClientMasterScreen: React.FC<ClientMasterScreenProps> = ({ clients, onAddC
           clientToEdit={clientToEdit}
           processTypes={processTypes}
           onAddProcessType={onAddProcessType}
+        />
+      )}
+      {clientToDelete && (
+        <ConfirmationModal
+          isOpen={!!clientToDelete}
+          onClose={() => setClientToDelete(null)}
+          onConfirm={handleConfirmDelete}
+          title="Delete Client"
+          message={
+            <>
+              Are you sure you want to delete the client{' '}
+              <strong className="font-semibold text-gray-800">{clientToDelete.name}</strong>?
+              This action cannot be undone.
+            </>
+          }
         />
       )}
       <div className="bg-white rounded-lg shadow-sm">
@@ -77,14 +102,12 @@ const ClientMasterScreen: React.FC<ClientMasterScreenProps> = ({ clients, onAddC
                 <th scope="col" className="px-6 py-3">GST No</th>
                 <th scope="col" className="px-6 py-3">PAN No</th>
                 <th scope="col" className="px-6 py-3">Payment Terms</th>
-                <th scope="col" className="px-6 py-3">
-                  <span className="sr-only">Edit</span>
-                </th>
+                <th scope="col" className="px-6 py-3 text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
               {sortedClients.map((client) => (
-                <tr key={client.name} className="bg-white border-b hover:bg-gray-50">
+                <tr key={client.id} className="bg-white border-b hover:bg-gray-50">
                   <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
                     {client.name}
                   </th>
@@ -92,13 +115,15 @@ const ClientMasterScreen: React.FC<ClientMasterScreenProps> = ({ clients, onAddC
                   <td className="px-6 py-4">{client.gstNo || '-'}</td>
                   <td className="px-6 py-4">{client.panNo || '-'}</td>
                   <td className="px-6 py-4">{client.paymentTerms || '-'}</td>
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => handleOpenModalForEdit(client)}
-                      className="font-medium text-blue-600 hover:underline"
-                    >
-                      Edit
-                    </button>
+                  <td className="px-6 py-4 text-center">
+                    <div className="flex items-center justify-center gap-4">
+                        <button onClick={() => handleOpenModalForEdit(client)} className="p-1 text-gray-400 hover:text-blue-500 rounded-full hover:bg-blue-50" aria-label="Edit client">
+                            <EditIcon className="w-5 h-5" />
+                        </button>
+                        <button onClick={() => setClientToDelete(client)} className="p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50" aria-label="Delete client">
+                            <TrashIcon className="w-5 h-5" />
+                        </button>
+                    </div>
                   </td>
                 </tr>
               ))}
