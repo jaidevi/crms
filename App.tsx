@@ -727,35 +727,457 @@ const App: React.FC = () => {
       }
   };
 
-  const handleAddPurchaseShop = (newShop: Omit<PurchaseShop, 'id'>) => setPurchaseShops(prev => [...prev, { ...newShop, id: Date.now().toString() }]);
-  const handleUpdatePurchaseShop = (updatedShop: PurchaseShop) => setPurchaseShops(prev => prev.map(s => s.id === updatedShop.id ? updatedShop : s));
-  const handleDeletePurchaseShop = (id: string) => setPurchaseShops(prev => prev.filter(s => s.id !== id));
+  const handleAddPurchaseShop = async (newShop: Omit<PurchaseShop, 'id'>) => {
+      try {
+          const { data, error } = await supabase.from('purchase_shops').insert([{
+              name: newShop.name,
+              phone: newShop.phone,
+              email: newShop.email,
+              address: newShop.address,
+              city: newShop.city,
+              state: newShop.state,
+              pincode: newShop.pincode,
+              gst_no: newShop.gstNo,
+              pan_no: newShop.panNo,
+              payment_terms: newShop.paymentTerms,
+          }]).select().single();
 
-  const handleAddEmployee = (newEmp: Omit<Employee, 'id'>) => setEmployees(prev => [...prev, { ...newEmp, id: Date.now().toString() }]);
-  const handleUpdateEmployee = async (id: string, emp: Employee) => setEmployees(prev => prev.map(e => e.id === id ? emp : e));
-  const handleDeleteEmployee = (id: string) => setEmployees(prev => prev.filter(e => e.id !== id));
-
-  const handleAddProcessType = (proc: { name: string, rate: number }) => setProcessTypes(prev => [...prev, { ...proc, id: Date.now().toString() }]);
-  const handleUpdateProcessType = (id: string, proc: { name: string, rate: number }) => setProcessTypes(prev => prev.map(p => p.id === id ? { ...p, ...proc } : p));
-  const handleDeleteProcessType = (id: string) => setProcessTypes(prev => prev.filter(p => p.id !== id));
-
-  const handleAddPurchaseOrder = (order: PurchaseOrder) => {
-      setPurchaseOrders(prev => [...prev, { ...order, id: Date.now().toString() }]);
-      setPoNumberConfig(prev => ({ ...prev, nextNumber: prev.nextNumber + 1 }));
+          if (error) throw error;
+          
+          const shop: PurchaseShop = {
+              id: data.id,
+              name: data.name,
+              phone: data.phone,
+              email: data.email,
+              address: data.address,
+              city: data.city,
+              state: data.state,
+              pincode: data.pincode,
+              gstNo: data.gst_no,
+              panNo: data.pan_no,
+              paymentTerms: data.payment_terms
+          };
+          setPurchaseShops(prev => [...prev, shop]);
+      } catch (error: any) {
+          console.error("Error adding shop:", error);
+          alert("Failed to add shop: " + error.message);
+      }
   };
-  const handleUpdatePurchaseOrder = (poNumber: string, updated: PurchaseOrder) => setPurchaseOrders(prev => prev.map(p => p.poNumber === poNumber ? updated : p));
-  const handleDeletePurchaseOrder = (poNumber: string) => setPurchaseOrders(prev => prev.filter(p => p.poNumber !== poNumber));
+
+  const handleUpdatePurchaseShop = async (updatedShop: PurchaseShop) => {
+      try {
+          const { error } = await supabase.from('purchase_shops').update({
+              name: updatedShop.name,
+              phone: updatedShop.phone,
+              email: updatedShop.email,
+              address: updatedShop.address,
+              city: updatedShop.city,
+              state: updatedShop.state,
+              pincode: updatedShop.pincode,
+              gst_no: updatedShop.gstNo,
+              pan_no: updatedShop.panNo,
+              payment_terms: updatedShop.paymentTerms,
+          }).eq('id', updatedShop.id);
+
+          if (error) throw error;
+          setPurchaseShops(prev => prev.map(s => s.id === updatedShop.id ? updatedShop : s));
+      } catch (error: any) {
+          console.error("Error updating shop:", error);
+          alert("Failed to update shop: " + error.message);
+      }
+  };
+
+  const handleDeletePurchaseShop = async (id: string) => {
+      try {
+          const { error } = await supabase.from('purchase_shops').delete().eq('id', id);
+          if (error) throw error;
+          setPurchaseShops(prev => prev.filter(s => s.id !== id));
+      } catch (error: any) {
+          console.error("Error deleting shop:", error);
+          alert("Failed to delete shop: " + error.message);
+      }
+  };
+
+  const handleAddEmployee = async (newEmp: Omit<Employee, 'id'>) => {
+      try {
+          const { data, error } = await supabase.from('employees').insert([{
+              name: newEmp.name,
+              designation: newEmp.designation,
+              phone: newEmp.phone,
+              daily_wage: newEmp.dailyWage,
+              rate_per_meter: newEmp.ratePerMeter
+          }]).select().single();
+
+          if (error) throw error;
+          
+          setEmployees(prev => [...prev, {
+              id: data.id,
+              name: data.name,
+              designation: data.designation,
+              phone: data.phone,
+              dailyWage: Number(data.daily_wage),
+              ratePerMeter: Number(data.rate_per_meter)
+          }]);
+      } catch (error: any) {
+          console.error("Error adding employee:", error);
+          alert("Failed to add employee: " + error.message);
+      }
+  };
+
+  const handleUpdateEmployee = async (id: string, emp: Employee) => {
+      try {
+          const { error } = await supabase.from('employees').update({
+              name: emp.name,
+              designation: emp.designation,
+              phone: emp.phone,
+              daily_wage: emp.dailyWage,
+              rate_per_meter: emp.ratePerMeter
+          }).eq('id', id);
+
+          if (error) throw error;
+          setEmployees(prev => prev.map(e => e.id === id ? emp : e));
+      } catch (error: any) {
+          console.error("Error updating employee:", error);
+          alert("Failed to update employee: " + error.message);
+      }
+  };
+
+  const handleDeleteEmployee = async (id: string) => {
+      try {
+          const { error } = await supabase.from('employees').delete().eq('id', id);
+          if (error) throw error;
+          setEmployees(prev => prev.filter(e => e.id !== id));
+      } catch (error: any) {
+          console.error("Error deleting employee:", error);
+          alert("Failed to delete employee: " + error.message);
+      }
+  };
+
+  const handleAddProcessType = async (proc: { name: string, rate: number }) => {
+      try {
+          const { data, error } = await supabase.from('process_types').insert([proc]).select().single();
+          if (error) throw error;
+          setProcessTypes(prev => [...prev, { ...proc, id: data.id }]);
+      } catch (error: any) {
+          console.error("Error adding process type:", error);
+          alert("Failed to add process type: " + error.message);
+      }
+  };
+
+  const handleUpdateProcessType = async (id: string, proc: { name: string, rate: number }) => {
+      try {
+          const { error } = await supabase.from('process_types').update(proc).eq('id', id);
+          if (error) throw error;
+          setProcessTypes(prev => prev.map(p => p.id === id ? { ...p, ...proc } : p));
+      } catch (error: any) {
+          console.error("Error updating process type:", error);
+          alert("Failed to update process type: " + error.message);
+      }
+  };
+
+  const handleDeleteProcessType = async (id: string) => {
+      try {
+          const { error } = await supabase.from('process_types').delete().eq('id', id);
+          if (error) throw error;
+          setProcessTypes(prev => prev.filter(p => p.id !== id));
+      } catch (error: any) {
+          console.error("Error deleting process type:", error);
+          alert("Failed to delete process type: " + error.message);
+      }
+  };
+
+  const handleAddPurchaseOrder = async (order: PurchaseOrder) => {
+      try {
+          // 1. Insert PO
+          const { data: poData, error: poError } = await supabase.from('purchase_orders').insert([{
+              po_number: order.poNumber,
+              po_date: order.poDate,
+              shop_name: order.shopName,
+              total_amount: order.totalAmount,
+              gst_no: order.gstNo,
+              payment_mode: order.paymentMode,
+              status: order.status,
+              payment_terms: order.paymentTerms,
+              reference_id: order.referenceId,
+              bank_name: order.bankName,
+              cheque_date: order.chequeDate
+          }]).select().single();
+
+          if (poError) throw poError;
+
+          // 2. Insert items
+          if (order.items.length > 0) {
+              const itemsPayload = order.items.map(item => ({
+                  purchase_order_id: poData.id,
+                  name: item.name,
+                  quantity: item.quantity,
+                  rate: item.rate,
+                  amount: item.amount
+              }));
+              const { error: itemsError } = await supabase.from('purchase_order_items').insert(itemsPayload);
+              if (itemsError) throw itemsError;
+          }
+
+          // 3. Update config
+          await handleUpdatePoConfig({ ...poNumberConfig, nextNumber: poNumberConfig.nextNumber + 1 });
+
+          // 4. Update Local State (re-fetching is safer but for speed we construct)
+          // For simplicity we trigger a reload or just add it. Ideally, fetch the full object back with items.
+          const { data: fullOrder, error: fetchError } = await supabase.from('purchase_orders').select('*, purchase_order_items(*)').eq('id', poData.id).single();
+          if (!fetchError && fullOrder) {
+               setPurchaseOrders(prev => [...prev, {
+                    id: fullOrder.id,
+                    poNumber: fullOrder.po_number,
+                    poDate: fullOrder.po_date,
+                    shopName: fullOrder.shop_name || '',
+                    items: (fullOrder.purchase_order_items || []).map((i: any) => ({
+                        id: i.id,
+                        name: i.name,
+                        quantity: Number(i.quantity) || 0,
+                        rate: Number(i.rate) || 0,
+                        amount: Number(i.amount) || 0
+                    })),
+                    totalAmount: Number(fullOrder.total_amount) || 0,
+                    gstNo: fullOrder.gst_no || '',
+                    paymentMode: fullOrder.payment_mode as PaymentMode,
+                    status: fullOrder.status as OrderStatus,
+                    paymentTerms: fullOrder.payment_terms,
+                    referenceId: fullOrder.reference_id,
+                    bankName: fullOrder.bank_name,
+                    chequeDate: fullOrder.cheque_date
+               }]);
+          }
+
+      } catch (error: any) {
+          console.error("Error adding PO:", error);
+          alert("Failed to add Purchase Order: " + error.message);
+      }
+  };
+
+  const handleUpdatePurchaseOrder = async (poNumber: string, updated: PurchaseOrder) => {
+      try {
+          const { data: poData, error: poError } = await supabase.from('purchase_orders').update({
+              po_date: updated.poDate,
+              shop_name: updated.shopName,
+              total_amount: updated.totalAmount,
+              gst_no: updated.gstNo,
+              payment_mode: updated.paymentMode,
+              status: updated.status,
+              payment_terms: updated.paymentTerms,
+              reference_id: updated.referenceId,
+              bank_name: updated.bankName,
+              cheque_date: updated.chequeDate
+          }).eq('po_number', poNumber).select().single();
+
+          if (poError) throw poError;
+
+          // Delete old items
+          await supabase.from('purchase_order_items').delete().eq('purchase_order_id', poData.id);
+
+          // Insert new items
+          if (updated.items.length > 0) {
+              const itemsPayload = updated.items.map(item => ({
+                  purchase_order_id: poData.id,
+                  name: item.name,
+                  quantity: item.quantity,
+                  rate: item.rate,
+                  amount: item.amount
+              }));
+              await supabase.from('purchase_order_items').insert(itemsPayload);
+          }
+
+          // Refresh local state
+          setPurchaseOrders(prev => prev.map(p => p.poNumber === poNumber ? updated : p));
+
+      } catch (error: any) {
+          console.error("Error updating PO:", error);
+          alert("Failed to update Purchase Order: " + error.message);
+      }
+  };
+
+  const handleDeletePurchaseOrder = async (poNumber: string) => {
+      try {
+          // Cascade delete should handle items if configured, otherwise manual delete items first
+          const { error } = await supabase.from('purchase_orders').delete().eq('po_number', poNumber);
+          if (error) throw error;
+          setPurchaseOrders(prev => prev.filter(p => p.poNumber !== poNumber));
+      } catch (error: any) {
+          console.error("Error deleting PO:", error);
+          alert("Failed to delete Purchase Order: " + error.message);
+      }
+  };
 
   const handleAddDeliveryChallan = async (dc: Omit<DeliveryChallan, 'id'>) => {
-      setDeliveryChallans(prev => [...prev, { ...dc, id: Date.now().toString() }]);
-      setDcNumberConfig(prev => ({ ...prev, nextNumber: prev.nextNumber + 1 }));
-  };
-  const handleUpdateDeliveryChallan = async (id: string, dc: DeliveryChallan) => setDeliveryChallans(prev => prev.map(d => d.id === id ? dc : d));
-  const handleDeleteDeliveryChallan = (id: string) => setDeliveryChallans(prev => prev.filter(d => d.id !== id));
+      try {
+          // Prepare payload for Supabase
+          const payload = {
+              challan_number: dc.challanNumber,
+              date: dc.date,
+              party_name: dc.partyName,
+              party_dc_no: dc.partyDCNo,
+              process: JSON.stringify(dc.process), // Convert string array to JSON string
+              design_no: dc.designNo,
+              pcs: dc.pcs,
+              mtr: dc.mtr,
+              width: dc.width,
+              shrinkage: dc.shrinkage,
+              pin: dc.pin,
+              pick: dc.pick,
+              extra_work: dc.extraWork,
+              status: dc.status,
+              worker_name: dc.workerName,
+              working_unit: dc.workingUnit,
+              is_outsourcing: dc.isOutsourcing,
+              dc_image: JSON.stringify(dc.dcImage), // Convert string array to JSON string
+              sample_image: JSON.stringify(dc.sampleImage) // Convert string array to JSON string
+          };
 
-  const handleAddInvoice = (inv: Omit<Invoice, 'id'>) => {
-      setInvoices(prev => [...prev, { ...inv, id: Date.now().toString() }]);
-      if (invoiceNumberConfig.mode === 'auto') setInvoiceNumberConfig(prev => ({ ...prev, nextNumber: prev.nextNumber + 1 }));
+          const { data, error } = await supabase.from('delivery_challans').insert([payload]).select().single();
+
+          if (error) throw error;
+
+          if (data) {
+              // Convert back to App model
+              let dcImages: string[] = [];
+              try { dcImages = data.dc_image ? JSON.parse(data.dc_image) : []; } catch { dcImages = []; }
+              
+              let sampleImages: string[] = [];
+              try { sampleImages = data.sample_image ? JSON.parse(data.sample_image) : []; } catch { sampleImages = []; }
+
+              let processes: string[] = [];
+              try { processes = data.process ? JSON.parse(data.process) : []; } catch { processes = []; }
+
+              const newChallan: DeliveryChallan = {
+                  id: data.id,
+                  challanNumber: data.challan_number,
+                  date: data.date,
+                  partyName: data.party_name,
+                  partyDCNo: data.party_dc_no || '',
+                  process: processes,
+                  designNo: data.design_no || '',
+                  pcs: Number(data.pcs) || 0,
+                  mtr: Number(data.mtr) || 0,
+                  width: Number(data.width) || 0,
+                  shrinkage: data.shrinkage || '',
+                  pin: data.pin || '',
+                  pick: data.pick || '',
+                  extraWork: data.extra_work || '',
+                  status: data.status || '',
+                  workerName: data.worker_name,
+                  workingUnit: data.working_unit,
+                  isOutsourcing: data.is_outsourcing || false,
+                  dcImage: dcImages,
+                  sampleImage: sampleImages
+              };
+
+              setDeliveryChallans(prev => [...prev, newChallan]);
+              
+              // Update configuration
+              await handleUpdateDcConfig({ ...dcNumberConfig, nextNumber: dcNumberConfig.nextNumber + 1 });
+          }
+      } catch (error: any) {
+          console.error("Error adding delivery challan:", error);
+          alert("Failed to add delivery challan: " + error.message);
+      }
+  };
+
+  const handleUpdateDeliveryChallan = async (id: string, dc: DeliveryChallan) => {
+      try {
+          const payload = {
+              challan_number: dc.challanNumber,
+              date: dc.date,
+              party_name: dc.partyName,
+              party_dc_no: dc.partyDCNo,
+              process: JSON.stringify(dc.process),
+              design_no: dc.designNo,
+              pcs: dc.pcs,
+              mtr: dc.mtr,
+              width: dc.width,
+              shrinkage: dc.shrinkage,
+              pin: dc.pin,
+              pick: dc.pick,
+              extra_work: dc.extraWork,
+              status: dc.status,
+              worker_name: dc.workerName,
+              working_unit: dc.workingUnit,
+              is_outsourcing: dc.isOutsourcing,
+              dc_image: JSON.stringify(dc.dcImage),
+              sample_image: JSON.stringify(dc.sampleImage)
+          };
+
+          const { error } = await supabase.from('delivery_challans').update(payload).eq('id', id);
+          if (error) throw error;
+
+          setDeliveryChallans(prev => prev.map(d => d.id === id ? dc : d));
+      } catch (error: any) {
+          console.error("Error updating delivery challan:", error);
+          alert("Failed to update delivery challan: " + error.message);
+      }
+  };
+
+  const handleDeleteDeliveryChallan = async (id: string) => {
+      try {
+          const { error } = await supabase.from('delivery_challans').delete().eq('id', id);
+          if (error) throw error;
+          setDeliveryChallans(prev => prev.filter(d => d.id !== id));
+      } catch (error: any) {
+          console.error("Error deleting delivery challan:", error);
+          alert("Failed to delete delivery challan: " + error.message);
+      }
+  };
+
+  const handleAddInvoice = async (inv: Omit<Invoice, 'id'>) => {
+      try {
+          // 1. Insert Invoice
+          const { data: invData, error: invError } = await supabase.from('invoices').insert([{
+              invoice_number: inv.invoiceNumber,
+              invoice_date: inv.invoiceDate,
+              client_name: inv.clientName,
+              sub_total: inv.subTotal,
+              total_cgst: inv.totalCgst,
+              total_sgst: inv.totalSgst,
+              total_tax_amount: inv.totalTaxAmount,
+              rounded_off: inv.roundedOff,
+              total_amount: inv.totalAmount
+          }]).select().single();
+
+          if (invError) throw invError;
+
+          // 2. Insert Items
+          if (inv.items.length > 0) {
+              const itemsPayload = inv.items.map(item => ({
+                  invoice_id: invData.id,
+                  challan_number: item.challanNumber,
+                  challan_date: item.challanDate ? item.challanDate : null,
+                  process: item.process,
+                  description: item.description,
+                  design_no: item.designNo,
+                  hsn_sac: item.hsnSac,
+                  pcs: item.pcs,
+                  mtr: item.mtr,
+                  rate: item.rate,
+                  subtotal: item.subtotal,
+                  cgst: item.cgst,
+                  sgst: item.sgst,
+                  amount: item.amount
+              }));
+              const { error: itemsError } = await supabase.from('invoice_items').insert(itemsPayload);
+              if (itemsError) throw itemsError;
+          }
+
+          // 3. Update State
+          const newInvoice = { ...inv, id: invData.id };
+          setInvoices(prev => [...prev, newInvoice]);
+
+          // 4. Update Config
+          if (invoiceNumberConfig.mode === 'auto') {
+              await handleUpdateInvConfig({ ...invoiceNumberConfig, nextNumber: invoiceNumberConfig.nextNumber + 1 });
+          }
+
+      } catch (error: any) {
+          console.error("Error adding invoice:", error);
+          alert("Failed to add invoice: " + error.message);
+      }
   };
   
   const handleDeleteInvoice = async (id: string) => {
@@ -769,55 +1191,338 @@ const App: React.FC = () => {
       }
   };
 
-  const handleAddPaymentReceived = (pr: Omit<PaymentReceived, 'id'>) => setPaymentsReceived(prev => [...prev, { ...pr, id: Date.now().toString() }]);
-  const handleUpdatePaymentReceived = (pr: PaymentReceived) => setPaymentsReceived(prev => prev.map(p => p.id === pr.id ? pr : p));
-  const handleDeletePaymentReceived = (id: string) => setPaymentsReceived(prev => prev.filter(p => p.id !== id));
+  const handleAddPaymentReceived = async (pr: Omit<PaymentReceived, 'id'>) => {
+      try {
+          const { data, error } = await supabase.from('payments_received').insert([{
+              client_name: pr.clientName,
+              payment_date: pr.paymentDate,
+              amount: pr.amount,
+              payment_mode: pr.paymentMode,
+              reference_number: pr.referenceNumber,
+              notes: pr.notes
+          }]).select().single();
+
+          if (error) throw error;
+          setPaymentsReceived(prev => [...prev, { ...pr, id: data.id }]);
+      } catch (error: any) {
+          console.error("Error adding payment:", error);
+          alert("Failed to add payment: " + error.message);
+      }
+  };
+
+  const handleUpdatePaymentReceived = async (pr: PaymentReceived) => {
+      try {
+          const { error } = await supabase.from('payments_received').update({
+              client_name: pr.clientName,
+              payment_date: pr.paymentDate,
+              amount: pr.amount,
+              payment_mode: pr.paymentMode,
+              reference_number: pr.referenceNumber,
+              notes: pr.notes
+          }).eq('id', pr.id);
+
+          if (error) throw error;
+          setPaymentsReceived(prev => prev.map(p => p.id === pr.id ? pr : p));
+      } catch (error: any) {
+          console.error("Error updating payment:", error);
+          alert("Failed to update payment: " + error.message);
+      }
+  };
+
+  const handleDeletePaymentReceived = async (id: string) => {
+      try {
+          const { error } = await supabase.from('payments_received').delete().eq('id', id);
+          if (error) throw error;
+          setPaymentsReceived(prev => prev.filter(p => p.id !== id));
+      } catch (error: any) {
+          console.error("Error deleting payment:", error);
+          alert("Failed to delete payment: " + error.message);
+      }
+  };
 
   const handleSaveAttendance = async (records: Omit<AttendanceRecord, 'id'>[]) => {
-      setAttendanceRecords(prev => {
-          // Merge logic simplified: remove old records for same emp/date, add new
-          const newRecords = [...prev];
-          records.forEach(rec => {
-             const idx = newRecords.findIndex(r => r.employee_id === rec.employee_id && r.date === rec.date);
-             if (idx >= 0) {
-                 newRecords[idx] = { ...rec, id: newRecords[idx].id };
-             } else {
-                 newRecords.push({ ...rec, id: Date.now().toString() + Math.random() });
-             }
+      try {
+          const upsertData = records.map(rec => ({
+              employee_id: rec.employee_id,
+              date: rec.date,
+              morning_status: rec.morningStatus,
+              evening_status: rec.eveningStatus,
+              morning_overtime_hours: rec.morningOvertimeHours,
+              evening_overtime_hours: rec.eveningOvertimeHours,
+              meters_produced: rec.metersProduced,
+              updated_at: new Date().toISOString()
+          }));
+
+          const { error } = await supabase.from('attendance').upsert(upsertData, { onConflict: 'employee_id,date' });
+          if (error) throw error;
+
+          // Refetch specifically this month's attendance or just update local state approximately
+          // Ideally, re-fetch from DB to get IDs and exact timestamps
+          // For now, we can do a simple merge in state if needed, or just let the next reload handle it.
+          // Let's do a quick optimistic update or a re-fetch. A re-fetch of the whole table might be heavy.
+          // Let's just update local state for immediate feedback.
+          setAttendanceRecords(prev => {
+              const newRecords = [...prev];
+              records.forEach(rec => {
+                 const idx = newRecords.findIndex(r => r.employee_id === rec.employee_id && r.date === rec.date);
+                 if (idx >= 0) {
+                     newRecords[idx] = { ...newRecords[idx], ...rec };
+                 } else {
+                     newRecords.push({ ...rec, id: `temp-${Date.now()}-${Math.random()}` });
+                 }
+              });
+              return newRecords;
           });
-          return newRecords;
-      });
+
+      } catch (error: any) {
+          console.error("Error saving attendance:", error);
+          alert("Failed to save attendance: " + error.message);
+      }
   };
 
-  const handleAddAdvance = async (adv: Omit<EmployeeAdvance, 'id'>) => setAdvances(prev => [...prev, { ...adv, id: Date.now().toString() }]);
-  const handleUpdateAdvance = async (adv: EmployeeAdvance) => setAdvances(prev => prev.map(a => a.id === adv.id ? adv : a));
-  const handleDeleteAdvance = (id: string) => setAdvances(prev => prev.filter(a => a.id !== id));
+  const handleAddAdvance = async (adv: Omit<EmployeeAdvance, 'id'>) => {
+      try {
+          const { data, error } = await supabase.from('employee_advances').insert([{
+              employee_id: adv.employeeId,
+              date: adv.date,
+              amount: adv.amount,
+              paid_amount: adv.paidAmount,
+              notes: adv.notes
+          }]).select().single();
 
-  const handleAddOtherExpense = async (exp: Omit<OtherExpense, 'id'>) => setOtherExpenses(prev => [...prev, { ...exp, id: Date.now().toString() }]);
-  const handleUpdateOtherExpense = async (exp: OtherExpense) => setOtherExpenses(prev => prev.map(e => e.id === exp.id ? exp : e));
-  const handleDeleteOtherExpense = (id: string) => setOtherExpenses(prev => prev.filter(e => e.id !== id));
+          if (error) throw error;
+          setAdvances(prev => [...prev, { ...adv, id: data.id }]);
+      } catch (error: any) {
+          console.error("Error adding advance:", error);
+          alert("Failed to add advance: " + error.message);
+      }
+  };
 
-  const handleAddTimberExpense = async (exp: Omit<TimberExpense, 'id'>) => setTimberExpenses(prev => [...prev, { ...exp, id: Date.now().toString() }]);
-  const handleUpdateTimberExpense = async (exp: TimberExpense) => setTimberExpenses(prev => prev.map(e => e.id === exp.id ? exp : e));
-  const handleDeleteTimberExpense = (id: string) => setTimberExpenses(prev => prev.filter(e => e.id !== id));
+  const handleUpdateAdvance = async (adv: EmployeeAdvance) => {
+      try {
+          const { error } = await supabase.from('employee_advances').update({
+              employee_id: adv.employeeId,
+              date: adv.date,
+              amount: adv.amount,
+              paid_amount: adv.paidAmount,
+              notes: adv.notes
+          }).eq('id', adv.id);
+
+          if (error) throw error;
+          setAdvances(prev => prev.map(a => a.id === adv.id ? adv : a));
+      } catch (error: any) {
+          console.error("Error updating advance:", error);
+          alert("Failed to update advance: " + error.message);
+      }
+  };
+
+  const handleDeleteAdvance = async (id: string) => {
+      try {
+          const { error } = await supabase.from('employee_advances').delete().eq('id', id);
+          if (error) throw error;
+          setAdvances(prev => prev.filter(a => a.id !== id));
+      } catch (error: any) {
+          console.error("Error deleting advance:", error);
+          alert("Failed to delete advance: " + error.message);
+      }
+  };
+
+  const handleAddOtherExpense = async (exp: Omit<OtherExpense, 'id'>) => {
+      try {
+          const { data, error } = await supabase.from('other_expenses').insert([{
+              date: exp.date,
+              item_name: exp.itemName,
+              amount: exp.amount,
+              notes: exp.notes,
+              payment_mode: exp.paymentMode,
+              payment_status: exp.paymentStatus,
+              payment_terms: exp.paymentTerms,
+              bank_name: exp.bankName,
+              cheque_date: exp.chequeDate
+          }]).select().single();
+
+          if (error) throw error;
+          setOtherExpenses(prev => [...prev, { ...exp, id: data.id }]);
+      } catch (error: any) {
+          console.error("Error adding expense:", error);
+          alert("Failed to add expense: " + error.message);
+      }
+  };
+
+  const handleUpdateOtherExpense = async (exp: OtherExpense) => {
+      try {
+          const { error } = await supabase.from('other_expenses').update({
+              date: exp.date,
+              item_name: exp.itemName,
+              amount: exp.amount,
+              notes: exp.notes,
+              payment_mode: exp.paymentMode,
+              payment_status: exp.paymentStatus,
+              payment_terms: exp.paymentTerms,
+              bank_name: exp.bankName,
+              cheque_date: exp.chequeDate
+          }).eq('id', exp.id);
+
+          if (error) throw error;
+          setOtherExpenses(prev => prev.map(e => e.id === exp.id ? exp : e));
+      } catch (error: any) {
+          console.error("Error updating expense:", error);
+          alert("Failed to update expense: " + error.message);
+      }
+  };
+
+  const handleDeleteOtherExpense = async (id: string) => {
+      try {
+          const { error } = await supabase.from('other_expenses').delete().eq('id', id);
+          if (error) throw error;
+          setOtherExpenses(prev => prev.filter(e => e.id !== id));
+      } catch (error: any) {
+          console.error("Error deleting expense:", error);
+          alert("Failed to delete expense: " + error.message);
+      }
+  };
+
+  const handleAddTimberExpense = async (exp: Omit<TimberExpense, 'id'>) => {
+      try {
+          const { data, error } = await supabase.from('timber_expenses').insert([{
+              date: exp.date,
+              supplier_name: exp.supplierName,
+              load_weight: exp.loadWeight,
+              vehicle_weight: exp.vehicleWeight,
+              cft: exp.cft,
+              rate: exp.rate,
+              amount: exp.amount,
+              notes: exp.notes,
+              payment_mode: exp.paymentMode,
+              payment_status: exp.paymentStatus,
+              payment_terms: exp.paymentTerms,
+              bank_name: exp.bankName,
+              cheque_date: exp.chequeDate
+          }]).select().single();
+
+          if (error) throw error;
+          setTimberExpenses(prev => [...prev, { ...exp, id: data.id }]);
+      } catch (error: any) {
+          console.error("Error adding timber expense:", error);
+          alert("Failed to add timber expense: " + error.message);
+      }
+  };
+
+  const handleUpdateTimberExpense = async (exp: TimberExpense) => {
+      try {
+          const { error } = await supabase.from('timber_expenses').update({
+              date: exp.date,
+              supplier_name: exp.supplierName,
+              load_weight: exp.loadWeight,
+              vehicle_weight: exp.vehicleWeight,
+              cft: exp.cft,
+              rate: exp.rate,
+              amount: exp.amount,
+              notes: exp.notes,
+              payment_mode: exp.paymentMode,
+              payment_status: exp.paymentStatus,
+              payment_terms: exp.paymentTerms,
+              bank_name: exp.bankName,
+              cheque_date: exp.chequeDate
+          }).eq('id', exp.id);
+
+          if (error) throw error;
+          setTimberExpenses(prev => prev.map(e => e.id === exp.id ? exp : e));
+      } catch (error: any) {
+          console.error("Error updating timber expense:", error);
+          alert("Failed to update timber expense: " + error.message);
+      }
+  };
+
+  const handleDeleteTimberExpense = async (id: string) => {
+      try {
+          const { error } = await supabase.from('timber_expenses').delete().eq('id', id);
+          if (error) throw error;
+          setTimberExpenses(prev => prev.filter(e => e.id !== id));
+      } catch (error: any) {
+          console.error("Error deleting timber expense:", error);
+          alert("Failed to delete timber expense: " + error.message);
+      }
+  };
 
   const handleAddSupplierPayment = async (pay: Omit<SupplierPayment, 'id'>) => {
-      setSupplierPayments(prev => [...prev, { ...pay, id: Date.now().toString() }]);
-      setSupplierPaymentConfig(prev => ({ ...prev, nextNumber: prev.nextNumber + 1 }));
+      try {
+          const { data, error } = await supabase.from('supplier_payments').insert([{
+              payment_number: pay.paymentNumber,
+              date: pay.date,
+              supplier_name: pay.supplierName,
+              amount: pay.amount,
+              payment_mode: pay.paymentMode,
+              reference_id: pay.referenceId,
+              image: pay.image
+          }]).select().single();
+
+          if (error) throw error;
+          setSupplierPayments(prev => [...prev, { ...pay, id: data.id }]);
+          await handleUpdatePoConfig({ ...poNumberConfig, nextNumber: supplierPaymentConfig.nextNumber + 1 }); // Assumed helper reused or need specific one
+          // Actually for SupplierPaymentConfig
+          // We need a specific handler or reuse generic upserter
+          const { error: confError } = await supabase.from('numbering_configs').upsert({ id: 'supplier_payment', prefix: supplierPaymentConfig.prefix, next_number: supplierPaymentConfig.nextNumber + 1 });
+          if(!confError) setSupplierPaymentConfig(prev => ({...prev, nextNumber: prev.nextNumber + 1}));
+
+      } catch (error: any) {
+          console.error("Error adding supplier payment:", error);
+          alert("Failed to add supplier payment: " + error.message);
+      }
   };
 
-  const handleSavePayslip = async (payslip: Omit<Payslip, 'id'>) => setPayslips(prev => [...prev, { ...payslip, id: Date.now().toString() }]);
+  const handleSavePayslip = async (payslip: Omit<Payslip, 'id'>) => {
+      try {
+          const { data, error } = await supabase.from('payslips').insert([{
+              employee_id: payslip.employeeId,
+              employee_name: payslip.employeeName,
+              payslip_date: payslip.payslipDate,
+              pay_period_start: payslip.payPeriodStart,
+              pay_period_end: payslip.payPeriodEnd,
+              total_working_days: payslip.totalWorkingDays,
+              ot_hours: payslip.otHours,
+              wage_earnings: payslip.wageEarnings,
+              production_earnings: payslip.productionEarnings,
+              gross_salary: payslip.grossSalary,
+              advance_deduction: payslip.advanceDeduction,
+              net_salary: payslip.netSalary,
+              total_outstanding_advance: payslip.totalOutstandingAdvance
+          }]).select().single();
+
+          if (error) throw error;
+          setPayslips(prev => [...prev, { ...payslip, id: data.id }]);
+      } catch (error: any) {
+          console.error("Error saving payslip:", error);
+          alert("Failed to save payslip: " + error.message);
+      }
+  };
   
   const handleAddMasterItem = async (item: { name: string, rate: number }): Promise<MasterItem> => {
-      const newItem = { ...item, id: Date.now().toString() };
-      setMasterItems(prev => [...prev, newItem]);
-      return newItem;
+      try {
+          const { data, error } = await supabase.from('master_items').insert([item]).select().single();
+          if (error) throw error;
+          const newItem = { ...item, id: data.id };
+          setMasterItems(prev => [...prev, newItem]);
+          return newItem;
+      } catch (error: any) {
+          console.error("Error adding master item:", error);
+          alert("Failed to add item: " + error.message);
+          throw error;
+      }
   };
 
   const handleAddExpenseCategory = async (name: string): Promise<ExpenseCategory> => {
-      const newCat = { id: Date.now().toString(), name };
-      setExpenseCategories(prev => [...prev, newCat]);
-      return newCat;
+      try {
+          const { data, error } = await supabase.from('expense_categories').insert([{ name }]).select().single();
+          if (error) throw error;
+          const newCat = { id: data.id, name };
+          setExpenseCategories(prev => [...prev, newCat]);
+          return newCat;
+      } catch (error: any) {
+          console.error("Error adding category:", error);
+          alert("Failed to add category: " + error.message);
+          throw error;
+      }
   };
   
   const handleAddBankName = (name: string) => setBankNames(prev => [...prev, name]);
