@@ -287,11 +287,11 @@ const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecord
     const getStatusChip = (status: string) => {
         const baseClasses = "px-2 py-0.5 text-xs font-medium rounded-full";
         switch (status) {
-            case 'Present': return <span className={`${baseClasses} bg-green-100 text-green-800`}>Present</span>;
-            case 'Absent': return <span className={`${baseClasses} bg-red-100 text-red-800`}>Absent</span>;
-            case 'Leave': return <span className={`${baseClasses} bg-yellow-100 text-yellow-800`}>Leave</span>;
-            case 'Holiday': return <span className={`${baseClasses} bg-blue-100 text-blue-800`}>Holiday</span>;
-            default: return <span className={`${baseClasses} bg-gray-100 text-gray-600`}>N/A</span>;
+            case 'Present': return <span className={`${baseClasses} bg-success-100 text-success-800`}>Present</span>;
+            case 'Absent': return <span className={`${baseClasses} bg-danger-100 text-danger-700`}>Absent</span>;
+            case 'Leave': return <span className={`${baseClasses} bg-warning-100 text-warning-800`}>Leave</span>;
+            case 'Holiday': return <span className={`${baseClasses} bg-primary-100 text-primary-800`}>Holiday</span>;
+            default: return <span className={`${baseClasses} bg-secondary-100 text-secondary-600`}>N/A</span>;
         }
     };
     
@@ -335,18 +335,18 @@ const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecord
     const tabButtonClasses = (tabName: string) => 
         `whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm ${
             activeTab === tabName 
-            ? 'border-blue-500 text-blue-600' 
-            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            ? 'border-primary-500 text-primary-600' 
+            : 'border-transparent text-secondary-500 hover:text-secondary-700 hover:border-secondary-300'
         }`;
 
     return (
         <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm">
                  <div className="p-5">
-                    <h1 className="text-2xl font-bold text-gray-800">Salary &amp; Payslips</h1>
-                    <p className="text-gray-500 mt-1">Calculate salaries and manage employee advances.</p>
+                    <h1 className="text-2xl font-bold text-secondary-800">Salary &amp; Payslips</h1>
+                    <p className="text-secondary-500 mt-1">Calculate salaries and manage employee advances.</p>
                 </div>
-                 <div className="border-b border-gray-200 px-5">
+                 <div className="border-b border-secondary-200 px-5">
                     <nav className="-mb-px flex space-x-6" aria-label="Tabs">
                         <button onClick={() => setActiveTab('calculator')} className={tabButtonClasses('calculator')}>
                             Salary Calculator
@@ -362,11 +362,11 @@ const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecord
                         <div className="p-6">
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                                 <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Employee</label>
+                                    <label className="block text-sm font-medium text-secondary-700 mb-1">Employee</label>
                                     <select
                                         value={selectedEmployeeId}
                                         onChange={e => { setSelectedEmployeeId(e.target.value); setResult(null); setEditableWage(''); setIsCalculated(false); }}
-                                        className="block w-full px-3 py-2.5 text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                        className="block w-full px-3 py-2.5 text-sm rounded-md border-secondary-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
                                     >
                                         <option value="">-- Select an Employee --</option>
                                         {sortedEmployees.map(emp => (
@@ -375,48 +375,48 @@ const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecord
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                                    <label className="block text-sm font-medium text-secondary-700 mb-1">Start Date</label>
                                     <div className="relative">
-                                        <button type="button" onClick={() => setStartDatePickerOpen(p => !p)} className="block w-full text-sm rounded-md border shadow-sm bg-white px-3 py-2.5 flex items-center justify-between text-left font-normal border-gray-300">
-                                            <span className={startDate ? 'text-gray-900' : 'text-gray-500'}>{formatDateForDisplay(startDate) || 'Select date'}</span>
-                                            <CalendarIcon className="w-5 h-5 text-gray-400" />
+                                        <button type="button" onClick={() => setStartDatePickerOpen(p => !p)} className="block w-full text-sm rounded-md border shadow-sm bg-white px-3 py-2.5 flex items-center justify-between text-left font-normal border-secondary-300">
+                                            <span className={startDate ? 'text-secondary-900' : 'text-secondary-500'}>{formatDateForDisplay(startDate) || 'Select date'}</span>
+                                            <CalendarIcon className="w-5 h-5 text-secondary-400" />
                                         </button>
                                         {isStartDatePickerOpen && <DatePicker value={startDate} onChange={d => { setStartDate(d); setStartDatePickerOpen(false); }} onClose={() => setStartDatePickerOpen(false)} />}
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                                    <label className="block text-sm font-medium text-secondary-700 mb-1">End Date</label>
                                     <div className="relative">
-                                        <button type="button" onClick={() => setEndDatePickerOpen(p => !p)} className="block w-full text-sm rounded-md border shadow-sm bg-white px-3 py-2.5 flex items-center justify-between text-left font-normal border-gray-300">
-                                            <span className={endDate ? 'text-gray-900' : 'text-gray-500'}>{formatDateForDisplay(endDate) || 'Select date'}</span>
-                                            <CalendarIcon className="w-5 h-5 text-gray-400" />
+                                        <button type="button" onClick={() => setEndDatePickerOpen(p => !p)} className="block w-full text-sm rounded-md border shadow-sm bg-white px-3 py-2.5 flex items-center justify-between text-left font-normal border-secondary-300">
+                                            <span className={endDate ? 'text-secondary-900' : 'text-secondary-500'}>{formatDateForDisplay(endDate) || 'Select date'}</span>
+                                            <CalendarIcon className="w-5 h-5 text-secondary-400" />
                                         </button>
                                         {isEndDatePickerOpen && <DatePicker value={endDate} onChange={d => { setEndDate(d); setEndDatePickerOpen(false); }} onClose={() => setEndDatePickerOpen(false)} />}
                                     </div>
                                 </div>
                                 <div className="md:col-start-4">
-                                    <button onClick={handleCalculate} className="w-full flex items-center justify-center bg-blue-600 text-white px-4 py-2.5 rounded-md text-sm font-semibold hover:bg-blue-700">
+                                    <button onClick={handleCalculate} className="w-full flex items-center justify-center bg-primary-600 text-white px-4 py-2.5 rounded-md text-sm font-semibold hover:bg-primary-700">
                                         <SearchIcon className="w-5 h-5 mr-2" />
                                         Calculate
                                     </button>
                                 </div>
                             </div>
-                            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+                            {error && <p className="text-danger-500 text-sm mt-2">{error}</p>}
                         </div>
 
                         {result && selectedEmployee && (
                             <div className="bg-white animate-fade-in-down">
                                 <div className="p-5 border-t">
-                                    <h2 className="text-lg font-semibold text-gray-800">Salary Details for {selectedEmployee.name}</h2>
-                                    <p className="text-sm text-gray-500">{formatDateForDisplay(startDate)} to {formatDateForDisplay(endDate)}</p>
+                                    <h2 className="text-lg font-semibold text-secondary-800">Salary Details for {selectedEmployee.name}</h2>
+                                    <p className="text-sm text-secondary-500">{formatDateForDisplay(startDate)} to {formatDateForDisplay(endDate)}</p>
                                 </div>
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
                                     <div className="lg:col-span-2 space-y-6">
                                         <div>
-                                            <h3 className="font-semibold text-gray-700 mb-2">Attendance Breakdown</h3>
+                                            <h3 className="font-semibold text-secondary-700 mb-2">Attendance Breakdown</h3>
                                             <div className="overflow-x-auto border rounded-lg max-h-96">
-                                                <table className="w-full text-sm text-left text-gray-500">
-                                                    <thead className="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
+                                                <table className="w-full text-sm text-left text-secondary-500">
+                                                    <thead className="text-xs text-secondary-700 uppercase bg-secondary-50 sticky top-0">
                                                         <tr>
                                                             <th className="px-4 py-3">Date</th>
                                                             <th className="px-4 py-3 text-center">Morning</th>
@@ -427,8 +427,8 @@ const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecord
                                                     </thead>
                                                     <tbody className="bg-white">
                                                         {result.details.map(d => (
-                                                            <tr key={d.date} className="border-b hover:bg-gray-50">
-                                                                <td className="px-4 py-2 font-medium text-gray-900">{formatDateForDisplay(d.date)}</td>
+                                                            <tr key={d.date} className="border-b hover:bg-secondary-50">
+                                                                <td className="px-4 py-2 font-medium text-secondary-900">{formatDateForDisplay(d.date)}</td>
                                                                 <td className="px-4 py-2 text-center">{getStatusChip(d.morningStatus)}</td>
                                                                 <td className="px-4 py-2 text-center">{getStatusChip(d.eveningStatus)}</td>
                                                                 <td className="px-4 py-2 text-right">{d.overtimeHours}</td>
@@ -440,8 +440,8 @@ const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecord
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="bg-gray-50 p-6 rounded-lg self-start">
-                                        <h3 className="font-semibold text-gray-800 mb-4 text-lg">Calculation Summary</h3>
+                                    <div className="bg-secondary-50 p-6 rounded-lg self-start">
+                                        <h3 className="font-semibold text-secondary-800 mb-4 text-lg">Calculation Summary</h3>
                                         
                                         {(() => {
                                             const wageEarnings = result.summary.totalPresentDays * (Number(editableWage) || 0);
@@ -453,74 +453,74 @@ const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecord
                                             return (
                                                 <div className="space-y-4 text-sm">
                                                     <div className="flex justify-between items-center">
-                                                        <span className="text-gray-600">Total Working Days:</span>
-                                                        <span className="font-semibold text-gray-800">{result.summary.totalPresentDays}</span>
+                                                        <span className="text-secondary-600">Total Working Days:</span>
+                                                        <span className="font-semibold text-secondary-800">{result.summary.totalPresentDays}</span>
                                                     </div>
                                                     <div className="flex justify-between items-center">
-                                                        <span className="text-gray-600">Total Meters Produced:</span>
-                                                        <span className="font-semibold text-gray-800">{result.summary.totalMetersProduced}</span>
+                                                        <span className="text-secondary-600">Total Meters Produced:</span>
+                                                        <span className="font-semibold text-secondary-800">{result.summary.totalMetersProduced}</span>
                                                     </div>
                                                     <div className="flex justify-between items-center">
-                                                        <label htmlFor="dailyWage" className="text-gray-600">Daily Wage:</label>
+                                                        <label htmlFor="dailyWage" className="text-secondary-600">Daily Wage:</label>
                                                         <div className="flex items-center gap-2">
-                                                            <span className="font-semibold text-gray-800">₹</span>
-                                                            <input id="dailyWage" type="number" value={editableWage} onChange={(e) => { setEditableWage(e.target.value); if (wageSaveState !== 'idle') setWageSaveState('idle'); }} className="w-24 p-1 text-sm text-right font-semibold text-gray-800 border-b-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-transparent" />
-                                                            <button onClick={handleWageUpdate} disabled={isWageUnchanged || wageSaveState !== 'idle'} className="px-2 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-semibold hover:bg-blue-200 disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed">
-                                                                {wageSaveState === 'saving' ? <SpinnerIcon className="w-4 h-4" /> : wageSaveState === 'saved' ? <CheckIcon className="w-4 h-4 text-green-600" /> : 'Save'}
+                                                            <span className="font-semibold text-secondary-800">₹</span>
+                                                            <input id="dailyWage" type="number" value={editableWage} onChange={(e) => { setEditableWage(e.target.value); if (wageSaveState !== 'idle') setWageSaveState('idle'); }} className="w-24 p-1 text-sm text-right font-semibold text-secondary-800 border-b-2 border-secondary-200 focus:border-primary-500 focus:outline-none bg-transparent" />
+                                                            <button onClick={handleWageUpdate} disabled={isWageUnchanged || wageSaveState !== 'idle'} className="px-2 py-1 bg-primary-100 text-primary-700 rounded-md text-xs font-semibold hover:bg-primary-200 disabled:bg-secondary-200 disabled:text-secondary-500 disabled:cursor-not-allowed">
+                                                                {wageSaveState === 'saving' ? <SpinnerIcon className="w-4 h-4" /> : wageSaveState === 'saved' ? <CheckIcon className="w-4 h-4 text-success-600" /> : 'Save'}
                                                             </button>
                                                         </div>
                                                     </div>
                                                      <div className="flex justify-between items-center">
-                                                        <label htmlFor="ratePerMeter" className="text-gray-600">Amount per Meter:</label>
+                                                        <label htmlFor="ratePerMeter" className="text-secondary-600">Amount per Meter:</label>
                                                         <div className="flex items-center gap-2">
-                                                            <span className="font-semibold text-gray-800">₹</span>
-                                                            <input id="ratePerMeter" type="number" value={editableRatePerMeter} onChange={(e) => { setEditableRatePerMeter(e.target.value); if (rateSaveState !== 'idle') setRateSaveState('idle'); }} className="w-24 p-1 text-sm text-right font-semibold text-gray-800 border-b-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-transparent" />
-                                                            <button onClick={handleRatePerMeterUpdate} disabled={isRatePerMeterUnchanged || rateSaveState !== 'idle'} className="px-2 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-semibold hover:bg-blue-200 disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed">
-                                                                {rateSaveState === 'saving' ? <SpinnerIcon className="w-4 h-4" /> : rateSaveState === 'saved' ? <CheckIcon className="w-4 h-4 text-green-600" /> : 'Save'}
+                                                            <span className="font-semibold text-secondary-800">₹</span>
+                                                            <input id="ratePerMeter" type="number" value={editableRatePerMeter} onChange={(e) => { setEditableRatePerMeter(e.target.value); if (rateSaveState !== 'idle') setRateSaveState('idle'); }} className="w-24 p-1 text-sm text-right font-semibold text-secondary-800 border-b-2 border-secondary-200 focus:border-primary-500 focus:outline-none bg-transparent" />
+                                                            <button onClick={handleRatePerMeterUpdate} disabled={isRatePerMeterUnchanged || rateSaveState !== 'idle'} className="px-2 py-1 bg-primary-100 text-primary-700 rounded-md text-xs font-semibold hover:bg-primary-200 disabled:bg-secondary-200 disabled:text-secondary-500 disabled:cursor-not-allowed">
+                                                                {rateSaveState === 'saving' ? <SpinnerIcon className="w-4 h-4" /> : rateSaveState === 'saved' ? <CheckIcon className="w-4 h-4 text-success-600" /> : 'Save'}
                                                             </button>
                                                         </div>
                                                     </div>
                                                     <div className="flex justify-between items-center">
-                                                        <span className="text-gray-600">Total Overtime:</span>
-                                                        <span className="font-semibold text-gray-800">{result.summary.totalOvertimeHours} hours</span>
+                                                        <span className="text-secondary-600">Total Overtime:</span>
+                                                        <span className="font-semibold text-secondary-800">{result.summary.totalOvertimeHours} hours</span>
                                                     </div>
 
                                                     <div className="border-t pt-4 mt-4 space-y-2">
                                                         <div className="flex justify-between items-center">
-                                                            <span className="text-gray-600">Wage Earnings:</span>
-                                                            <span className="font-medium text-gray-800">₹{wageEarnings.toFixed(2)}</span>
+                                                            <span className="text-secondary-600">Wage Earnings:</span>
+                                                            <span className="font-medium text-secondary-800">₹{wageEarnings.toFixed(2)}</span>
                                                         </div>
                                                         <div className="flex justify-between items-center">
-                                                            <span className="text-gray-600">Production Earnings:</span>
-                                                            <span className="font-medium text-gray-800">₹{productionEarnings.toFixed(2)}</span>
+                                                            <span className="text-secondary-600">Production Earnings:</span>
+                                                            <span className="font-medium text-secondary-800">₹{productionEarnings.toFixed(2)}</span>
                                                         </div>
                                                         <div className="flex justify-between items-center text-base">
-                                                            <span className="font-semibold text-gray-800">Gross Salary:</span>
-                                                            <span className="font-semibold text-gray-800">₹{grossSalary.toFixed(2)}</span>
+                                                            <span className="font-semibold text-secondary-800">Gross Salary:</span>
+                                                            <span className="font-semibold text-secondary-800">₹{grossSalary.toFixed(2)}</span>
                                                         </div>
                                                         <div className="flex justify-between items-center">
-                                                            <label htmlFor="advanceDeduction" className="text-gray-600">Advance Deduction:</label>
+                                                            <label htmlFor="advanceDeduction" className="text-secondary-600">Advance Deduction:</label>
                                                              <div className="flex items-center gap-1">
-                                                                <span className="font-semibold text-red-600">- ₹</span>
-                                                                <input id="advanceDeduction" type="number" value={editableDeduction} onChange={(e) => { setError(''); setEditableDeduction(e.target.value); }} className="w-24 p-1 text-sm text-right font-semibold text-red-600 border-b-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-transparent" />
+                                                                <span className="font-semibold text-danger-600">- ₹</span>
+                                                                <input id="advanceDeduction" type="number" value={editableDeduction} onChange={(e) => { setError(''); setEditableDeduction(e.target.value); }} className="w-24 p-1 text-sm text-right font-semibold text-danger-600 border-b-2 border-secondary-200 focus:border-primary-500 focus:outline-none bg-transparent" />
                                                             </div>
                                                         </div>
                                                          <div className="flex justify-between items-center">
-                                                            <span className="text-gray-600">Total Outstanding Advance:</span>
-                                                            <span className="font-semibold text-gray-800">₹{result.summary.totalOutstandingAdvance.toFixed(2)}</span>
+                                                            <span className="text-secondary-600">Total Outstanding Advance:</span>
+                                                            <span className="font-semibold text-secondary-800">₹{result.summary.totalOutstandingAdvance.toFixed(2)}</span>
                                                         </div>
                                                         <div className="flex justify-between items-center text-lg border-t pt-2 mt-2">
-                                                            <span className="font-bold text-gray-800">Net Salary:</span>
-                                                            <span className={`font-bold text-xl ${netSalary < 0 ? 'text-red-600' : 'text-green-600'}`}>₹{netSalary.toFixed(2)}</span>
+                                                            <span className="font-bold text-secondary-800">Net Salary:</span>
+                                                            <span className={`font-bold text-xl ${netSalary < 0 ? 'text-danger-600' : 'text-success-600'}`}>₹{netSalary.toFixed(2)}</span>
                                                         </div>
-                                                        <p className="text-xs text-gray-500 text-right pt-1">(Overtime pay not included)</p>
+                                                        <p className="text-xs text-secondary-500 text-right pt-1">(Overtime pay not included)</p>
                                                     </div>
                                                      {isCalculated && (
                                                         <div className="mt-6 text-center">
                                                             <button
                                                                 onClick={handleFinalize}
                                                                 disabled={finalizeState !== 'idle'}
-                                                                className="w-full px-4 py-3 bg-green-600 text-white rounded-md font-semibold hover:bg-green-700 disabled:bg-gray-400 flex items-center justify-center transition-colors"
+                                                                className="w-full px-4 py-3 bg-success-600 text-white rounded-md font-semibold hover:bg-success-700 disabled:bg-secondary-400 flex items-center justify-center transition-colors"
                                                             >
                                                                 {finalizeState === 'saving' && <SpinnerIcon className="w-5 h-5 mr-2" />}
                                                                 {finalizeState === 'saved' && <CheckIcon className="w-5 h-5 mr-2" />}
@@ -548,18 +548,18 @@ const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecord
                     ) : (
                     <div className="p-5 space-y-5">
                         <div className="relative flex-grow w-full md:w-auto">
-                            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary-400" />
                             <input
                                 type="text"
                                 placeholder="Search by employee..."
                                 value={payslipSearchTerm}
                                 onChange={(e) => setPayslipSearchTerm(e.target.value)}
-                                className="w-full md:w-64 pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full md:w-64 pl-10 pr-4 py-2 text-sm border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                             />
                         </div>
                         <div className="overflow-x-auto border rounded-lg">
-                            <table className="w-full text-sm text-left text-gray-500">
-                                <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                            <table className="w-full text-sm text-left text-secondary-500">
+                                <thead className="text-xs text-secondary-700 uppercase bg-secondary-50">
                                     <tr>
                                         <th scope="col" className="px-6 py-3">Payslip Date</th>
                                         <th scope="col" className="px-6 py-3">Employee Name</th>
@@ -570,13 +570,13 @@ const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecord
                                 </thead>
                                 <tbody>
                                     {filteredPayslips.map((payslip) => (
-                                        <tr key={payslip.id} className="bg-white border-b hover:bg-gray-50">
+                                        <tr key={payslip.id} className="bg-white border-b hover:bg-secondary-50">
                                             <td className="px-6 py-4">{formatDateForDisplay(payslip.payslipDate)}</td>
-                                            <td className="px-6 py-4 font-medium text-gray-900">{payslip.employeeName}</td>
+                                            <td className="px-6 py-4 font-medium text-secondary-900">{payslip.employeeName}</td>
                                             <td className="px-6 py-4">{formatDateForDisplay(payslip.payPeriodStart)} - {formatDateForDisplay(payslip.payPeriodEnd)}</td>
-                                            <td className="px-6 py-4 text-right font-bold text-green-600">₹{payslip.netSalary.toFixed(2)}</td>
+                                            <td className="px-6 py-4 text-right font-bold text-success-600">₹{payslip.netSalary.toFixed(2)}</td>
                                             <td className="px-6 py-4 text-center">
-                                                <button onClick={() => setViewingPayslip(payslip)} className="font-medium text-blue-600 hover:underline">
+                                                <button onClick={() => setViewingPayslip(payslip)} className="font-medium text-primary-600 hover:underline">
                                                     View / Print
                                                 </button>
                                             </td>
@@ -584,7 +584,7 @@ const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecord
                                     ))}
                                 </tbody>
                             </table>
-                            {filteredPayslips.length === 0 && <div className="text-center p-8 text-gray-500">No saved payslips found.</div>}
+                            {filteredPayslips.length === 0 && <div className="text-center p-8 text-secondary-500">No saved payslips found.</div>}
                         </div>
                     </div>
                     )

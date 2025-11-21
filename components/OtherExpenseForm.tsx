@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { CloseIcon, CalendarIcon } from './Icons';
 import DatePicker from './DatePicker';
@@ -22,12 +23,24 @@ const BLANK_EXPENSE: Omit<OtherExpense, 'id'> = {
     notes: '',
     bankName: '',
     chequeDate: '',
+    paymentMode: 'Cash',
+    paymentStatus: 'Paid',
+    paymentTerms: 'Due on receipt',
 };
 
 const formatDateForInput = (isoDate?: string) => {
     if (!isoDate || !/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return '';
     const [year, month, day] = isoDate.split('-');
     return `${day}-${month}-${year}`;
+};
+
+const parsePaymentTermsToDays = (terms?: string): string => {
+    if (!terms) return '';
+    if (terms.toLowerCase() === 'due on receipt') {
+        return '0';
+    }
+    const match = terms.match(/net (\d+)/i);
+    return match ? match[1] : '';
 };
 
 const OtherExpenseForm: React.FC<OtherExpenseFormProps> = ({ onClose, onSave, expenseToEdit, expenseCategories, onAddExpenseCategory, bankNames, onAddBankName }) => {
@@ -135,14 +148,6 @@ const OtherExpenseForm: React.FC<OtherExpenseFormProps> = ({ onClose, onSave, ex
         [...expenseCategories].sort((a, b) => a.name.localeCompare(b.name)),
         [expenseCategories]
     );
-    
-    const paymentTermOptions = useMemo(() => {
-        const options = ['Due on receipt', 'Net 15', 'Net 30', 'Net 45', 'Net 60'];
-        if (expense.paymentTerms && !options.includes(expense.paymentTerms)) {
-            return [expense.paymentTerms, ...options];
-        }
-        return options;
-    }, [expense.paymentTerms]);
 
     const modalTitle = isEditing ? 'Edit Expense' : 'Record New Expense';
     const commonInputClasses = "block w-full px-3 py-2.5 text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500";
@@ -218,12 +223,36 @@ const OtherExpenseForm: React.FC<OtherExpenseFormProps> = ({ onClose, onSave, ex
                             </div>
                             <div>
                                 <label htmlFor="paymentTerms" className="block text-sm font-medium text-gray-700 mb-1">Payment Terms</label>
-                                <select id="paymentTerms" name="paymentTerms" value={expense.paymentTerms || ''} onChange={handleChange} className={commonInputClasses}>
-                                    <option value="" disabled>Select payment terms</option>
-                                    {paymentTermOptions.map(term => (
-                                        <option key={term} value={term}>{term}</option>
-                                    ))}
-                                </select>
+                                <div className="relative">
+                                    <input
+                                        id="paymentTerms"
+                                        type="number"
+                                        value={parsePaymentTermsToDays(expense.paymentTerms)}
+                                        onChange={e => {
+                                            const value = e.target.value;
+                                            if (value === '') {
+                                                setExpense(prev => ({...prev, paymentTerms: ''}));
+                                                return;
+                                            }
+                                            const numDays = parseInt(value, 10);
+                                            if (!isNaN(numDays)) {
+                                                if (numDays <= 0) {
+                                                    setExpense(prev => ({...prev, paymentTerms: 'Due on receipt'}));
+                                                } else {
+                                                    setExpense(prev => ({...prev, paymentTerms: `Net ${numDays}`}));
+                                                }
+                                            }
+                                        }}
+                                        className={`${commonInputClasses} pr-12`}
+                                        placeholder="e.g., 30"
+                                        min="0"
+                                    />
+                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                        <span className="text-secondary-500 sm:text-sm">
+                                            days
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

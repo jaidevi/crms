@@ -6,7 +6,7 @@ import type { EmployeeAdvance, Employee } from '../App';
 
 interface EmployeeAdvanceFormProps {
     onClose: () => void;
-    onSave: (advance: Omit<EmployeeAdvance, 'id'> | EmployeeAdvance) => void;
+    onSave: (advance: Omit<EmployeeAdvance, 'id'> | EmployeeAdvance) => void | Promise<void>;
     employees: Employee[];
     advanceToEdit?: EmployeeAdvance | null;
 }
@@ -89,14 +89,14 @@ const EmployeeAdvanceForm: React.FC<EmployeeAdvanceFormProps> = ({ onClose, onSa
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!validate()) return;
         const finalAdvanceData = { ...advance, amount: Number(advance.amount), paidAmount: Number(advance.paidAmount) || 0 };
 
         if (isEditing && advanceToEdit) {
-            onSave({ ...finalAdvanceData, id: advanceToEdit.id });
+            await onSave({ ...finalAdvanceData, id: advanceToEdit.id });
         } else {
-            onSave(finalAdvanceData);
+            await onSave(finalAdvanceData);
         }
     };
 

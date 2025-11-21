@@ -68,15 +68,15 @@ const MonthYearPicker: React.FC<MonthYearPickerProps> = ({ currentDate, onSelect
     }, [pickerYear]);
 
     return (
-        <div ref={pickerRef} className="absolute left-1/2 -translate-x-1/2 mt-2 w-64 bg-white border border-gray-200 rounded-md shadow-lg z-30 p-3 animate-fade-in-down origin-top">
+        <div ref={pickerRef} className="absolute left-1/2 -translate-x-1/2 mt-2 w-64 bg-white border border-secondary-200 rounded-md shadow-lg z-30 p-3 animate-fade-in-down origin-top">
             <div className="flex items-center justify-between mb-3 px-1">
-                <button onClick={() => setPickerYear(y => y - 1)} className="p-1 rounded-full hover:bg-gray-100 text-gray-500" aria-label="Previous year">
+                <button onClick={() => setPickerYear(y => y - 1)} className="p-1 rounded-full hover:bg-secondary-100 text-secondary-500" aria-label="Previous year">
                     <ChevronLeftIcon className="w-5 h-5" />
                 </button>
-                <div className="font-semibold text-gray-800 text-sm">
+                <div className="font-semibold text-secondary-800 text-sm">
                     {pickerYear}
                 </div>
-                <button onClick={() => setPickerYear(y => y + 1)} disabled={isNextYearDisabled} className="p-1 rounded-full hover:bg-gray-100 text-gray-500 disabled:text-gray-300 disabled:cursor-not-allowed" aria-label="Next year">
+                <button onClick={() => setPickerYear(y => y + 1)} disabled={isNextYearDisabled} className="p-1 rounded-full hover:bg-secondary-100 text-secondary-500 disabled:text-secondary-300 disabled:cursor-not-allowed" aria-label="Next year">
                     <ChevronRightIcon className="w-5 h-5" />
                 </button>
             </div>
@@ -91,9 +91,9 @@ const MonthYearPicker: React.FC<MonthYearPickerProps> = ({ currentDate, onSelect
                             onClick={() => handleMonthSelect(index)}
                             disabled={isDisabled}
                             className={`px-3 py-2 text-sm rounded-md transition-colors ${
-                                isSelected ? 'bg-blue-600 text-white font-semibold' :
-                                isDisabled ? 'text-gray-300 cursor-not-allowed' :
-                                'hover:bg-gray-100 text-gray-700'
+                                isSelected ? 'bg-primary-600 text-white font-semibold' :
+                                isDisabled ? 'text-secondary-300 cursor-not-allowed' :
+                                'hover:bg-secondary-100 text-secondary-700'
                             }`}
                         >
                             {month}
@@ -106,18 +106,18 @@ const MonthYearPicker: React.FC<MonthYearPickerProps> = ({ currentDate, onSelect
 };
 
 const getStatusSelectClasses = (status: AttendanceStatus | 'N/A') => {
-    const baseClasses = "flex-1 p-1 text-xs border-transparent rounded focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-200 disabled:cursor-not-allowed font-medium";
+    const baseClasses = "flex-1 p-1 text-xs border-transparent rounded focus:ring-primary-500 focus:border-primary-500 disabled:bg-secondary-200 disabled:cursor-not-allowed font-medium";
     switch (status) {
         case 'Present':
-            return `${baseClasses} bg-green-100 text-green-800`;
+            return `${baseClasses} bg-success-100 text-success-800`;
         case 'Absent':
-            return `${baseClasses} bg-red-100 text-red-800`;
+            return `${baseClasses} bg-danger-100 text-danger-800`;
         case 'Holiday':
-            return `${baseClasses} bg-purple-100 text-purple-800`;
+            return `${baseClasses} bg-primary-100 text-primary-800`;
         case 'Leave':
-            return `${baseClasses} bg-pink-100 text-pink-800`;
+            return `${baseClasses} bg-warning-100 text-warning-800`;
         default:
-            return `${baseClasses} bg-gray-100 text-gray-800`;
+            return `${baseClasses} bg-secondary-100 text-secondary-800`;
     }
 };
 
@@ -310,13 +310,13 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ employees, attendan
 
     return (
         <div className="bg-white rounded-lg shadow-sm">
-            <div className="flex flex-col md:flex-row items-center justify-between p-5 border-b border-gray-200 gap-4">
+            <div className="flex flex-col md:flex-row items-center justify-between p-5 border-b border-secondary-200 gap-4">
                 <div className="flex items-center gap-2">
-                    <button onClick={() => handleMonthChange(-1)} className="p-2 rounded-full hover:bg-gray-100" aria-label="Previous month"><ChevronLeftIcon/></button>
+                    <button onClick={() => handleMonthChange(-1)} className="p-2 rounded-full hover:bg-secondary-100" aria-label="Previous month"><ChevronLeftIcon/></button>
                     <div className="relative">
                         <button
                             onClick={() => setIsMonthPickerOpen(p => !p)}
-                            className="text-xl font-semibold text-gray-800 text-center w-48 hover:bg-gray-100 rounded-md py-1 px-2 transition-colors"
+                            className="text-xl font-semibold text-secondary-800 text-center w-48 hover:bg-secondary-100 rounded-md py-1 px-2 transition-colors"
                             aria-haspopup="true"
                             aria-expanded={isMonthPickerOpen}
                         >
@@ -334,12 +334,12 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ employees, attendan
                             />
                         )}
                     </div>
-                    <button onClick={() => handleMonthChange(1)} className="p-2 rounded-full hover:bg-gray-100 disabled:text-gray-300 disabled:cursor-not-allowed" disabled={isCurrentOrFutureMonth} aria-label="Next month"><ChevronRightIcon/></button>
+                    <button onClick={() => handleMonthChange(1)} className="p-2 rounded-full hover:bg-secondary-100 disabled:text-secondary-300 disabled:cursor-not-allowed" disabled={isCurrentOrFutureMonth} aria-label="Next month"><ChevronRightIcon/></button>
                 </div>
                 <button 
                     onClick={handleSave}
                     disabled={!hasChanges || saveState !== 'idle'}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center w-36 transition-colors"
+                    className="px-4 py-2 bg-primary-600 text-white rounded-md text-sm font-semibold hover:bg-primary-700 disabled:bg-secondary-400 disabled:cursor-not-allowed flex items-center justify-center w-36 transition-colors"
                 >
                     {saveState === 'saving' && <><SpinnerIcon className="w-5 h-5 mr-2" /> Saving...</>}
                     {saveState === 'saved' && <><CheckIcon className="w-5 h-5 mr-2" /> Saved!</>}
@@ -347,11 +347,11 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ employees, attendan
                 </button>
             </div>
             <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left text-gray-500 border-collapse">
-                    <thead className="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0 z-10">
+                <table className="w-full text-sm text-left text-secondary-500 border-collapse">
+                    <thead className="text-xs text-secondary-700 uppercase bg-secondary-50 sticky top-0 z-10">
                         <tr>
-                            <th className="px-2 py-3 border whitespace-nowrap sticky left-0 bg-gray-50 z-20">Sl#</th>
-                            <th className="px-2 py-3 border whitespace-nowrap min-w-[150px] sticky left-[53px] bg-gray-50 z-20">Employee Name</th>
+                            <th className="px-2 py-3 border whitespace-nowrap sticky left-0 bg-secondary-50 z-20">Sl#</th>
+                            <th className="px-2 py-3 border whitespace-nowrap min-w-[150px] sticky left-[53px] bg-secondary-50 z-20">Employee Name</th>
                             {dayHeaders.map(({ day, name }) => {
                                 const dateForHeader = new Date(year, month, day);
                                 dateForHeader.setHours(0,0,0,0);
@@ -360,8 +360,8 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ employees, attendan
                                 const isFutureDateHeader = dateForHeader > today;
                                 const isSundayHeader = dateForHeader.getDay() === 0;
 
-                                const headerContainerClass = isSundayHeader ? 'bg-red-50' : isEditingThisDate ? 'bg-blue-50' : '';
-                                const headerDayNameClass = isSundayHeader ? 'text-red-500' : 'text-gray-400';
+                                const headerContainerClass = isSundayHeader ? 'bg-danger-50' : isEditingThisDate ? 'bg-primary-50' : '';
+                                const headerDayNameClass = isSundayHeader ? 'text-danger-500' : 'text-secondary-400';
                                 
                                 return (
                                     <th key={day} className={`p-1 border text-center min-w-[320px] ${headerContainerClass}`}>
@@ -375,7 +375,7 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ employees, attendan
                                                     if (isFutureDateHeader) return;
                                                     setEditingDate(isEditingThisDate ? null : dateStringForHeader);
                                                 }}
-                                                className={`ml-2 p-1 rounded-full ${isFutureDateHeader ? 'text-gray-300 cursor-not-allowed' : isEditingThisDate ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50'}`}
+                                                className={`ml-2 p-1 rounded-full ${isFutureDateHeader ? 'text-secondary-300 cursor-not-allowed' : isEditingThisDate ? 'bg-primary-100 text-primary-600' : 'text-secondary-400 hover:text-primary-500 hover:bg-primary-50'}`}
                                                 title={isFutureDateHeader ? 'Cannot edit future dates' : isEditingThisDate ? 'Lock this date' : 'Edit this date'}
                                                 disabled={isFutureDateHeader}
                                             >
@@ -385,11 +385,11 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ employees, attendan
                                     </th>
                                 );
                             })}
-                            <th className="px-2 py-3 border bg-blue-50 text-blue-800 text-center">P</th>
-                            <th className="px-2 py-3 border bg-blue-50 text-blue-800 text-center">A</th>
-                            <th className="px-2 py-3 border bg-blue-50 text-blue-800 text-center">L</th>
-                            <th className="px-2 py-3 border bg-blue-50 text-blue-800 text-center">OT</th>
-                            <th className="px-2 py-3 border bg-blue-50 text-blue-800 text-center">Meters</th>
+                            <th className="px-2 py-3 border bg-primary-50 text-primary-800 text-center">P</th>
+                            <th className="px-2 py-3 border bg-primary-50 text-primary-800 text-center">A</th>
+                            <th className="px-2 py-3 border bg-primary-50 text-primary-800 text-center">L</th>
+                            <th className="px-2 py-3 border bg-primary-50 text-primary-800 text-center">OT</th>
+                            <th className="px-2 py-3 border bg-primary-50 text-primary-800 text-center">Meters</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -418,9 +418,9 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ employees, attendan
                             });
 
                             return (
-                                <tr key={emp.id} className="bg-white border-b hover:bg-gray-50">
+                                <tr key={emp.id} className="bg-white border-b hover:bg-secondary-50">
                                     <td className="px-2 py-2 border text-center sticky left-0 bg-white">{index + 1}</td>
-                                    <td className="px-2 py-2 border font-medium text-gray-900 whitespace-nowrap min-w-[150px] sticky left-[53px] bg-white">{emp.name}</td>
+                                    <td className="px-2 py-2 border font-medium text-secondary-900 whitespace-nowrap min-w-[150px] sticky left-[53px] bg-white">{emp.name}</td>
                                     {Array.from({ length: daysInMonth }).map((_, i) => {
                                         const day = i + 1;
                                         const date = new Date(year, month, day);
@@ -435,8 +435,8 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ employees, attendan
                                         const defaultStatus = isSunday ? 'Holiday' : 'Present';
 
                                         const cellClasses = ['p-1', 'border', 'text-center'];
-                                        if (isFutureDate) cellClasses.push('bg-gray-100');
-                                        if (isEditingThisDate) cellClasses.push('bg-blue-50');
+                                        if (isFutureDate) cellClasses.push('bg-secondary-100');
+                                        if (isEditingThisDate) cellClasses.push('bg-primary-50');
 
                                         return (
                                             <td key={day} className={cellClasses.join(' ')}>
@@ -464,7 +464,7 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ employees, attendan
                                                         title="Overtime Hours"
                                                         value={record?.overtimeHours || ''}
                                                         onChange={(e) => handleAttendanceChange(emp.id, day, { overtimeHours: Number(e.target.value) || 0 })}
-                                                        className="w-12 p-1 text-xs border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-200 disabled:cursor-not-allowed"
+                                                        className="w-12 p-1 text-xs border-secondary-300 rounded focus:ring-primary-500 focus:border-primary-500 disabled:bg-secondary-200 disabled:cursor-not-allowed"
                                                         placeholder="OT"
                                                         disabled={isLocked}
                                                     />
@@ -473,31 +473,31 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ employees, attendan
                                                         title="Meters Produced"
                                                         value={record?.metersProduced || ''}
                                                         onChange={(e) => handleAttendanceChange(emp.id, day, { metersProduced: Number(e.target.value) || 0 })}
-                                                        className="w-16 p-1 text-xs border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-200 disabled:cursor-not-allowed"
+                                                        className="w-16 p-1 text-xs border-secondary-300 rounded focus:ring-primary-500 focus:border-primary-500 disabled:bg-secondary-200 disabled:cursor-not-allowed"
                                                         placeholder="Meters"
                                                         disabled={isLocked}
                                                     />
                                                 </div>
                                                 {record && wasEdited(record.createdAt, record.updatedAt) && (
-                                                    <div className="text-[10px] text-gray-400 mt-1 text-center" title={`Edited at ${formatTime(record.updatedAt)}`}>
+                                                    <div className="text-[10px] text-secondary-400 mt-1 text-center" title={`Edited at ${formatTime(record.updatedAt)}`}>
                                                         Last edit on {formatDateForTimestamp(record.updatedAt)}
                                                     </div>
                                                 )}
                                             </td>
                                         )
                                     })}
-                                    <td className="px-2 py-2 border text-center font-semibold bg-gray-50">{summary.P}</td>
-                                    <td className="px-2 py-2 border text-center font-semibold bg-gray-50">{summary.A}</td>
-                                    <td className="px-2 py-2 border text-center font-semibold bg-gray-50">{summary.L}</td>
-                                    <td className="px-2 py-2 border text-center font-semibold bg-gray-50">{summary.OT}</td>
-                                    <td className="px-2 py-2 border text-center font-semibold bg-gray-50">{totalMeters}</td>
+                                    <td className="px-2 py-2 border text-center font-semibold bg-secondary-50">{summary.P}</td>
+                                    <td className="px-2 py-2 border text-center font-semibold bg-secondary-50">{summary.A}</td>
+                                    <td className="px-2 py-2 border text-center font-semibold bg-secondary-50">{summary.L}</td>
+                                    <td className="px-2 py-2 border text-center font-semibold bg-secondary-50">{summary.OT}</td>
+                                    <td className="px-2 py-2 border text-center font-semibold bg-secondary-50">{totalMeters}</td>
                                 </tr>
                             );
                         })}
                     </tbody>
                 </table>
                  {employees.length === 0 && (
-                    <div className="text-center p-8 text-gray-500">
+                    <div className="text-center p-8 text-secondary-500">
                         No employees found. Please add employees in the Employee Master screen first.
                     </div>
                  )}

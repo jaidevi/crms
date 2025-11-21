@@ -12,12 +12,12 @@ interface FormLabelProps {
   labelColor?: string;
 }
 
-const FormLabel: React.FC<FormLabelProps> = ({ htmlFor, label, required = false, hasInfo = false, labelColor = "text-gray-700"}) => {
+const FormLabel: React.FC<FormLabelProps> = ({ htmlFor, label, required = false, hasInfo = false, labelColor = "text-secondary-700"}) => {
   return (
     <label htmlFor={htmlFor} className={`flex items-center text-sm font-medium mb-1 ${labelColor}`}>
       <span>{label}</span>
-      {required && <span className="text-red-500 ml-0.5">*</span>}
-      {hasInfo && <QuestionMarkIcon className="w-4 h-4 text-gray-400 ml-1" />}
+      {required && <span className="text-danger-500 ml-0.5">*</span>}
+      {hasInfo && <QuestionMarkIcon className="w-4 h-4 text-secondary-400 ml-1" />}
     </label>
   );
 };
@@ -63,17 +63,17 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ clients, onAddClient, p
     }
   };
 
-  const commonInputClasses = "block w-full px-3 py-2.5 text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500";
+  const commonInputClasses = "block w-full px-3 py-2.5 text-sm rounded-md border-secondary-300 shadow-sm focus:border-primary-500 focus:ring-primary-500";
   
   return (
     <>
       {showClientMasterModal && <ShopMasterModal onClose={() => setShowClientMasterModal(false)} onSave={handleSaveClient} existingClientNames={clientNames} processTypes={processTypes} onAddProcessType={onAddProcessType} />}
       <div className="bg-white rounded-lg shadow-sm">
           {/* Form Header */}
-          <div className="flex items-center justify-between p-5 border-b border-gray-200">
-              <h1 className="text-xl font-semibold text-gray-800">New Item</h1>
-              <button className="p-1 rounded-full hover:bg-gray-100">
-                  <CloseIcon className="w-5 h-5 text-gray-500" />
+          <div className="flex items-center justify-between p-5 border-b border-secondary-200">
+              <h1 className="text-xl font-semibold text-secondary-800">New Item</h1>
+              <button className="p-1 rounded-full hover:bg-secondary-100">
+                  <CloseIcon className="w-5 h-5 text-secondary-500" />
               </button>
           </div>
 
@@ -92,9 +92,9 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ clients, onAddClient, p
                                       value="goods"
                                       checked={itemType === 'goods'}
                                       onChange={(e) => setItemType(e.target.value)}
-                                      className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                      className="h-4 w-4 text-primary-600 border-secondary-300 focus:ring-primary-500"
                                   />
-                                  <span className="ml-2 text-sm text-gray-700">Goods</span>
+                                  <span className="ml-2 text-sm text-secondary-700">Goods</span>
                               </label>
                               <label className="flex items-center">
                                   <input 
@@ -103,9 +103,9 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ clients, onAddClient, p
                                       value="service"
                                       checked={itemType === 'service'}
                                       onChange={(e) => setItemType(e.target.value)}
-                                      className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                      className="h-4 w-4 text-primary-600 border-secondary-300 focus:ring-primary-500"
                                   />
-                                  <span className="ml-2 text-sm text-gray-700">Service</span>
+                                  <span className="ml-2 text-sm text-secondary-700">Service</span>
                               </label>
                           </div>
                       </div>
@@ -114,7 +114,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ clients, onAddClient, p
                           <FormLabel htmlFor="clientName" label="Client Name" />
                            <select id="clientName" value={selectedClientName} onChange={handleClientNameChange} className={commonInputClasses}>
                                 {clientNames.map(c => <option key={c} value={c}>{c}</option>)}
-                                <option value="_add_new_" className="text-blue-600 font-semibold">++ Add New Client ++</option>
+                                <option value="_add_new_" className="text-primary-600 font-semibold">++ Add New Client ++</option>
                             </select>
                       </div>
                       
@@ -134,12 +134,12 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ clients, onAddClient, p
                       </div>
 
                       <div>
-                          <FormLabel htmlFor="selling-price" label="Selling Price" required labelColor="text-red-500" />
+                          <FormLabel htmlFor="selling-price" label="Selling Price" required labelColor="text-danger-500" />
                           <div className="flex rounded-md shadow-sm">
-                              <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">
+                              <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-secondary-300 bg-secondary-50 text-secondary-500 sm:text-sm">
                                   INR
                               </span>
-                              <input type="text" id="selling-price" className="flex-1 min-w-0 block w-full px-3 py-2.5 rounded-none rounded-r-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm border-gray-300" />
+                              <input type="text" id="selling-price" className="flex-1 min-w-0 block w-full px-3 py-2.5 rounded-none rounded-r-md focus:ring-primary-500 focus:border-primary-500 sm:text-sm border-secondary-300" />
                           </div>
                       </div>
 
@@ -159,15 +159,15 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ clients, onAddClient, p
                           accept="image/*"
                           multiple
                       />
-                      <div className="flex justify-center items-center w-full h-52 border-2 border-gray-300 border-dashed rounded-lg">
+                      <div className="flex justify-center items-center w-full h-52 border-2 border-secondary-300 border-dashed rounded-lg">
                           <div className="text-center">
-                              <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
-                              <p className="mt-2 text-sm text-gray-600">
+                              <ImageIcon className="mx-auto h-12 w-12 text-secondary-400" />
+                              <p className="mt-2 text-sm text-secondary-600">
                                   Drag image(s) here or{' '}
                                   <button 
                                       type="button" 
                                       onClick={handleBrowseClick} 
-                                      className="font-medium text-blue-600 hover:text-blue-500 focus:outline-none"
+                                      className="font-medium text-primary-600 hover:text-primary-500 focus:outline-none"
                                   >
                                       Browse images
                                   </button>
@@ -180,10 +180,10 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ clients, onAddClient, p
       </div>
       <div className="bg-white py-4 px-8 mt-4 rounded-lg shadow-sm">
           <div className="flex justify-start space-x-3">
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+              <button className="px-4 py-2 bg-primary-600 text-white rounded-md text-sm font-semibold hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                 Save
               </button>
-              <button className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-semibold hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">
+              <button className="px-4 py-2 bg-secondary-200 text-secondary-800 rounded-md text-sm font-semibold hover:bg-secondary-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-400">
                 Cancel
               </button>
           </div>

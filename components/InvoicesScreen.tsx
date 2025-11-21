@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import type { Client, DeliveryChallan, ProcessType, Invoice, InvoiceNumberConfig, CompanyDetails } from '../App';
 import { CalendarIcon, SearchIcon } from './Icons';
@@ -76,17 +75,22 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
         to.setHours(23, 59, 59, 999);
 
         const results = deliveryChallans.filter(challan => {
-            if (challan.status !== 'Ready to Invoice') {
-                return false;
-            }
             if (invoicedChallanNumbers.has(challan.challanNumber)) {
                 return false; // Filter out already invoiced challans
             }
             if (!challan.date || !/^\d{4}-\d{2}-\d{2}$/.test(challan.date)) return false;
             
             const challanDate = parseAsLocalDate(challan.date);
+            
+            let partyToCompare = challan.partyName;
+            if (challan.isOutsourcing && challan.partyName.includes('|')) {
+                const fromMatch = challan.partyName.match(/FROM: (.*?)\|/);
+                if (fromMatch) {
+                    partyToCompare = fromMatch[1].trim();
+                }
+            }
 
-            return challan.partyName === selectedClient && challanDate >= from && challanDate <= to;
+            return partyToCompare === selectedClient && challanDate >= from && challanDate <= to;
         });
         
         setFilteredChallans(results);

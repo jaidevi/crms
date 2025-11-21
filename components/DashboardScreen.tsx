@@ -30,12 +30,12 @@ interface KPICardProps {
 
 const KPICard: React.FC<KPICardProps> = ({ title, value, icon, color }) => {
     const colorClasses = {
-        blue: 'bg-blue-100 text-blue-600',
-        green: 'bg-green-100 text-green-600',
-        orange: 'bg-orange-100 text-orange-600',
-        purple: 'bg-purple-100 text-purple-600',
-        red: 'bg-red-100 text-red-600',
-        yellow: 'bg-yellow-100 text-yellow-600',
+        blue: 'bg-primary-100 text-primary-600',
+        green: 'bg-success-100 text-success-600',
+        orange: 'bg-accent-100 text-accent-600',
+        purple: 'bg-primary-100 text-primary-600',
+        red: 'bg-danger-100 text-danger-600',
+        yellow: 'bg-warning-100 text-warning-800',
     };
 
     return (
@@ -44,8 +44,8 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, icon, color }) => {
                 {icon}
             </div>
             <div>
-                <p className="text-sm font-medium text-gray-500">{title}</p>
-                <p className="text-2xl font-bold text-gray-800 mt-1">{value}</p>
+                <p className="text-sm font-medium text-secondary-500">{title}</p>
+                <p className="text-2xl font-bold text-secondary-800 mt-1">{value}</p>
             </div>
         </div>
     );
@@ -78,10 +78,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 invoice.items.flatMap(item => item.challanNumber.split(',').map(s => s.trim()))
             )
         );
-        const readyToInvoice = deliveryChallans.filter(c => c.status === 'Ready to Invoice' && !invoicedChallanNumbers.has(c.challanNumber));
+        const readyToInvoice = deliveryChallans.filter(c => (c.status === 'Ready to Invoice' || c.status === 'Delivered') && !invoicedChallanNumbers.has(c.challanNumber));
         const pendingDelivery = deliveryChallans.filter(c => c.status === 'Not Delivered');
         const totalMetersProcessed = deliveryChallans
-            .filter(c => c.status === 'Ready to Invoice')
+            .filter(c => c.status === 'Ready to Invoice' || c.status === 'Delivered')
             .reduce((sum, c) => sum + c.mtr, 0);
 
         return {
@@ -108,7 +108,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     return (
         <div className="space-y-8 animate-fade-in-down">
             <div>
-                <h2 className="text-xl font-semibold text-gray-700 mb-4">Sales Overview</h2>
+                <h2 className="text-xl font-semibold text-secondary-700 mb-4">Sales Overview</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <KPICard title="Total Revenue" value={formatCurrency(salesKpis.totalRevenue)} icon={<DollarSignIcon className="w-6 h-6" />} color="green" />
                     <KPICard title="Payments Received" value={formatCurrency(salesKpis.totalPayments)} icon={<PaymentsIcon className="w-6 h-6" />} color="blue" />
@@ -118,7 +118,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
             </div>
             
             <div>
-                <h2 className="text-xl font-semibold text-gray-700 mb-4">Production & Operations</h2>
+                <h2 className="text-xl font-semibold text-secondary-700 mb-4">Production & Operations</h2>
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <KPICard title="Challans Ready for Invoice" value={productionKpis.readyToInvoiceCount} icon={<PackageIcon className="w-6 h-6" />} color="orange" />
                     <KPICard title="Pending Deliveries" value={productionKpis.pendingDeliveryCount} icon={<PackageIcon className="w-6 h-6" />} color="yellow" />
@@ -127,7 +127,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
             </div>
 
             <div>
-                <h2 className="text-xl font-semibold text-gray-700 mb-4">Expenses & Purchases</h2>
+                <h2 className="text-xl font-semibold text-secondary-700 mb-4">Expenses & Purchases</h2>
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <KPICard title="Total Purchase Value" value={formatCurrency(expenseKpis.totalPurchaseValue)} icon={<ShoppingCartIcon className="w-6 h-6" />} color="purple" />
                     <KPICard title="Unpaid Purchases" value={expenseKpis.unpaidPurchases} icon={<ShoppingCartIcon className="w-6 h-6" />} color="red" />

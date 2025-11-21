@@ -3,20 +3,24 @@ import { CloseIcon, CalendarIcon, ChevronDownIcon, ImageIcon, SpinnerIcon, Check
 import DatePicker from './DatePicker';
 import AddShopModal from './AddShopModal';
 import EmployeeModal from './EmployeeModal';
+import PurchaseShopModal from './PurchaseShopModal';
 import ProcessTypeModal from './PartyDCProcessModal';
-import type { DeliveryChallan, Client, ProcessType, DeliveryChallanNumberConfig, Employee } from '../App';
+import type { DeliveryChallan, Client, ProcessType, DeliveryChallanNumberConfig, Employee, PurchaseShop, CompanyDetails } from '../App';
 
 interface DeliveryChallanFormProps {
     onClose: () => void;
     onSave: (entry: Omit<DeliveryChallan, 'id'>) => void | Promise<void>;
     clients: Client[];
     onAddClient: (newClient: Omit<Client, 'id'>) => void;
+    purchaseShops: PurchaseShop[];
+    onAddPurchaseShop: (newShop: Omit<PurchaseShop, 'id'>) => void;
     processTypes: ProcessType[];
     onAddProcessType: (process: { name: string, rate: number }) => void;
     challanToEdit?: DeliveryChallan | null;
     deliveryChallanNumberConfig: DeliveryChallanNumberConfig;
     employees: Employee[];
     onAddEmployee: (employee: Omit<Employee, 'id'>) => void;
+    companyDetails: CompanyDetails;
 }
 
 const BLANK_CHALLAN: Omit<DeliveryChallan, 'id' | 'challanNumber'> = {
@@ -34,6 +38,7 @@ const BLANK_CHALLAN: Omit<DeliveryChallan, 'id' | 'challanNumber'> = {
     extraWork: '',
     status: '',
     workerName: '',
+    workingUnit: 'Unit I',
     isOutsourcing: false,
     dcImage: [],
     sampleImage: [],
@@ -62,12 +67,15 @@ const useClickOutside = (ref: React.RefObject<HTMLElement>, handler: () => void)
     }, [ref, handler]);
 };
 
-const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSave, clients, onAddClient, processTypes, onAddProcessType, challanToEdit, deliveryChallanNumberConfig, employees, onAddEmployee }) => {
+const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSave, clients, onAddClient, purchaseShops, onAddPurchaseShop, processTypes, onAddProcessType, challanToEdit, deliveryChallanNumberConfig, employees, onAddEmployee, companyDetails }) => {
     const isEditing = !!challanToEdit;
     const [challan, setChallan] = useState<Omit<DeliveryChallan, 'id' | 'challanNumber'>>(BLANK_CHALLAN);
     const [challanNumber, setChallanNumber] = useState('');
+    const [fromParty, setFromParty] = useState('');
+    const [toParty, setToParty] = useState('');
     const [isDatePickerOpen, setDatePickerOpen] = useState(false);
     const [showAddClientModal, setShowAddClientModal] = useState(false);
+    const [showAddShopModal, setShowAddShopModal] = useState(false);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const [isProcessDropdownOpen, setProcessDropdownOpen] = useState(false);
     const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
@@ -78,14 +86,34 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSa
     const processDropdownRef = useRef<HTMLDivElement>(null);
     useClickOutside(processDropdownRef, () => setProcessDropdownOpen(false));
 
-    const clientNames = useMemo(() => clients.map(s => s.name), [clients]);
+    const partyList = useMemo(() => clients.map(c => c.name), [clients]);
     const processNames = useMemo(() => processTypes.map(p => p.name), [processTypes]);
+
+    const [processSearch, setProcessSearch] = useState('');
+    const filteredProcessNames = useMemo(() => {
+        const sorted = [...processNames].sort((a, b) => a.localeCompare(b));
+        if (!processSearch) {
+            return sorted;
+        }
+        return sorted.filter(p => 
+            p.toLowerCase().includes(processSearch.toLowerCase())
+        );
+    }, [processNames, processSearch]);
 
     useEffect(() => {
         if (challanToEdit) {
             const { id, ...rest } = challanToEdit;
             setChallan(rest);
             setChallanNumber(rest.challanNumber);
+             if (rest.isOutsourcing && rest.partyName.includes('|')) {
+                const fromMatch = rest.partyName.match(/FROM: (.*?)\|/);
+                const toMatch = rest.partyName.match(/\| TO: (.*)/);
+                setFromParty(fromMatch ? fromMatch[1].trim() : '');
+                setToParty(toMatch ? toMatch[1].trim() : '');
+            } else {
+                setFromParty('');
+                setToParty('');
+            }
         } else {
             setChallan({
                 ...BLANK_CHALLAN,
@@ -94,6 +122,8 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSa
             const paddedNumber = String(deliveryChallanNumberConfig.nextNumber).padStart(4, '0');
             const newChallanNumber = `${deliveryChallanNumberConfig.prefix}-${paddedNumber}`;
             setChallanNumber(newChallanNumber);
+            setFromParty('');
+            setToParty('');
         }
     }, [challanToEdit, deliveryChallanNumberConfig]);
 
@@ -104,6 +134,19 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSa
         if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
     };
     
+    const handleWorkingUnitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const value = e.target.value;
+        const isOutsourcingNow = value === 'Outsourcing';
+        setChallan(prev => ({
+            ...prev,
+            workingUnit: value,
+            isOutsourcing: isOutsourcingNow,
+            partyName: '' 
+        }));
+        setFromParty('');
+        setToParty('');
+    };
+
     const handleWorkerNameChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const value = e.target.value;
         if (value === '_add_new_') {
@@ -171,10 +214,16 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSa
         setChallan(prev => ({ ...prev, partyName: newClientName }));
         setShowAddClientModal(false);
     };
+
+    const handleSaveShop = (shopData: PurchaseShop) => {
+        const { id, ...newShopData } = shopData;
+        onAddPurchaseShop(newShopData);
+        setChallan(prev => ({ ...prev, partyName: newShopData.name }));
+        setShowAddShopModal(false);
+    };
     
     const handleSaveProcess = (processData: { name: string, rate: number }) => {
         onAddProcessType(processData);
-        // Automatically select the new process
         setChallan(prev => ({
             ...prev,
             process: [...prev.process, processData.name],
@@ -184,7 +233,15 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSa
 
     const validate = () => {
         const newErrors: { [key: string]: string } = {};
-        if (!challan.partyName) newErrors.partyName = "Party name is required.";
+        if (challan.isOutsourcing) {
+            if (!fromParty) newErrors.fromParty = "From Party is required.";
+            if (!toParty) newErrors.toParty = "To Party is required.";
+            if (fromParty && toParty && fromParty === toParty) {
+                newErrors.toParty = "To Party cannot be the same as From Party.";
+            }
+        } else {
+            if (!challan.partyName) newErrors.partyName = "Party name is required.";
+        }
         if (!challan.date) newErrors.date = "Date is required.";
         if (challan.process.length === 0) newErrors.process = "At least one process is required.";
         if (challan.pcs <= 0) newErrors.pcs = "No of pcs must be positive.";
@@ -197,8 +254,13 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSa
     const handleSubmit = async () => {
         if (validate()) {
             setSaveState('saving');
+            let finalChallanData = { ...challan, challanNumber };
+            if (finalChallanData.isOutsourcing) {
+                finalChallanData.partyName = `FROM: ${fromParty} | TO: ${toParty}`;
+            }
+
             try {
-                await onSave({ ...challan, challanNumber });
+                await onSave(finalChallanData);
                 setSaveState('saved');
                 setTimeout(() => {
                     onClose();
@@ -214,11 +276,12 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSa
     
     const modalTitle = isEditing ? `Edit Delivery Challan (${challanNumber})` : 'Create New Delivery Challan';
     const commonInputClasses = "block w-full px-3 py-2.5 text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500";
-    const statusOptions = ['Ready to Invoice', 'Not Delivered'];
+    const statusOptions = ['Ready to Invoice', 'Not Delivered', 'Deliver to Outsource', 'Rework'];
 
     return (
         <>
-            {showAddClientModal && <AddShopModal onClose={() => setShowAddClientModal(false)} onSave={handleSaveClient} existingClientNames={clientNames} />}
+            {showAddClientModal && <AddShopModal onClose={() => setShowAddClientModal(false)} onSave={handleSaveClient} existingClientNames={clients.map(c => c.name)} />}
+            {showAddShopModal && <PurchaseShopModal onClose={() => setShowAddShopModal(false)} onSave={handleSaveShop} existingShopNames={purchaseShops.map(s => s.name)} />}
             {showAddEmployeeModal && <EmployeeModal onClose={() => setShowAddEmployeeModal(false)} onSave={handleSaveEmployee} existingEmployees={employees} />}
             {showAddProcessModal && (
                 <ProcessTypeModal
@@ -265,15 +328,19 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSa
                                         )}
                                     </div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Party Name <span className="text-red-500">*</span></label>
-                                    <select name="partyName" value={challan.partyName} onChange={handlePartyNameChange} className={`${commonInputClasses} ${errors.partyName ? 'border-red-500' : ''}`}>
-                                        <option value="">Select a party</option>
-                                        {clientNames.map(name => <option key={name} value={name}>{name}</option>)}
-                                        <option value="_add_new_">++ Add New Party ++</option>
-                                    </select>
-                                    {errors.partyName && <p className="mt-1 text-sm text-red-500">{errors.partyName}</p>}
-                                </div>
+                                
+                                {!challan.isOutsourcing && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Party Name <span className="text-red-500">*</span></label>
+                                        <select name="partyName" value={challan.partyName} onChange={handlePartyNameChange} className={`${commonInputClasses} ${errors.partyName ? 'border-red-500' : ''}`}>
+                                            <option value="">Select a party</option>
+                                            {partyList.map(name => <option key={name} value={name}>{name}</option>)}
+                                            <option value="_add_new_">++ Add New Party ++</option>
+                                        </select>
+                                        {errors.partyName && <p className="mt-1 text-sm text-red-500">{errors.partyName}</p>}
+                                    </div>
+                                )}
+                                
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Status <span className="text-red-500">*</span></label>
                                     <select
@@ -290,62 +357,111 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSa
                                     {errors.status && <p className="mt-1 text-sm text-red-500">{errors.status}</p>}
                                 </div>
                             </div>
-                            <div className="pt-4">
-                                <label className="flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        name="isOutsourcing"
-                                        checked={challan.isOutsourcing || false}
-                                        onChange={(e) => setChallan(prev => ({ ...prev, isOutsourcing: e.target.checked }))}
-                                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                    />
-                                    <span className="ml-2 text-sm text-gray-700">This is an Outsourcing Challan</span>
-                                </label>
+                            {challan.isOutsourcing && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">From Party <span className="text-red-500">*</span></label>
+                                        <select name="fromParty" value={fromParty} onChange={(e) => { setFromParty(e.target.value); if (errors.fromParty) setErrors(p => ({...p, fromParty: ''})); }} className={`${commonInputClasses} ${errors.fromParty ? 'border-red-500' : ''}`}>
+                                            <option value="">Select a client</option>
+                                            {clients.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                                        </select>
+                                        {errors.fromParty && <p className="mt-1 text-sm text-red-500">{errors.fromParty}</p>}
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">To Party <span className="text-red-500">*</span></label>
+                                        <select name="toParty" value={toParty} onChange={(e) => { setToParty(e.target.value); if (errors.toParty) setErrors(p => ({...p, toParty: ''})); }} className={`${commonInputClasses} ${errors.toParty ? 'border-red-500' : ''}`}>
+                                            <option value="">Select a client</option>
+                                            {clients.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                                        </select>
+                                        {errors.toParty && <p className="mt-1 text-sm text-red-500">{errors.toParty}</p>}
+                                    </div>
+                                </div>
+                            )}
+                        </fieldset>
+
+                        <fieldset className="border border-gray-200 rounded-lg p-4">
+                            <legend className="text-base font-semibold text-gray-900 px-2">Production Details</legend>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Working Unit</label>
+                                    <select name="workingUnit" value={challan.workingUnit || 'Unit I'} onChange={handleWorkingUnitChange} className={commonInputClasses}>
+                                        <option value="Unit I">Unit I</option>
+                                        <option value="Unit II">Unit II</option>
+                                        <option value="Outsourcing">Outsourcing</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Worker Name</label>
+                                    <select name="workerName" value={challan.workerName} onChange={handleWorkerNameChange} className={commonInputClasses}>
+                                        <option value="">Select a worker</option>
+                                        {employees.map(e => <option key={e.id} value={e.name}>{e.name}</option>)}
+                                        <option value="_add_new_">++ Add New Worker ++</option>
+                                    </select>
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Extra work</label>
+                                    <textarea name="extraWork" rows={2} value={challan.extraWork} onChange={handleChange} className={commonInputClasses} />
+                                </div>
                             </div>
                         </fieldset>
 
                         <fieldset className="border border-gray-200 rounded-lg p-4">
                             <legend className="text-base font-semibold text-gray-900 px-2">Fabric &amp; Process Details</legend>
                             <div className="space-y-4 pt-4">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Party DC No</label>
                                         <input name="partyDCNo" type="text" value={challan.partyDCNo} onChange={handleChange} className={commonInputClasses} />
                                     </div>
-                                    <div ref={processDropdownRef} className="relative">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Process <span className="text-red-500">*</span></label>
-                                        <button type="button" onClick={() => setProcessDropdownOpen(p => !p)} className={`flex items-center justify-between w-full text-left ${commonInputClasses} ${errors.process ? 'border-red-500' : ''}`}>
-                                            <span className="truncate pr-8">{challan.process.length > 0 ? challan.process.join(', ') : 'Select processes'}</span>
-                                            <ChevronDownIcon className="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
-                                        </button>
-                                        {isProcessDropdownOpen && (
-                                            <div className="absolute top-full mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg z-10 max-h-60 overflow-y-auto">
-                                                {processNames.map(p => (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Program / Design No</label>
+                                        <input name="designNo" type="text" value={challan.designNo} onChange={handleChange} className={commonInputClasses} />
+                                    </div>
+                                </div>
+
+                                <div ref={processDropdownRef} className="relative">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Process <span className="text-red-500">*</span></label>
+                                    <button type="button" onClick={() => setProcessDropdownOpen(p => !p)} className={`flex items-center justify-between w-full text-left ${commonInputClasses} ${errors.process ? 'border-red-500' : ''}`}>
+                                        <span className="truncate pr-8">{challan.process.length > 0 ? challan.process.join(', ') : 'Select processes'}</span>
+                                        <ChevronDownIcon className="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
+                                    </button>
+                                    {isProcessDropdownOpen && (
+                                        <div className="absolute top-full mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg z-10 flex flex-col">
+                                            <div className="p-2 border-b border-gray-200">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search processes..."
+                                                    value={processSearch}
+                                                    onChange={(e) => setProcessSearch(e.target.value)}
+                                                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                                                />
+                                            </div>
+                                            <div className="max-h-48 overflow-y-auto">
+                                                {filteredProcessNames.map(p => (
                                                     <label key={p} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
                                                         <input type="checkbox" checked={challan.process.includes(p)} onChange={() => handleProcessToggle(p)} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                                                         <span className="ml-3">{p}</span>
                                                     </label>
                                                 ))}
-                                                <div className="border-t border-gray-200">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setProcessDropdownOpen(false);
-                                                            setShowAddProcessModal(true);
-                                                        }}
-                                                        className="w-full text-left px-4 py-2 text-sm text-blue-600 font-semibold hover:bg-gray-100"
-                                                    >
-                                                        ++ Add New Process ++
-                                                    </button>
-                                                </div>
+                                                {filteredProcessNames.length === 0 && (
+                                                    <div className="px-4 py-2 text-sm text-gray-500">No process found.</div>
+                                                )}
                                             </div>
-                                        )}
-                                        {errors.process && <p className="mt-1 text-sm text-red-500">{errors.process}</p>}
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Design No</label>
-                                        <input name="designNo" type="text" value={challan.designNo} onChange={handleChange} className={commonInputClasses} />
-                                    </div>
+                                            <div className="border-t border-gray-200">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setProcessDropdownOpen(false);
+                                                        setShowAddProcessModal(true);
+                                                    }}
+                                                    className="w-full text-left px-4 py-2 text-sm text-blue-600 font-semibold hover:bg-gray-100"
+                                                >
+                                                    ++ Add New Process ++
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {errors.process && <p className="mt-1 text-sm text-red-500">{errors.process}</p>}
                                 </div>
                                 <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                                     <div>
@@ -374,24 +490,6 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSa
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Pick</label>
                                         <input name="pick" type="text" value={challan.pick || ''} onChange={handleChange} className={commonInputClasses} />
                                     </div>
-                                </div>
-                            </div>
-                        </fieldset>
-
-                        <fieldset className="border border-gray-200 rounded-lg p-4">
-                            <legend className="text-base font-semibold text-gray-900 px-2">Production Details</legend>
-                            <div className="space-y-4 pt-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Worker Name</label>
-                                    <select name="workerName" value={challan.workerName} onChange={handleWorkerNameChange} className={commonInputClasses}>
-                                        <option value="">Select a worker</option>
-                                        {employees.map(e => <option key={e.id} value={e.name}>{e.name}</option>)}
-                                        <option value="_add_new_">++ Add New Worker ++</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Extra work</label>
-                                    <textarea name="extraWork" rows={2} value={challan.extraWork} onChange={handleChange} className={commonInputClasses} />
                                 </div>
                             </div>
                         </fieldset>

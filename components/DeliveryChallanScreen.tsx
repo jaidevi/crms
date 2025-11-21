@@ -1,9 +1,11 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import DeliveryChallanForm from './DeliveryChallanForm';
-import { PlusIcon, SearchIcon, EditIcon, TrashIcon, CameraIcon } from './Icons';
-import type { DeliveryChallan, Client, ProcessType, DeliveryChallanNumberConfig, Invoice, CompanyDetails, Employee } from '../App';
+import { PlusIcon, SearchIcon, EditIcon, TrashIcon, CameraIcon, PrintIcon } from './Icons';
+import type { DeliveryChallan, Client, ProcessType, DeliveryChallanNumberConfig, Invoice, CompanyDetails, Employee, PurchaseShop } from '../App';
 import ConfirmationModal from './ConfirmationModal';
 import InvoiceView from './InvoiceView';
+import ChallanView from './ChallanView';
 
 interface DeliveryChallanScreenProps {
   deliveryChallans: DeliveryChallan[];
@@ -12,10 +14,13 @@ interface DeliveryChallanScreenProps {
   onDeleteChallan: (id: string) => void;
   clients: Client[];
   onAddClient: (newClient: Omit<Client, 'id'>) => void;
+  purchaseShops: PurchaseShop[];
+  onAddPurchaseShop: (newShop: Omit<PurchaseShop, 'id'>) => void;
   processTypes: ProcessType[];
   onAddProcessType: (process: { name: string, rate: number }) => void;
   deliveryChallanNumberConfig: DeliveryChallanNumberConfig;
   invoices: Invoice[];
+  onDeleteInvoice: (id: string) => void;
   companyDetails: CompanyDetails;
   employees: Employee[];
   onAddEmployee: (employee: Omit<Employee, 'id'>) => void;
@@ -72,24 +77,37 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
     onDeleteChallan,
     clients, 
     onAddClient, 
+    purchaseShops,
+    onAddPurchaseShop,
     processTypes, 
     onAddProcessType,
     deliveryChallanNumberConfig, 
     invoices,
+    onDeleteInvoice,
     companyDetails,
     employees,
     onAddEmployee
 }) => {
-  const [activeTab, setActiveTab] = useState<'pending' | 'delivered' | 'invoices'>('delivered');
+  const [activeTab, setActiveTab] = useState<'pending' | 'delivered' | 'invoices' | 'outsourcing' | 'rework'>('delivered');
   const [searchTerm, setSearchTerm] = useState('');
   
   const [isChallanFormOpen, setIsChallanFormOpen] = useState(false);
   const [challanToEdit, setChallanToEdit] = useState<DeliveryChallan | null>(null);
   const [challanToDelete, setChallanToDelete] = useState<DeliveryChallan | null>(null);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
   const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null);
+  const [challanToPrint, setChallanToPrint] = useState<DeliveryChallan | null>(null);
   
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
+
+  const formatPartyNameForDisplay = (partyName: string) => {
+    if (partyName.includes('|') && partyName.includes('FROM:')) {
+        const fromMatch = partyName.match(/FROM: (.*?)\|/);
+        return fromMatch ? fromMatch[1].trim() : partyName;
+    }
+    return partyName;
+  };
 
   useEffect(() => {
     setCurrentPage(1);
@@ -108,21 +126,51 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
     );
   }, [invoices]);
 
-  const { pendingCount, deliveredCount } = useMemo(() => {
-    return deliveryChallans.reduce((counts, challan) => {
-        if (challan.status === 'Not Delivered') {
-            counts.pendingCount++;
-        } else if (challan.status === 'Ready to Invoice' && !invoicedChallanNumbers.has(challan.challanNumber)) {
-            counts.deliveredCount++;
+  const { pendingCount, deliveredCount, outsourcingCount, reworkCount } = useMemo(() => {
+    const counts = { pending: 0, delivered: 0, outsourcing: 0, rework: 0 };
+    for (const challan of deliveryChallans) {
+        if (challan.status === 'Rework') {
+            counts.rework++;
+            continue;
         }
-        return counts;
-    }, { pendingCount: 0, deliveredCount: 0 });
+        if ((challan.status === 'Ready to Invoice' || challan.status === 'Delivered') && !invoicedChallanNumbers.has(challan.challanNumber.trim())) {
+            counts.delivered++;
+            continue;
+        }
+        if (challan.isOutsourcing && (challan.status !== 'Ready to Invoice' && challan.status !== 'Delivered')) {
+            counts.outsourcing++;
+            continue;
+        }
+        if (!challan.isOutsourcing && challan.status === 'Not Delivered') {
+            counts.pending++;
+        }
+    }
+    return { 
+        pendingCount: counts.pending, 
+        deliveredCount: counts.delivered, 
+        outsourcingCount: counts.outsourcing, 
+        reworkCount: counts.rework 
+    };
   }, [deliveryChallans, invoicedChallanNumbers]);
 
   const filteredChallans = useMemo(() => {
-    const listToFilter = activeTab === 'pending'
-        ? deliveryChallans.filter(c => c.status === 'Not Delivered')
-        : deliveryChallans.filter(c => c.status === 'Ready to Invoice' && !invoicedChallanNumbers.has(c.challanNumber));
+    let listToFilter: DeliveryChallan[];
+    switch (activeTab) {
+        case 'pending':
+            listToFilter = deliveryChallans.filter(c => !c.isOutsourcing && c.status === 'Not Delivered');
+            break;
+        case 'delivered':
+            listToFilter = deliveryChallans.filter(c => (c.status === 'Ready to Invoice' || c.status === 'Delivered') && !invoicedChallanNumbers.has(c.challanNumber.trim()));
+            break;
+        case 'outsourcing':
+            listToFilter = deliveryChallans.filter(c => c.isOutsourcing && (c.status !== 'Ready to Invoice' && c.status !== 'Delivered') && c.status !== 'Rework');
+            break;
+        case 'rework':
+            listToFilter = deliveryChallans.filter(c => c.status === 'Rework');
+            break;
+        default:
+            listToFilter = [];
+    }
 
     const sortedList = listToFilter.sort((a, b) => {
         const dateComparison = new Date(b.date).getTime() - new Date(a.date).getTime();
@@ -195,8 +243,12 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
         await onAddChallan(challanData);
     }
     
-    if (challanData.status === 'Not Delivered') {
+    if (challanData.status === 'Rework') {
+        setActiveTab('rework');
+    } else if (challanData.status === 'Not Delivered' && !challanData.isOutsourcing) {
         setActiveTab('pending');
+    } else if (challanData.isOutsourcing && (challanData.status !== 'Ready to Invoice' && challanData.status !== 'Delivered')) {
+        setActiveTab('outsourcing');
     } else {
         setActiveTab('delivered');
     }
@@ -213,6 +265,10 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
     setIsChallanFormOpen(true);
   };
 
+  if (challanToPrint) {
+    return <ChallanView challan={challanToPrint} companyDetails={companyDetails} onBack={() => setChallanToPrint(null)} />;
+  }
+
   if (viewingInvoice && clientForInvoice) {
     return <InvoiceView invoice={viewingInvoice} client={clientForInvoice} companyDetails={companyDetails} onBack={() => setViewingInvoice(null)} />;
   }
@@ -225,12 +281,15 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
           onSave={handleSaveChallan}
           clients={clients}
           onAddClient={onAddClient}
+          purchaseShops={purchaseShops}
+          onAddPurchaseShop={onAddPurchaseShop}
           processTypes={processTypes}
           onAddProcessType={onAddProcessType}
           deliveryChallanNumberConfig={deliveryChallanNumberConfig}
           challanToEdit={challanToEdit}
           employees={employees}
           onAddEmployee={onAddEmployee}
+          companyDetails={companyDetails}
         />
       )}
       {challanToDelete && (
@@ -240,6 +299,15 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
             onConfirm={() => { onDeleteChallan(challanToDelete.id); setChallanToDelete(null); }}
             title="Delete Delivery Challan"
             message={`Are you sure you want to delete challan number ${challanToDelete.challanNumber}? This cannot be undone.`}
+        />
+      )}
+      {invoiceToDelete && (
+        <ConfirmationModal
+            isOpen={!!invoiceToDelete}
+            onClose={() => setInvoiceToDelete(null)}
+            onConfirm={() => { onDeleteInvoice(invoiceToDelete.id); setInvoiceToDelete(null); }}
+            title="Delete Invoice"
+            message={`Are you sure you want to delete invoice ${invoiceToDelete.invoiceNumber}? This action cannot be undone.`}
         />
       )}
       <div className="bg-white rounded-lg shadow-sm p-5 space-y-5">
@@ -275,6 +343,12 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
                     <button onClick={() => setActiveTab('delivered')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'delivered' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                         Ready to Invoice <span className="bg-green-100 text-green-800 text-xs font-medium ml-2 px-2 py-0.5 rounded-full">{deliveredCount}</span>
                     </button>
+                    <button onClick={() => setActiveTab('outsourcing')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'outsourcing' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                        Outsourcing <span className="bg-indigo-100 text-indigo-800 text-xs font-medium ml-2 px-2 py-0.5 rounded-full">{outsourcingCount}</span>
+                    </button>
+                    <button onClick={() => setActiveTab('rework')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'rework' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                        Rework <span className="bg-orange-100 text-orange-800 text-xs font-medium ml-2 px-2 py-0.5 rounded-full">{reworkCount}</span>
+                    </button>
                     <button onClick={() => setActiveTab('invoices')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'invoices' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                         Generated Invoices <span className="bg-blue-100 text-blue-800 text-xs font-medium ml-2 px-2 py-0.5 rounded-full">{invoices.length}</span>
                     </button>
@@ -291,6 +365,7 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
                             <th scope="col" className="px-6 py-3">Date</th>
                             <th scope="col" className="px-6 py-3">Client</th>
                             <th scope="col" className="px-6 py-3 text-right">Amount</th>
+                            <th scope="col" className="px-6 py-3 text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -304,6 +379,11 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
                                 <td className="px-6 py-4">{formatDateForDisplay(invoice.invoiceDate)}</td>
                                 <td className="px-6 py-4">{invoice.clientName}</td>
                                 <td className="px-6 py-4 text-right font-medium">₹{invoice.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                <td className="px-6 py-4 text-center">
+                                    <button onClick={() => setInvoiceToDelete(invoice)} className="p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50" title="Delete Invoice">
+                                        <TrashIcon className="w-5 h-5" />
+                                    </button>
+                                </td>
                             </tr>
                         ))}
                     </tbody>
@@ -341,22 +421,23 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
                     <th scope="col" className="px-4 py-3">Pin</th>
                     <th scope="col" className="px-4 py-3">Pick</th>
                     <th scope="col" className="px-4 py-3">Worker Name</th>
+                    <th scope="col" className="px-4 py-3">Working Unit</th>
                     <th scope="col" className="px-4 py-3 text-center">Images</th>
                     <th scope="col" className="px-4 py-3 text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedChallans.map((challan) => (
-                    <tr key={challan.id} className="bg-white border-b hover:bg-gray-50 whitespace-nowrap">
-                      <td className="px-4 py-3 font-medium text-gray-900">{challan.challanNumber}</td>
-                      <td className="px-4 py-3">{formatDateForDisplay(challan.date)}</td>
-                      <td className="px-4 py-3 font-medium">{challan.partyName}</td>
-                      <td className="px-4 py-3">
+                    <tr key={challan.id} className="bg-white border-b hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">{challan.challanNumber}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">{formatDateForDisplay(challan.date)}</td>
+                      <td className="px-4 py-3 font-medium">{formatPartyNameForDisplay(challan.partyName)}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <div>
                             <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
-                                challan.status === 'Ready to Invoice' ? 'bg-green-100 text-green-800' : 
+                                (challan.status === 'Ready to Invoice' || challan.status === 'Delivered') ? 'bg-green-100 text-green-800' : 
                                 challan.status === 'Not Delivered' ? 'bg-yellow-100 text-yellow-800' :
-                                challan.status === 'Delivered' ? 'bg-green-100 text-green-800' : // backward compatibility
+                                challan.status === 'Rework' ? 'bg-orange-100 text-orange-800' :
                                 'bg-red-100 text-red-800'
                             }`}>
                                 {challan.status}
@@ -370,16 +451,17 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
                             </div>
                         )}
                       </td>
-                      <td className="px-4 py-3">{challan.partyDCNo || '-'}</td>
-                      <td className="px-4 py-3">{challan.process.join(', ')}</td>
-                      <td className="px-4 py-3">{challan.designNo}</td>
-                      <td className="px-4 py-3 text-right">{challan.pcs}</td>
-                      <td className="px-4 py-3 text-right">{challan.mtr}</td>
-                      <td className="px-4 py-3 text-right">{challan.width || '-'}</td>
-                      <td className="px-4 py-3">{challan.shrinkage || '-'}</td>
-                      <td className="px-4 py-3">{challan.pin || '-'}</td>
-                      <td className="px-4 py-3">{challan.pick || '-'}</td>
-                      <td className="px-4 py-3">{challan.workerName || '-'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">{challan.partyDCNo || '-'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">{challan.process.join(', ')}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">{challan.designNo}</td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">{challan.pcs}</td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">{challan.mtr}</td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">{challan.width || '-'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">{challan.shrinkage || '-'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">{challan.pin || '-'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">{challan.pick || '-'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">{challan.workerName || '-'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">{challan.workingUnit || '-'}</td>
                       <td className="px-4 py-3 text-center">
                          <div className="flex items-center justify-center gap-3">
                             {challan.dcImage && challan.dcImage.length > 0 ? (
@@ -418,6 +500,11 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
                             <button onClick={() => setChallanToDelete(challan)} className="p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50" title="Delete Challan">
                                 <TrashIcon className="w-5 h-5" />
                             </button>
+                             {activeTab === 'outsourcing' && (
+                                <button onClick={() => setChallanToPrint(challan)} className="p-1 text-gray-400 hover:text-green-500 rounded-full hover:bg-green-50" title="Print Challan">
+                                    <PrintIcon className="w-5 h-5" />
+                                </button>
+                            )}
                         </div>
                       </td>
                     </tr>

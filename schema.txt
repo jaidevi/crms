@@ -1,3 +1,4 @@
+
 -- Enable the UUID extension if not already enabled
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
@@ -154,6 +155,17 @@ BEGIN
     END IF;
 END $$;
 
+-- Safely add working_unit column if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'delivery_challans' AND column_name = 'working_unit'
+    ) THEN
+        ALTER TABLE delivery_challans ADD COLUMN working_unit TEXT;
+    END IF;
+END $$;
+
 -- 7. Purchase Orders Table
 -- Stores main purchase order details. Items are in a separate table.
 CREATE TABLE IF NOT EXISTS purchase_orders (
@@ -177,6 +189,16 @@ BEGIN
         WHERE table_schema = 'public' AND table_name = 'purchase_orders' AND column_name = 'payment_terms'
     ) THEN
         ALTER TABLE purchase_orders ADD COLUMN payment_terms TEXT;
+    END IF;
+END $$;
+-- Safely add reference_id column if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'purchase_orders' AND column_name = 'reference_id'
+    ) THEN
+        ALTER TABLE purchase_orders ADD COLUMN reference_id TEXT;
     END IF;
 END $$;
 ALTER TABLE purchase_orders ENABLE ROW LEVEL SECURITY;
@@ -288,7 +310,7 @@ CREATE POLICY "Users can update their own company_details." ON company_details F
 -- 13. Numbering Configs Table
 -- Stores configuration for auto-numbering of documents.
 CREATE TABLE IF NOT EXISTS numbering_configs (
-    id TEXT PRIMARY KEY, -- e.g., 'po', 'data_entry', 'invoice'
+    id TEXT PRIMARY KEY, -- e.g., 'po', 'data_entry', 'invoice', 'supplier_payment'
     prefix TEXT,
     next_number INT,
     mode TEXT -- For invoices (auto/manual)
@@ -469,3 +491,45 @@ CREATE POLICY "Public expense_categories are viewable by everyone." ON expense_c
 CREATE POLICY "Users can insert their own expense_categories." ON expense_categories FOR INSERT WITH CHECK (true);
 CREATE POLICY "Users can update their own expense_categories." ON expense_categories FOR UPDATE USING (true);
 CREATE POLICY "Users can delete their own expense_categories." ON expense_categories FOR DELETE USING (true);
+
+-- 19. Timber Expenses Table
+CREATE TABLE IF NOT EXISTS timber_expenses (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    date DATE NOT NULL,
+    supplier_name TEXT NOT NULL,
+    load_weight NUMERIC NOT NULL,
+    vehicle_weight NUMERIC NOT NULL,
+    cft NUMERIC NOT NULL,
+    rate NUMERIC NOT NULL,
+    amount NUMERIC NOT NULL,
+    notes TEXT,
+    payment_mode TEXT,
+    payment_status TEXT,
+    bank_name TEXT,
+    cheque_date DATE,
+    payment_terms TEXT
+);
+ALTER TABLE timber_expenses ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public timber_expenses are viewable by everyone." ON timber_expenses FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own timber_expenses." ON timber_expenses FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own timber_expenses." ON timber_expenses FOR UPDATE USING (true);
+CREATE POLICY "Users can delete their own timber_expenses." ON timber_expenses FOR DELETE USING (true);
+
+-- 20. Supplier Payments Table
+CREATE TABLE IF NOT EXISTS supplier_payments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    payment_number TEXT NOT NULL UNIQUE,
+    date DATE NOT NULL,
+    supplier_name TEXT NOT NULL,
+    amount NUMERIC NOT NULL CHECK (amount > 0),
+    payment_mode TEXT NOT NULL,
+    reference_id TEXT,
+    image TEXT
+);
+ALTER TABLE supplier_payments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public supplier_payments are viewable by everyone." ON supplier_payments FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own supplier_payments." ON supplier_payments FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own supplier_payments." ON supplier_payments FOR UPDATE USING (true);
+CREATE POLICY "Users can delete their own supplier_payments." ON supplier_payments FOR DELETE USING (true);
