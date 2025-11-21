@@ -329,7 +329,7 @@ const App: React.FC = () => {
   useEffect(() => {
     const fetchTable = async (table: string, setter: Function, transformer?: Function) => {
         try {
-            let query = supabase.from(table).select('*');
+            let query: any = supabase.from(table).select('*');
             
             // Specific includes for nested data
             if (table === 'purchase_orders') {
@@ -1169,7 +1169,27 @@ const App: React.FC = () => {
           const newInvoice = { ...inv, id: invData.id };
           setInvoices(prev => [...prev, newInvoice]);
 
-          // 4. Update Config
+          // 4. Update Challan Status to 'Rework'
+          const challanNumbersToUpdate = inv.items.flatMap(item => 
+              item.challanNumber.split(',').map(s => s.trim())
+          ).filter(s => s);
+
+          if (challanNumbersToUpdate.length > 0) {
+              const { error: statusError } = await supabase
+                  .from('delivery_challans')
+                  .update({ status: 'Rework' })
+                  .in('challan_number', challanNumbersToUpdate);
+              
+              if (statusError) throw statusError;
+
+              setDeliveryChallans(prev => prev.map(dc => 
+                  challanNumbersToUpdate.includes(dc.challanNumber) 
+                      ? { ...dc, status: 'Rework' } 
+                      : dc
+              ));
+          }
+
+          // 5. Update Config
           if (invoiceNumberConfig.mode === 'auto') {
               await handleUpdateInvConfig({ ...invoiceNumberConfig, nextNumber: invoiceNumberConfig.nextNumber + 1 });
           }

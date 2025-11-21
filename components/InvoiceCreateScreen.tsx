@@ -26,7 +26,7 @@ const numberFormat = (num: number, options?: Intl.NumberFormatOptions) => {
 };
 
 // Vel Logo SVG Data URI
-const VEL_LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTUwIj4KICA8cGF0aCBkPSJNNDUgMTUwIEw0NSA5MCBMNTUgOTAgTDU1IDE1MCBaIiBmaWxsPSIjYjQ1MzA5IiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMTQ1IiByPSI1IiBmaWxsPSIjYjQ1MzA5IiAvPgogIDxwYXRoIGQ9Ik01MCAxMCBDIDkwIDYwIDkwIDkwIDUwIDExMCBDIDEwIDkwIDEwIDYwIDUwIDEwIFoiIGZpbGw9IiNkOTc3MDYiIHN0cm9rZT0iI2I0NTMwOSIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPHBhdGggZD0iTTUwIDQwIEMgNjAgNjAgNjAgODAgNTAgOTAgQyA0MCA4MCA0MCA2MCA1MCA0MCBaIiBmaWxsPSIjMTk3NmQyIiAvPgogIDxsaW5lIHgxPSIzNSIgeTE9IjI1IiB4Mj0iNjUiIHkyPSIyNSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIC8+CiAgPGxpbmUgeDE9IjMyIiB5MT0iMzIiIHgyPSI2OCIgeTI9IjMyIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIgLz4KICA8bGluZSB4MT0iMzUiIHkxPSIzOSIgeDI9IjY1IiB5Mj0iMzkiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIyIiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMzIiIHI9IjIuNSIgZmlsbD0iI2RjMjYyNiIgLz4KPC9zdmc+";
+const VEL_LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTUwIj4KICA8cGF0aCBkPSJNNDUgMTUwIEw0NSA5MCBMNTUgOTAgTDU1IDE1MCBaIiBmaWxsPSIjZjk3MzE2IiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMTQ1IiByPSI1IiBmaWxsPSIjZjk3MzE2IiAvPgogIDxwYXRoIGQ9Ik01MCAxMCBDIDkwIDYwIDkwIDkwIDUwIDExMCBDIDEwIDkwIDEwIDYwIDUwIDEwIFoiIGZpbGw9IiNmOTczMTYiIHN0cm9rZT0iI2I0NTMwOSIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPHBhdGggZD0iTTUwIDQwIEMgNjAgNjAgNjAgODAgNTAgOTAgQyA0MCA4MCA0MCA2MCA1MCA0MCBaIiBmaWxsPSIjMTk3NmQyIiAvPgogIDxsaW5lIHgxPSIzNSIgeTE9IjI1IiB4Mj0iNjUiIHkyPSIyNSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIC8+CiAgPGxpbmUgeDE9IjMyIiB5MT0iMzIiIHgyPSI2OCIgeTI9IjMyIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIgLz4KICA8bGluZSB4MT0iMzUiIHkxPSIzOSIgeDI9IjY1IiB5Mj0iMzkiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIyIiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMzIiIHI9IjIuNSIgZmlsbD0iI2RjMjYyNiIgLz4KPC9zdmc+";
 
 const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onSave, client, challansToInvoice, invoiceNumberConfig, processTypes, companyDetails }) => {
     const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -38,9 +38,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
     useEffect(() => {
         if (invoiceNumberConfig.mode === 'auto') {
             const prefix = invoiceNumberConfig.prefix;
-            const endsWithSeparator = /[\s\/-]$/.test(prefix);
-            const separator = endsWithSeparator || prefix.trim().length === 0 ? '' : ''; 
-            setInvoiceNumber(`${prefix}${separator}${invoiceNumberConfig.nextNumber}`);
+            setInvoiceNumber(`${prefix}${invoiceNumberConfig.nextNumber}`);
         } else {
             setInvoiceNumber('');
         }
@@ -58,19 +56,29 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
 
         sortedChallans.forEach(challan => {
             const processName = challan.process.join(', ');
-            const primaryProcessName = challan.process.length > 0 ? challan.process[0] : '';
-            const clientProcessRate = client.processes.find(p => p.processName === primaryProcessName);
-            const rate = clientProcessRate
-                ? clientProcessRate.rate
-                : (processTypes.find(p => p.name === primaryProcessName)?.rate || 0);
+            
+            // Calculate cumulative rate for all processes
+            let totalRate = 0;
+            challan.process.forEach(procName => {
+                // 1. Check if client has a specific rate for this process
+                const clientProcessRate = client.processes.find(p => p.processName === procName);
+                
+                if (clientProcessRate) {
+                    totalRate += clientProcessRate.rate;
+                } else {
+                    // 2. Fallback to master process rate
+                    const masterProcess = processTypes.find(p => p.name === procName);
+                    totalRate += (masterProcess?.rate || 0);
+                }
+            });
 
             const hsnSac = '998821';
-            const groupKey = `${processName}|${rate}|${hsnSac}`;
+            const groupKey = `${processName}|${totalRate}|${hsnSac}`;
 
             if (!groupedItemsMap.has(groupKey)) {
                 groupedItemsMap.set(groupKey, {
                     process: processName,
-                    rate: rate,
+                    rate: totalRate,
                     hsnSac: hsnSac,
                     pcs: 0,
                     mtr: 0,
@@ -169,6 +177,17 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
         onSave({ invoiceNumber, invoiceDate, clientName: client.name, items: lineItems, subTotal, totalCgst, totalSgst, totalTaxAmount, roundedOff, totalAmount: roundedTotal });
     };
 
+    // Helper to split invoice number for display
+    const getInvoiceNumberParts = (fullNumber: string) => {
+        const match = fullNumber.match(/^(.*?)(\d+)$/);
+        if (match) {
+            return { prefix: match[1], number: match[2] };
+        }
+        return { prefix: fullNumber, number: '' };
+    };
+
+    const { prefix: displayPrefix, number: displayNumber } = getInvoiceNumberParts(invoiceNumber);
+
     const editableInputClasses = "w-full text-right bg-transparent border-b border-gray-300 focus:border-blue-500 focus:outline-none focus:ring-0 p-1";
     
     return (
@@ -207,8 +226,8 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                         <div className="mb-6">
                             {invoiceNumberConfig.mode === 'auto' ? (
                                  <h1 className="text-xl font-bold tracking-wide uppercase">
-                                    <span className="text-blue-700">INV/SKTP/-- </span>
-                                    <span className="text-gray-800">{invoiceNumberConfig.nextNumber}</span>
+                                    <span className="text-blue-700">{displayPrefix} </span>
+                                    <span className="text-gray-800">{displayNumber}</span>
                                 </h1>
                             ) : (
                                 <div className="flex justify-end">

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import type { Client, Invoice, DeliveryChallan, ProcessType } from '../App';
 
@@ -21,18 +22,21 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
         if (!challan.process || challan.process.length === 0) {
             return 0;
         }
-        // Use the first process to determine the rate, consistent with invoice creation.
-        const primaryProcessName = challan.process[0];
         
-        // Check for a client-specific rate first
-        const clientProcess = client.processes.find(p => p.processName === primaryProcessName);
-        if (clientProcess) {
-            return clientProcess.rate;
-        }
+        let totalRate = 0;
+        challan.process.forEach(procName => {
+            // 1. Check for client-specific rate
+            const clientProcess = client.processes.find(p => p.processName === procName);
+            if (clientProcess) {
+                totalRate += clientProcess.rate;
+            } else {
+                // 2. Fallback to master process rate
+                const masterProcess = processTypes.find(p => p.name === procName);
+                totalRate += (masterProcess?.rate || 0);
+            }
+        });
 
-        // Fallback to the master process rate
-        const masterProcess = processTypes.find(p => p.name === primaryProcessName);
-        return masterProcess?.rate || 0;
+        return totalRate;
     };
     
     return (

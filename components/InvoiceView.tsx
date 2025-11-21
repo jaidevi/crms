@@ -38,6 +38,17 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
 
     const totalQty = invoice.items.reduce((sum, i) => sum + i.mtr, 0);
 
+    // Safe parsing for display
+    const getInvoiceNumberParts = (fullNumber: string) => {
+        const match = fullNumber.match(/^(.*?)(\d+)$/);
+        if (match) {
+            return { prefix: match[1], number: match[2] };
+        }
+        return { prefix: fullNumber, number: '' };
+    };
+    
+    const { prefix, number } = getInvoiceNumberParts(invoice.invoiceNumber);
+
     return (
         <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 lg:p-8">
             <div className="flex justify-between items-center mb-6 no-print">
@@ -81,10 +92,10 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                         <div className="mb-6">
                             <div className="flex items-baseline justify-end">
                                 <h1 className="text-2xl font-bold text-blue-700 mr-2">
-                                    {invoice.invoiceNumber.replace(/\d+/g, '').trim()}
+                                    {prefix}
                                 </h1>
                                 <span className="text-2xl font-bold text-gray-900">
-                                     {invoice.invoiceNumber.match(/\d+/g)}
+                                     {number}
                                 </span>
                             </div>
                             <div className="text-sm text-gray-600">
