@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { PlusIcon, TrashIcon } from './Icons';
 import type { Client, ProcessType } from '../App';
@@ -55,7 +54,8 @@ const NewClientScreen: React.FC<NewClientScreenProps> = ({ clients, onAddClient,
             setAvailableCities(stateData ? stateData.cities.sort() : []);
             setClient(prev => ({ ...prev, state: value, city: '' }));
         } else {
-            const finalValue = name === 'name' ? value.toUpperCase() : value;
+            // Explicitly force uppercase for name, gstNo, and panNo
+            const finalValue = (name === 'name' || name === 'gstNo' || name === 'panNo') ? value.toUpperCase() : value;
             setClient(prev => ({ ...prev, [name]: finalValue }));
         }
 
@@ -174,7 +174,7 @@ const NewClientScreen: React.FC<NewClientScreenProps> = ({ clients, onAddClient,
         }
         
         const validProcesses = processes
-            .filter(p => p.processName.trim() !== '')
+            .filter(p => p.processName && p.processName.trim() !== '')
             .map(({ processName, rate }) => ({ processName, rate }));
 
         const { id, ...newClientData } = client;

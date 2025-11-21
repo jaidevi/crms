@@ -310,7 +310,7 @@ CREATE POLICY "Users can update their own company_details." ON company_details F
 -- 13. Numbering Configs Table
 -- Stores configuration for auto-numbering of documents.
 CREATE TABLE IF NOT EXISTS numbering_configs (
-    id TEXT PRIMARY KEY, -- e.g., 'po', 'data_entry', 'invoice', 'supplier_payment'
+    id TEXT PRIMARY KEY, -- e.g., 'po', 'delivery_challans', 'invoice', 'supplier_payment'
     prefix TEXT,
     next_number INT,
     mode TEXT -- For invoices (auto/manual)

@@ -351,20 +351,27 @@ const App: React.FC = () => {
     };
 
     // 1. Clients
-    fetchTable('clients', setClients, (data: any[]) => data.map(c => ({
-        id: c.id,
-        name: c.name,
-        phone: c.phone || '',
-        email: c.email || '',
-        address: c.address || '',
-        city: c.city || '',
-        state: c.state || '',
-        pincode: c.pincode || '',
-        gstNo: c.gst_no || '',
-        panNo: c.pan_no || '',
-        paymentTerms: c.payment_terms || '',
-        processes: c.processes || []
-    })));
+    fetchTable('clients', setClients, (data: any[]) => data.map(c => {
+        // Ensure processes is handled gracefully if it comes as string or array
+        let processes = c.processes;
+        if (typeof processes === 'string') {
+            try { processes = JSON.parse(processes); } catch { processes = []; }
+        }
+        return {
+            id: c.id,
+            name: c.name,
+            phone: c.phone || '',
+            email: c.email || '',
+            address: c.address || '',
+            city: c.city || '',
+            state: c.state || '',
+            pincode: c.pincode || '',
+            gstNo: c.gst_no || '',
+            panNo: c.pan_no || '',
+            paymentTerms: c.payment_terms || '',
+            processes: Array.isArray(processes) ? processes : []
+        };
+    }));
 
     // 2. Purchase Shops
     fetchTable('purchase_shops', setPurchaseShops, (data: any[]) => data.map(s => ({
@@ -632,7 +639,8 @@ const App: React.FC = () => {
     fetchTable('numbering_configs', (data: any[]) => {
         data.forEach(conf => {
             if (conf.id === 'po') setPoNumberConfig({ prefix: conf.prefix, nextNumber: conf.next_number });
-            if (conf.id === 'dc') setDcNumberConfig({ prefix: conf.prefix, nextNumber: conf.next_number });
+            // FIX: Check for both IDs to support legacy or misconfigured entries
+            if (conf.id === 'delivery_challan' || conf.id === 'dc') setDcNumberConfig({ prefix: conf.prefix, nextNumber: conf.next_number });
             if (conf.id === 'invoice') setInvoiceNumberConfig({ mode: conf.mode || 'auto', prefix: conf.prefix, nextNumber: conf.next_number });
             if (conf.id === 'supplier_payment') setSupplierPaymentConfig({ prefix: conf.prefix, nextNumber: conf.next_number });
         });
@@ -641,9 +649,83 @@ const App: React.FC = () => {
   }, []);
 
   // Handlers (Basic Implementation)
-  const handleAddClient = (newClient: Omit<Client, 'id'>) => setClients(prev => [...prev, { ...newClient, id: Date.now().toString() }]);
-  const handleUpdateClient = (updatedClient: Client) => setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
-  const handleDeleteClient = (id: string) => setClients(prev => prev.filter(c => c.id !== id));
+  const handleAddClient = async (newClient: Omit<Client, 'id'>) => {
+      try {
+          const { data, error } = await supabase.from('clients').insert([{
+              name: newClient.name,
+              phone: newClient.phone,
+              email: newClient.email,
+              address: newClient.address,
+              city: newClient.city,
+              state: newClient.state,
+              pincode: newClient.pincode,
+              gst_no: newClient.gstNo,
+              pan_no: newClient.panNo,
+              payment_terms: newClient.paymentTerms,
+              // Ensure processes is stored as valid JSON array
+              processes: newClient.processes || []
+          }]).select().single();
+
+          if (error) throw error;
+          if (data) {
+              const client: Client = {
+                  id: data.id,
+                  name: data.name,
+                  phone: data.phone,
+                  email: data.email,
+                  address: data.address,
+                  city: data.city,
+                  state: data.state,
+                  pincode: data.pincode,
+                  gstNo: data.gst_no,
+                  panNo: data.pan_no,
+                  paymentTerms: data.payment_terms,
+                  processes: data.processes || []
+              };
+              setClients(prev => [...prev, client]);
+          }
+      } catch (error: any) {
+          console.error("Error adding client:", error);
+          alert("Failed to add client: " + error.message);
+      }
+  };
+
+  const handleUpdateClient = async (updatedClient: Client) => {
+      try {
+          const { error } = await supabase.from('clients').update({
+              name: updatedClient.name,
+              phone: updatedClient.phone,
+              email: updatedClient.email,
+              address: updatedClient.address,
+              city: updatedClient.city,
+              state: updatedClient.state,
+              pincode: updatedClient.pincode,
+              gst_no: updatedClient.gstNo,
+              pan_no: updatedClient.panNo,
+              payment_terms: updatedClient.paymentTerms,
+              // Ensure processes is stored as valid JSON array
+              processes: updatedClient.processes || []
+          }).eq('id', updatedClient.id);
+
+          if (error) throw error;
+
+          setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
+      } catch (error: any) {
+          console.error("Error updating client:", error);
+          alert("Failed to update client: " + error.message);
+      }
+  };
+
+  const handleDeleteClient = async (id: string) => {
+      try {
+          const { error } = await supabase.from('clients').delete().eq('id', id);
+          if (error) throw error;
+          setClients(prev => prev.filter(c => c.id !== id));
+      } catch (error: any) {
+          console.error("Error deleting client:", error);
+          alert("Failed to delete client: " + error.message);
+      }
+  };
 
   const handleAddPurchaseShop = (newShop: Omit<PurchaseShop, 'id'>) => setPurchaseShops(prev => [...prev, { ...newShop, id: Date.now().toString() }]);
   const handleUpdatePurchaseShop = (updatedShop: PurchaseShop) => setPurchaseShops(prev => prev.map(s => s.id === updatedShop.id ? updatedShop : s));
@@ -676,7 +758,16 @@ const App: React.FC = () => {
       if (invoiceNumberConfig.mode === 'auto') setInvoiceNumberConfig(prev => ({ ...prev, nextNumber: prev.nextNumber + 1 }));
   };
   
-  const handleDeleteInvoice = (id: string) => setInvoices(prev => prev.filter(i => i.id !== id));
+  const handleDeleteInvoice = async (id: string) => {
+      try {
+          const { error } = await supabase.from('invoices').delete().eq('id', id);
+          if (error) throw error;
+          setInvoices(prev => prev.filter(i => i.id !== id));
+      } catch (error: any) {
+          console.error("Error deleting invoice:", error);
+          alert("Failed to delete invoice: " + error.message);
+      }
+  };
 
   const handleAddPaymentReceived = (pr: Omit<PaymentReceived, 'id'>) => setPaymentsReceived(prev => [...prev, { ...pr, id: Date.now().toString() }]);
   const handleUpdatePaymentReceived = (pr: PaymentReceived) => setPaymentsReceived(prev => prev.map(p => p.id === pr.id ? pr : p));
@@ -731,6 +822,53 @@ const App: React.FC = () => {
   
   const handleAddBankName = (name: string) => setBankNames(prev => [...prev, name]);
 
+  // Configuration Persistence Handlers
+  const handleUpdatePoConfig = async (newConfig: PONumberConfig) => {
+      try {
+          const { error } = await supabase.from('numbering_configs').upsert({ 
+              id: 'po', 
+              prefix: newConfig.prefix, 
+              next_number: newConfig.nextNumber 
+          });
+          if (error) throw error;
+          setPoNumberConfig(newConfig);
+      } catch (error: any) {
+          console.error("Error updating PO config:", error);
+          alert("Failed to save PO settings.");
+      }
+  };
+
+  const handleUpdateDcConfig = async (newConfig: DeliveryChallanNumberConfig) => {
+      try {
+          const { error } = await supabase.from('numbering_configs').upsert({ 
+              id: 'delivery_challan', // Correct ID per schema
+              prefix: newConfig.prefix, 
+              next_number: newConfig.nextNumber 
+          });
+          if (error) throw error;
+          setDcNumberConfig(newConfig);
+      } catch (error: any) {
+          console.error("Error updating DC config:", error);
+          alert("Failed to save Delivery Challan settings.");
+      }
+  };
+
+  const handleUpdateInvConfig = async (newConfig: InvoiceNumberConfig) => {
+      try {
+          const { error } = await supabase.from('numbering_configs').upsert({ 
+              id: 'invoice', 
+              prefix: newConfig.prefix, 
+              next_number: newConfig.nextNumber, 
+              mode: newConfig.mode 
+          });
+          if (error) throw error;
+          setInvoiceNumberConfig(newConfig);
+      } catch (error: any) {
+          console.error("Error updating Invoice config:", error);
+          alert("Failed to save Invoice settings.");
+      }
+  };
+
   // Render content based on activeScreen
   const renderContent = () => {
     switch (activeScreen) {
@@ -763,7 +901,7 @@ const App: React.FC = () => {
       case 'Add Purchase Shop': return <PurchaseShopMasterScreen shops={purchaseShops} onAddShop={handleAddPurchaseShop} onUpdateShop={handleUpdatePurchaseShop} onDeleteShop={handleDeletePurchaseShop} />;
       case 'Add Employee': return <EmployeeMasterScreen employees={employees} onAddEmployee={handleAddEmployee} onUpdateEmployee={handleUpdateEmployee} onDeleteEmployee={handleDeleteEmployee} />;
       case 'Add Process': return <PartyDCProcessMasterScreen processTypes={processTypes} onAddProcessType={handleAddProcessType} onUpdateProcessType={handleUpdateProcessType} onDeleteProcessType={handleDeleteProcessType} />;
-      case 'Settings': return <SettingsScreen poConfig={poNumberConfig} onUpdatePoConfig={setPoNumberConfig} dcConfig={dcNumberConfig} onUpdateDcConfig={setDcNumberConfig} invConfig={invoiceNumberConfig} onUpdateInvConfig={setInvoiceNumberConfig} />;
+      case 'Settings': return <SettingsScreen poConfig={poNumberConfig} onUpdatePoConfig={handleUpdatePoConfig} dcConfig={dcNumberConfig} onUpdateDcConfig={handleUpdateDcConfig} invConfig={invoiceNumberConfig} onUpdateInvConfig={handleUpdateInvConfig} />;
       case 'User Admin': return <UserAdminScreen companyDetails={companyDetails} onUpdate={setCompanyDetails} />;
       case 'New Screen': return <ProductsScreen clients={clients} onAddClient={handleAddClient} processTypes={processTypes} onAddProcessType={handleAddProcessType} />;
       case 'New Client Screen': return <NewClientScreen clients={clients} onAddClient={handleAddClient} processTypes={processTypes} onAddProcessType={handleAddProcessType} setActiveScreen={setActiveScreen} />;

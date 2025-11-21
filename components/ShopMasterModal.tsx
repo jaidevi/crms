@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { CloseIcon, PlusIcon, TrashIcon } from './Icons';
 import type { Client, ProcessType } from '../App';
@@ -81,7 +80,8 @@ const ShopMasterModal: React.FC<ShopMasterModalProps> = ({ onClose, onSave, exis
             setAvailableCities(stateData ? stateData.cities.sort() : []);
             setClient(prev => ({ ...prev, state: value, city: '' }));
         } else {
-            const finalValue = name === 'name' ? value.toUpperCase() : value;
+            // Explicitly force uppercase for name, gstNo, and panNo
+            const finalValue = (name === 'name' || name === 'gstNo' || name === 'panNo') ? value.toUpperCase() : value;
             setClient(prev => ({ ...prev, [name]: finalValue }));
         }
 
@@ -203,8 +203,9 @@ const ShopMasterModal: React.FC<ShopMasterModalProps> = ({ onClose, onSave, exis
             return;
         }
         
+        // Ensure we are constructing a clean array of process objects for Supabase
         const validProcessesForSave = processes
-          .filter(p => p.processName.trim() !== '')
+          .filter(p => p.processName && p.processName.trim() !== '')
           .map(({ processName, rate }) => ({ processName, rate }));
 
         onSave({ ...client, name: client.name.trim(), processes: validProcessesForSave });

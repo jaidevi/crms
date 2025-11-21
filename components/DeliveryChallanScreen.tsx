@@ -305,7 +305,7 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
         <ConfirmationModal
             isOpen={!!invoiceToDelete}
             onClose={() => setInvoiceToDelete(null)}
-            onConfirm={() => { onDeleteInvoice(invoiceToDelete.id); setInvoiceToDelete(null); }}
+            onConfirm={() => { if(invoiceToDelete) onDeleteInvoice(invoiceToDelete.id); setInvoiceToDelete(null); }}
             title="Delete Invoice"
             message={`Are you sure you want to delete invoice ${invoiceToDelete.invoiceNumber}? This action cannot be undone.`}
         />
