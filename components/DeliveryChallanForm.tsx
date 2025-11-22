@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { CloseIcon, CalendarIcon, ChevronDownIcon, ImageIcon, SpinnerIcon, CheckIcon } from './Icons';
 import DatePicker from './DatePicker';
@@ -21,6 +22,7 @@ interface DeliveryChallanFormProps {
     employees: Employee[];
     onAddEmployee: (employee: Omit<Employee, 'id'>) => void;
     companyDetails: CompanyDetails;
+    isOutsourcingScreen?: boolean;
 }
 
 const BLANK_CHALLAN: Omit<DeliveryChallan, 'id' | 'challanNumber'> = {
@@ -67,7 +69,22 @@ const useClickOutside = (ref: React.RefObject<HTMLElement>, handler: () => void)
     }, [ref, handler]);
 };
 
-const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSave, clients, onAddClient, purchaseShops, onAddPurchaseShop, processTypes, onAddProcessType, challanToEdit, deliveryChallanNumberConfig, employees, onAddEmployee, companyDetails }) => {
+const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ 
+    onClose, 
+    onSave, 
+    clients, 
+    onAddClient, 
+    purchaseShops, 
+    onAddPurchaseShop, 
+    processTypes, 
+    onAddProcessType, 
+    challanToEdit, 
+    deliveryChallanNumberConfig, 
+    employees, 
+    onAddEmployee, 
+    companyDetails,
+    isOutsourcingScreen = false 
+}) => {
     const isEditing = !!challanToEdit;
     const [challan, setChallan] = useState<Omit<DeliveryChallan, 'id' | 'challanNumber'>>(BLANK_CHALLAN);
     const [challanNumber, setChallanNumber] = useState('');
@@ -118,6 +135,9 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSa
             setChallan({
                 ...BLANK_CHALLAN,
                 partyName: '',
+                isOutsourcing: isOutsourcingScreen,
+                workingUnit: isOutsourcingScreen ? 'Outsourcing' : 'Unit I',
+                status: isOutsourcingScreen ? 'Not Delivered' : '',
             });
             const paddedNumber = String(deliveryChallanNumberConfig.nextNumber).padStart(4, '0');
             const newChallanNumber = `${deliveryChallanNumberConfig.prefix}-${paddedNumber}`;
@@ -125,7 +145,7 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSa
             setFromParty('');
             setToParty('');
         }
-    }, [challanToEdit, deliveryChallanNumberConfig]);
+    }, [challanToEdit, deliveryChallanNumberConfig, isOutsourcingScreen]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
@@ -141,10 +161,12 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSa
             ...prev,
             workingUnit: value,
             isOutsourcing: isOutsourcingNow,
-            partyName: '' 
+            partyName: isOutsourcingNow ? '' : prev.partyName 
         }));
-        setFromParty('');
-        setToParty('');
+        if (!isOutsourcingNow) {
+            setFromParty('');
+            setToParty('');
+        }
     };
 
     const handleWorkerNameChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -274,9 +296,12 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSa
         }
     };
     
-    const modalTitle = isEditing ? `Edit Delivery Challan (${challanNumber})` : 'Create New Delivery Challan';
+    const modalTitle = isEditing 
+        ? `Edit ${isOutsourcingScreen ? 'Outsourcing' : 'Delivery'} Challan (${challanNumber})` 
+        : `Create New ${isOutsourcingScreen ? 'Outsourcing' : 'Delivery'} Challan`;
+    
     const commonInputClasses = "block w-full px-3 py-2.5 text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500";
-    const statusOptions = ['Ready to Invoice', 'Not Delivered', 'Deliver to Outsource', 'Rework'];
+    const statusOptions = ['Ready to Invoice', 'Not Delivered', 'Rework'];
 
     return (
         <>
@@ -384,11 +409,14 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({ onClose, onSa
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Working Unit</label>
-                                    <select name="workingUnit" value={challan.workingUnit || 'Unit I'} onChange={handleWorkingUnitChange} className={commonInputClasses}>
-                                        <option value="Unit I">Unit I</option>
-                                        <option value="Unit II">Unit II</option>
-                                        <option value="Outsourcing">Outsourcing</option>
-                                    </select>
+                                    {isOutsourcingScreen ? (
+                                        <input type="text" value="Outsourcing" readOnly className={`${commonInputClasses} bg-gray-100`} />
+                                    ) : (
+                                        <select name="workingUnit" value={challan.workingUnit || 'Unit I'} onChange={handleWorkingUnitChange} className={commonInputClasses}>
+                                            <option value="Unit I">Unit I</option>
+                                            <option value="Unit II">Unit II</option>
+                                        </select>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Worker Name</label>

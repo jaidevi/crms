@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
 import {
   InvoiceIcon, HomeIcon, CustomersIcon, ItemsIcon, QuotesIcon,
   DeliveryIcon, InvoicesIcon, PaymentsIcon, CreditNotesIcon, ExpensesIcon,
   ReportsIcon, ChevronRightIcon, ChevronLeftIcon, SettingsIcon,
   DatabaseIcon, ChevronUpIcon, ChevronDownIcon, PlusIcon, EditIcon, WalletIcon,
-  SearchIcon
+  SearchIcon, PackageIcon
 } from './Icons';
 
 interface NavItemProps {
@@ -42,7 +43,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeScreen, setActiveScreen }) => {
   const [masterSearch, setMasterSearch] = useState('');
 
   const masterScreens = ['Add Client', 'Add Purchase Shop', 'Add Employee', 'Add Process'];
-  const transactionScreens = ['Expenses', 'Delivery Challans', 'Invoices', 'Payment Received', 'Salary & Payslips', 'Attendance'];
+  const transactionScreens = ['Expenses', 'Delivery Challans', 'Outsourcing', 'Invoices', 'Payment Received', 'Salary & Payslips', 'Attendance'];
   
   const isMastersActive = masterScreens.includes(activeScreen);
   const isTransactionsActive = transactionScreens.includes(activeScreen);
@@ -54,6 +55,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeScreen, setActiveScreen }) => {
   const transactionNavItems = [
     { icon: <ExpensesIcon />, label: "Expenses" },
     { icon: <DeliveryIcon />, label: "Delivery Challans" },
+    { icon: <PackageIcon />, label: "Outsourcing" },
     { icon: <InvoiceIcon />, label: "Invoices" },
     { icon: <PaymentsIcon />, label: "Payment Received" },
     { icon: <CreditNotesIcon />, label: "Attendance" },

@@ -24,6 +24,7 @@ interface DeliveryChallanScreenProps {
   companyDetails: CompanyDetails;
   employees: Employee[];
   onAddEmployee: (employee: Omit<Employee, 'id'>) => void;
+  isOutsourcingScreen?: boolean;
 }
 
 const formatDateForDisplay = (isoDate: string) => {
@@ -86,9 +87,12 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
     onDeleteInvoice,
     companyDetails,
     employees,
-    onAddEmployee
+    onAddEmployee,
+    isOutsourcingScreen = false
 }) => {
-  const [activeTab, setActiveTab] = useState<'pending' | 'delivered' | 'invoices' | 'outsourcing' | 'rework'>('delivered');
+  const [activeTab, setActiveTab] = useState<'pending' | 'delivered' | 'invoices' | 'outsourcing' | 'rework'>(
+      isOutsourcingScreen ? 'outsourcing' : 'delivered'
+  );
   const [searchTerm, setSearchTerm] = useState('');
   
   const [isChallanFormOpen, setIsChallanFormOpen] = useState(false);
@@ -111,7 +115,13 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, searchTerm]);
+    // Reset tab if screen type changes
+    if (isOutsourcingScreen) {
+        setActiveTab('outsourcing');
+    } else if (activeTab === 'outsourcing') {
+        setActiveTab('delivered');
+    }
+  }, [activeTab, searchTerm, isOutsourcingScreen]);
 
   const clientForInvoice = useMemo(() => {
     if (!viewingInvoice) return null;
@@ -121,7 +131,7 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
   const invoicedChallanNumbers = useMemo(() => {
     return new Set(
         invoices.flatMap(invoice => 
-            invoice.items.flatMap(item => item.challanNumber.split(',').map(s => s.trim()))
+            invoice.items.flatMap(item => (item.challanNumber || '').split(',').map(s => s.trim()))
         )
     );
   }, [invoices]);
@@ -129,11 +139,15 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
   const { pendingCount, deliveredCount, outsourcingCount, reworkCount } = useMemo(() => {
     const counts = { pending: 0, delivered: 0, outsourcing: 0, rework: 0 };
     for (const challan of deliveryChallans) {
+        if (invoicedChallanNumbers.has(challan.challanNumber.trim())) {
+            continue;
+        }
+
         if (challan.status === 'Rework') {
             counts.rework++;
             continue;
         }
-        if ((challan.status === 'Ready to Invoice' || challan.status === 'Delivered') && !invoicedChallanNumbers.has(challan.challanNumber.trim())) {
+        if (challan.status === 'Ready to Invoice' || challan.status === 'Delivered') {
             counts.delivered++;
             continue;
         }
@@ -157,16 +171,16 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
     let listToFilter: DeliveryChallan[];
     switch (activeTab) {
         case 'pending':
-            listToFilter = deliveryChallans.filter(c => !c.isOutsourcing && c.status === 'Not Delivered');
+            listToFilter = deliveryChallans.filter(c => !c.isOutsourcing && c.status === 'Not Delivered' && !invoicedChallanNumbers.has(c.challanNumber.trim()));
             break;
         case 'delivered':
             listToFilter = deliveryChallans.filter(c => (c.status === 'Ready to Invoice' || c.status === 'Delivered') && !invoicedChallanNumbers.has(c.challanNumber.trim()));
             break;
         case 'outsourcing':
-            listToFilter = deliveryChallans.filter(c => c.isOutsourcing && (c.status !== 'Ready to Invoice' && c.status !== 'Delivered') && c.status !== 'Rework');
+            listToFilter = deliveryChallans.filter(c => c.isOutsourcing && (c.status !== 'Ready to Invoice' && c.status !== 'Delivered') && c.status !== 'Rework' && !invoicedChallanNumbers.has(c.challanNumber.trim()));
             break;
         case 'rework':
-            listToFilter = deliveryChallans.filter(c => c.status === 'Rework');
+            listToFilter = deliveryChallans.filter(c => c.status === 'Rework' && !invoicedChallanNumbers.has(c.challanNumber.trim()));
             break;
         default:
             listToFilter = [];
@@ -243,14 +257,17 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
         await onAddChallan(challanData);
     }
     
-    if (challanData.status === 'Rework') {
-        setActiveTab('rework');
-    } else if (challanData.status === 'Not Delivered' && !challanData.isOutsourcing) {
-        setActiveTab('pending');
-    } else if (challanData.isOutsourcing && (challanData.status !== 'Ready to Invoice' && challanData.status !== 'Delivered')) {
+    // Tab switching logic might need adjustment based on screen
+    if (isOutsourcingScreen) {
         setActiveTab('outsourcing');
     } else {
-        setActiveTab('delivered');
+        if (challanData.status === 'Rework') {
+            setActiveTab('rework');
+        } else if (challanData.status === 'Not Delivered') {
+            setActiveTab('pending');
+        } else {
+            setActiveTab('delivered');
+        }
     }
     handleCloseChallanForm();
   };
@@ -290,6 +307,7 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
           employees={employees}
           onAddEmployee={onAddEmployee}
           companyDetails={companyDetails}
+          isOutsourcingScreen={isOutsourcingScreen}
         />
       )}
       {challanToDelete && (
@@ -313,8 +331,8 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
       <div className="bg-white rounded-lg shadow-sm p-5 space-y-5">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-                <h1 className="text-2xl font-bold text-gray-800">Delivery Challans</h1>
-                <p className="text-gray-500 mt-1">Manage, create, and view delivery challans.</p>
+                <h1 className="text-2xl font-bold text-gray-800">{isOutsourcingScreen ? 'Outsourcing' : 'Delivery Challans'}</h1>
+                <p className="text-gray-500 mt-1">{isOutsourcingScreen ? 'Manage outsourcing jobs sent to other parties.' : 'Manage, create, and view delivery challans.'}</p>
             </div>
             <div className="flex items-center gap-4 w-full md:w-auto">
                 <div className="relative flex-grow">
@@ -329,7 +347,7 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
                 </div>
                 <button onClick={handleOpenFormForNewChallan} className="flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-blue-700 whitespace-nowrap">
                   <PlusIcon className="w-5 h-5 mr-2" />
-                  New Challan
+                  {isOutsourcingScreen ? 'New Outsourcing' : 'New Challan'}
                 </button>
             </div>
         </div>
@@ -337,21 +355,27 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
         <div>
             <div className="border-b border-gray-200">
                 <nav className="-mb-px flex space-x-6" aria-label="Tabs">
-                    <button onClick={() => setActiveTab('pending')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'pending' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                        Pending <span className="bg-yellow-100 text-yellow-800 text-xs font-medium ml-2 px-2 py-0.5 rounded-full">{pendingCount}</span>
-                    </button>
-                    <button onClick={() => setActiveTab('delivered')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'delivered' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                        Ready to Invoice <span className="bg-green-100 text-green-800 text-xs font-medium ml-2 px-2 py-0.5 rounded-full">{deliveredCount}</span>
-                    </button>
-                    <button onClick={() => setActiveTab('outsourcing')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'outsourcing' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                        Outsourcing <span className="bg-indigo-100 text-indigo-800 text-xs font-medium ml-2 px-2 py-0.5 rounded-full">{outsourcingCount}</span>
-                    </button>
-                    <button onClick={() => setActiveTab('rework')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'rework' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                        Rework <span className="bg-orange-100 text-orange-800 text-xs font-medium ml-2 px-2 py-0.5 rounded-full">{reworkCount}</span>
-                    </button>
-                    <button onClick={() => setActiveTab('invoices')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'invoices' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                        Generated Invoices <span className="bg-blue-100 text-blue-800 text-xs font-medium ml-2 px-2 py-0.5 rounded-full">{invoices.length}</span>
-                    </button>
+                    {!isOutsourcingScreen && (
+                        <>
+                            <button onClick={() => setActiveTab('pending')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'pending' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                                Pending <span className="bg-yellow-100 text-yellow-800 text-xs font-medium ml-2 px-2 py-0.5 rounded-full">{pendingCount}</span>
+                            </button>
+                            <button onClick={() => setActiveTab('delivered')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'delivered' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                                Ready to Invoice <span className="bg-green-100 text-green-800 text-xs font-medium ml-2 px-2 py-0.5 rounded-full">{deliveredCount}</span>
+                            </button>
+                            <button onClick={() => setActiveTab('rework')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'rework' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                                Rework <span className="bg-orange-100 text-orange-800 text-xs font-medium ml-2 px-2 py-0.5 rounded-full">{reworkCount}</span>
+                            </button>
+                            <button onClick={() => setActiveTab('invoices')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'invoices' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                                Generated Invoices <span className="bg-blue-100 text-blue-800 text-xs font-medium ml-2 px-2 py-0.5 rounded-full">{invoices.length}</span>
+                            </button>
+                        </>
+                    )}
+                    {isOutsourcingScreen && (
+                        <button onClick={() => setActiveTab('outsourcing')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'outsourcing' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                            Outsourcing Jobs <span className="bg-indigo-100 text-indigo-800 text-xs font-medium ml-2 px-2 py-0.5 rounded-full">{outsourcingCount}</span>
+                        </button>
+                    )}
                 </nav>
             </div>
         </div>

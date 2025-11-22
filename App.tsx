@@ -1617,6 +1617,16 @@ const App: React.FC = () => {
           processTypes={processTypes} onAddProcessType={handleAddProcessType}
           deliveryChallanNumberConfig={dcNumberConfig} invoices={invoices} onDeleteInvoice={handleDeleteInvoice}
           companyDetails={companyDetails} employees={employees} onAddEmployee={handleAddEmployee}
+          isOutsourcingScreen={false}
+        />;
+      case 'Outsourcing': return <DeliveryChallanScreen
+          deliveryChallans={deliveryChallans} onAddChallan={handleAddDeliveryChallan} onUpdateChallan={handleUpdateDeliveryChallan} onDeleteChallan={handleDeleteDeliveryChallan}
+          clients={clients} onAddClient={handleAddClient}
+          purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop}
+          processTypes={processTypes} onAddProcessType={handleAddProcessType}
+          deliveryChallanNumberConfig={dcNumberConfig} invoices={invoices} onDeleteInvoice={handleDeleteInvoice}
+          companyDetails={companyDetails} employees={employees} onAddEmployee={handleAddEmployee}
+          isOutsourcingScreen={true}
         />;
       case 'Invoices': return <InvoicesScreen clients={clients} deliveryChallans={deliveryChallans} processTypes={processTypes} onAddInvoice={handleAddInvoice} invoiceNumberConfig={invoiceNumberConfig} invoices={invoices} companyDetails={companyDetails} />;
       case 'Payment Received': return <PaymentReceivedScreen payments={paymentsReceived} onAddPayment={handleAddPaymentReceived} onUpdatePayment={handleUpdatePaymentReceived} onDeletePayment={handleDeletePaymentReceived} clients={clients} onAddClient={handleAddClient} />;
