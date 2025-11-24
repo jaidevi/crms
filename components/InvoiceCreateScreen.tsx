@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { DeliveryChallan, ProcessType, Invoice, InvoiceItem, InvoiceNumberConfig, Client, CompanyDetails } from '../App';
 import DatePicker from './DatePicker';
-import { CloseIcon, CalendarIcon } from './Icons';
+import { CloseIcon, CalendarIcon, PrintIcon } from './Icons';
 
 interface InvoiceCreateScreenProps {
     onCancel: () => void;
@@ -26,7 +26,7 @@ const numberFormat = (num: number, options?: Intl.NumberFormatOptions) => {
 };
 
 // Vel Logo SVG Data URI
-const VEL_LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTUwIj4KICA8cGF0aCBkPSJNNDUgMTUwIEw0NSA5MCBMNTUgOTAgTDU1IDE1MCBaIiBmaWxsPSIjZjk3MzE2IiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMTQ1IiByPSI1IiBmaWxsPSIjZjk3MzE2IiAvPgogIDxwYXRoIGQ9Ik01MCAxMCBDIDkwIDYwIDkwIDkwIDUwIDExMCBDIDEwIDkwIDEwIDYwIDUwIDEwIFoiIGZpbGw9IiNmOTczMTYiIHN0cm9rZT0iI2I0NTMwOSIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPHBhdGggZD0iTTUwIDQwIEMgNjAgNjAgNjAgODAgNTAgOTAgQyA0MCA4MCA0MCA2MCA1MCA0MCBaIiBmaWxsPSIjMTk3NmQyIiAvPgogIDxsaW5lIHgxPSIzNSIgeTE9IjI1IiB4Mj0iNjUiIHkyPSIyNSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIC8+CiAgPGxpbmUgeDE9IjMyIiB5MT0iMzIiIHgyPSI2OCIgeTI9IjMyIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIgLz4KICA8bGluZSB4MT0iMzUiIHkxPSIzOSIgeDI9IjY1IiB5Mj0iMzkiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIyIiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMzIiIHI9IjIuNSIgZmlsbD0iI2RjMjYyNiIgLz4KPC9zdmc+";
+const VEL_LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTUwIj48cmVjdCB4PSI0NiIgeT0iMTAwIiB3aWR0aD0iOCIgaGVpZ2h0PSI1MCIgZmlsbD0iI2I0NTMwOSIgLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjE0OCIgcj0iNCIgZmlsbD0iI2I0NTMwOSIgLz48cGF0aCBkPSJNNDAgMTAwIFE1MCAxMTAgNjAgMTAwIiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNDIgMTA1IFE1MCAxMTUgNTggMTA1IiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNDQgMTEwIFE1MCAxMTggNTYgMTEwIiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNTAgNSBDIDg1IDQwIDg1IDgwIDUwIDEwMCBDIDE1IDgwIDE1IDQwIDUwIDUgWiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZjk3MzE2IiBzdHJva2Utd2lkdGg9IjQiIC8+PHBhdGggZD0iTTUwIDQ1IEMgNjUgNjAgNjUgODAgNTAgOTAgQyAzNSA4MCAzNSA2MCA1MCA0NSBaIiBmaWxsPSIjMWQ0ZWQ4IiAvPjxsaW5lIHgxPSIzNSIgeTE9IjI1IiB4Mj0iNjUiIHkyPSIyNSIgc3Ryb2tlPSIjOWNhM2FmIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgLz48bGluZSB4MT0iMzIiIHkxPSIzMiIgeDI9IjY4IiB5Mj0iMzIiIHN0cm9rZT0iIzljYTNhZiIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiIC8+PGxpbmUgeDE9IjM1IiB5MT0iMzkiIHgyPSI2NSIgeTI9IjM5IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiAvPjxjaXJjbGUgY3g9IjUwIiBjeT0iMzIiIHI9IjQiIGZpbGw9IiNkYzI2MjYiIC8+PC9zdmc+";
 
 const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onSave, client, challansToInvoice, invoiceNumberConfig, processTypes, companyDetails }) => {
     const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -172,9 +172,29 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSave = () => {
+    const handleSaveAndPrint = () => {
         if (!validate()) return;
-        onSave({ invoiceNumber, invoiceDate, clientName: client.name, items: lineItems, subTotal, totalCgst, totalSgst, totalTaxAmount, roundedOff, totalAmount: roundedTotal });
+        
+        // Trigger print dialog for the current view
+        window.print();
+
+        // Then proceed to save
+        onSave({ 
+            invoiceNumber, 
+            invoiceDate, 
+            clientName: client.name, 
+            items: lineItems, 
+            subTotal, 
+            totalCgst, 
+            totalSgst, 
+            totalTaxAmount, 
+            roundedOff, 
+            totalAmount: roundedTotal 
+        });
+    };
+    
+    const handlePrintDraft = () => {
+        window.print();
     };
 
     // Helper to split invoice number for display
@@ -192,21 +212,21 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
     
     return (
         <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 lg:p-8">
-            <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center">
-                </div>
-                <div>
-                    <button onClick={onCancel} className="px-4 py-2 mr-2 bg-gray-200 text-gray-800 rounded-md text-sm font-semibold hover:bg-gray-300">
-                        Cancel
-                    </button>
-                    <button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700">
-                        Save Invoice
-                    </button>
-                </div>
+            {/* Top Toolbar - Hidden in Print */}
+            <div className="flex justify-end items-center mb-6 no-print space-x-2">
+                <button onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-semibold hover:bg-gray-300">
+                    Cancel
+                </button>
+                <button onClick={handlePrintDraft} className="px-4 py-2 bg-secondary-600 text-white rounded-md text-sm font-semibold hover:bg-secondary-700">
+                    <span className="flex items-center"><PrintIcon className="w-4 h-4 mr-1"/> Print Draft</span>
+                </button>
+                <button onClick={handleSaveAndPrint} className="px-5 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 shadow-sm">
+                    Save & Print Invoice
+                </button>
             </div>
 
-            <div className="max-w-7xl mx-auto bg-white p-8 text-sm font-sans text-gray-800 border rounded-lg">
-                {/* Header mimicking InvoiceView */}
+            <div id="printable-invoice" className="max-w-7xl mx-auto bg-white p-8 text-sm font-sans text-gray-800 border rounded-lg relative">
+                {/* Header */}
                 <header className="flex justify-between items-start pb-4">
                      <div className="flex items-start w-1/2">
                         <div className="w-24 h-32 mr-4 flex-shrink-0">
@@ -232,7 +252,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                             ) : (
                                 <div className="flex justify-end">
                                     <div className="w-full max-w-xs">
-                                        <label htmlFor="invoiceNumber" className="block text-sm font-medium text-gray-700 mb-1 text-right">Invoice Number <span className="text-red-500">*</span></label>
+                                        <label htmlFor="invoiceNumber" className="block text-sm font-medium text-gray-700 mb-1 text-right no-print">Invoice Number <span className="text-red-500">*</span></label>
                                         <input
                                             id="invoiceNumber"
                                             type="text"
@@ -241,17 +261,18 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                                             className={`block w-full px-3 py-2 text-xl rounded-md border shadow-sm focus:border-blue-500 focus:ring-blue-500 text-right ${errors.invoiceNumber ? 'border-red-500' : 'border-gray-300'}`}
                                             placeholder="Enter Invoice #"
                                         />
-                                        {errors.invoiceNumber && <p className="mt-1 text-sm text-red-500 text-right">{errors.invoiceNumber}</p>}
+                                        {errors.invoiceNumber && <p className="mt-1 text-sm text-red-500 text-right no-print">{errors.invoiceNumber}</p>}
                                     </div>
                                 </div>
                             )}
                             <div className="relative inline-block mt-1">
                                 <span className="text-gray-600 mr-1">Date:</span>
-                                <button className="font-medium text-gray-700 hover:text-blue-600 border-b border-dashed" onClick={() => setDatePickerOpen(p => !p)}>
+                                <button className="font-medium text-gray-700 hover:text-blue-600 border-b border-dashed no-print" onClick={() => setDatePickerOpen(p => !p)}>
                                     {formatDateForDisplay(invoiceDate)}
                                 </button>
+                                <span className="font-medium text-gray-900 hidden print:inline">{formatDateForDisplay(invoiceDate)}</span>
                                 {isDatePickerOpen && (
-                                    <div className="absolute right-0 z-10">
+                                    <div className="absolute right-0 z-10 no-print">
                                         <DatePicker value={invoiceDate} onChange={d => { setInvoiceDate(d); setDatePickerOpen(false); }} onClose={() => setDatePickerOpen(false)} />
                                     </div>
                                 )}
@@ -289,13 +310,16 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                                     <td className="p-2 text-center">{index + 1}</td>
                                     <td className="p-2 font-medium">{item.process}</td>
                                     <td className="p-2 text-center">
-                                        <input type="text" value={item.hsnSac} onChange={e => handleItemChange(item.id, 'hsnSac', e.target.value)} className={`${editableInputClasses} text-center`} />
+                                        <input type="text" value={item.hsnSac} onChange={e => handleItemChange(item.id, 'hsnSac', e.target.value)} className={`${editableInputClasses} text-center no-print`} />
+                                        <span className="hidden print:inline">{item.hsnSac}</span>
                                     </td>
                                     <td className="p-2 text-right">
-                                        <input type="number" value={item.mtr} onChange={e => handleItemChange(item.id, 'mtr', Number(e.target.value))} className={editableInputClasses} />
+                                        <input type="number" value={item.mtr} onChange={e => handleItemChange(item.id, 'mtr', Number(e.target.value))} className={`${editableInputClasses} no-print`} />
+                                        <span className="hidden print:inline">{numberFormat(item.mtr)}</span>
                                     </td>
                                     <td className="p-2 text-right">
-                                        <input type="number" value={item.rate} onChange={e => handleItemChange(item.id, 'rate', Number(e.target.value))} className={`${editableInputClasses} ${errors[`rate_${item.id}`] ? 'border-red-500' : ''}`} />
+                                        <input type="number" value={item.rate} onChange={e => handleItemChange(item.id, 'rate', Number(e.target.value))} className={`${editableInputClasses} no-print ${errors[`rate_${item.id}`] ? 'border-red-500' : ''}`} />
+                                        <span className="hidden print:inline">{numberFormat(item.rate)}</span>
                                     </td>
                                     <td className="p-2 text-right">{numberFormat(item.cgst)}</td>
                                     <td className="p-2 text-right">{numberFormat(item.sgst)}</td>
@@ -352,6 +376,11 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                     </table>
                     </div>
                 </section>
+            </div>
+            {/* Bottom Toolbar - Also hidden in print, duplicate functionality for convenience */}
+            <div className="bg-gray-50 p-4 mt-4 border-t rounded-b-lg flex justify-end space-x-3 no-print">
+                 <button onClick={onCancel} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md text-sm font-semibold hover:bg-gray-50">Cancel</button>
+                 <button onClick={handleSaveAndPrint} className="px-5 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700">Save & Print Invoice</button>
             </div>
         </div>
     );

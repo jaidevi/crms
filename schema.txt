@@ -1,3 +1,4 @@
+
 -- Enable the UUID extension if not already enabled
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
@@ -105,6 +106,7 @@ CREATE TABLE IF NOT EXISTS delivery_challans (
     party_name TEXT NOT NULL,
     party_dc_no TEXT,
     process TEXT,
+    split_process JSONB,
     design_no TEXT,
     pcs NUMERIC,
     mtr NUMERIC,
@@ -143,6 +145,17 @@ BEGIN
         WHERE table_schema = 'public' AND table_name = 'delivery_challans' AND column_name = 'working_unit'
     ) THEN
         ALTER TABLE delivery_challans ADD COLUMN working_unit TEXT;
+    END IF;
+END $$;
+
+-- Safely add split_process column if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'delivery_challans' AND column_name = 'split_process'
+    ) THEN
+        ALTER TABLE delivery_challans ADD COLUMN split_process JSONB DEFAULT '[]'::jsonb;
     END IF;
 END $$;
 -- 7. Purchase Orders Table

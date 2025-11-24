@@ -160,6 +160,7 @@ export interface DeliveryChallan {
   partyName: string;
   partyDCNo: string;
   process: string[];
+  splitProcess: string[]; // Added splitProcess
   designNo: string;
   pcs: number;
   mtr: number;
@@ -461,6 +462,12 @@ const App: React.FC = () => {
             if (!Array.isArray(processes) && typeof dc.process === 'string') processes = dc.process.split(',').map((s: string) => s.trim());
         } catch { processes = dc.process ? [dc.process] : []; }
 
+        let splitProcesses: string[] = [];
+        try {
+            splitProcesses = dc.split_process ? JSON.parse(dc.split_process) : [];
+            if (!Array.isArray(splitProcesses) && typeof dc.split_process === 'string') splitProcesses = dc.split_process.split(',').map((s: string) => s.trim());
+        } catch { splitProcesses = dc.split_process ? [dc.split_process] : []; }
+
         return {
             id: dc.id,
             challanNumber: dc.challan_number,
@@ -468,6 +475,7 @@ const App: React.FC = () => {
             partyName: dc.party_name,
             partyDCNo: dc.party_dc_no || '',
             process: processes,
+            splitProcess: splitProcesses,
             designNo: dc.design_no || '',
             pcs: Number(dc.pcs) || 0,
             mtr: Number(dc.mtr) || 0,
@@ -491,12 +499,6 @@ const App: React.FC = () => {
         invoiceNumber: inv.invoice_number,
         invoiceDate: inv.invoice_date,
         clientName: inv.client_name,
-        subTotal: Number(inv.sub_total) || 0,
-        totalCgst: Number(inv.total_cgst) || 0,
-        totalSgst: Number(inv.total_sgst) || 0,
-        totalTaxAmount: Number(inv.total_tax_amount) || 0,
-        roundedOff: Number(inv.rounded_off) || 0,
-        totalAmount: Number(inv.total_amount) || 0,
         items: (inv.invoice_items || []).map((item: any) => ({
             id: item.id,
             challanNumber: item.challan_number || '',
@@ -512,7 +514,13 @@ const App: React.FC = () => {
             cgst: Number(item.cgst) || 0,
             sgst: Number(item.sgst) || 0,
             amount: Number(item.amount) || 0
-        }))
+        })),
+        subTotal: Number(inv.sub_total) || 0,
+        totalCgst: Number(inv.total_cgst) || 0,
+        totalSgst: Number(inv.total_sgst) || 0,
+        totalTaxAmount: Number(inv.total_tax_amount) || 0,
+        roundedOff: Number(inv.rounded_off) || 0,
+        totalAmount: Number(inv.total_amount) || 0
     })));
 
     // 10. Payments Received
@@ -1015,7 +1023,8 @@ const App: React.FC = () => {
               date: dc.date,
               party_name: dc.partyName,
               party_dc_no: dc.partyDCNo,
-              process: JSON.stringify(dc.process), // Convert string array to JSON string
+              process: JSON.stringify(dc.process || []), // Convert string array to JSON string
+              split_process: JSON.stringify(dc.splitProcess || []), // Convert string array to JSON string
               design_no: dc.designNo,
               pcs: dc.pcs,
               mtr: dc.mtr,
@@ -1028,13 +1037,16 @@ const App: React.FC = () => {
               worker_name: dc.workerName,
               working_unit: dc.workingUnit,
               is_outsourcing: dc.isOutsourcing,
-              dc_image: JSON.stringify(dc.dcImage), // Convert string array to JSON string
-              sample_image: JSON.stringify(dc.sampleImage) // Convert string array to JSON string
+              dc_image: JSON.stringify(dc.dcImage || []), // Convert string array to JSON string
+              sample_image: JSON.stringify(dc.sampleImage || []) // Convert string array to JSON string
           };
 
           const { data, error } = await supabase.from('delivery_challans').insert([payload]).select().single();
 
-          if (error) throw error;
+          if (error) {
+              console.error("Supabase Insert Error:", error);
+              throw error;
+          }
 
           if (data) {
               // Convert back to App model
@@ -1047,6 +1059,9 @@ const App: React.FC = () => {
               let processes: string[] = [];
               try { processes = data.process ? JSON.parse(data.process) : []; } catch { processes = []; }
 
+              let splitProcesses: string[] = [];
+              try { splitProcesses = data.split_process ? JSON.parse(data.split_process) : []; } catch { splitProcesses = []; }
+
               const newChallan: DeliveryChallan = {
                   id: data.id,
                   challanNumber: data.challan_number,
@@ -1054,6 +1069,7 @@ const App: React.FC = () => {
                   partyName: data.party_name,
                   partyDCNo: data.party_dc_no || '',
                   process: processes,
+                  splitProcess: splitProcesses,
                   designNo: data.design_no || '',
                   pcs: Number(data.pcs) || 0,
                   mtr: Number(data.mtr) || 0,
@@ -1077,7 +1093,10 @@ const App: React.FC = () => {
           }
       } catch (error: any) {
           console.error("Error adding delivery challan:", error);
-          alert("Failed to add delivery challan: " + error.message);
+          const msg = error?.message || error?.details || JSON.stringify(error);
+          alert("Failed to add delivery challan: " + msg);
+          // Important: Re-throw so the UI knows it failed (e.g., to keep modal open)
+          throw error;
       }
   };
 
@@ -1088,7 +1107,8 @@ const App: React.FC = () => {
               date: dc.date,
               party_name: dc.partyName,
               party_dc_no: dc.partyDCNo,
-              process: JSON.stringify(dc.process),
+              process: JSON.stringify(dc.process || []),
+              split_process: JSON.stringify(dc.splitProcess || []),
               design_no: dc.designNo,
               pcs: dc.pcs,
               mtr: dc.mtr,
@@ -1101,17 +1121,22 @@ const App: React.FC = () => {
               worker_name: dc.workerName,
               working_unit: dc.workingUnit,
               is_outsourcing: dc.isOutsourcing,
-              dc_image: JSON.stringify(dc.dcImage),
-              sample_image: JSON.stringify(dc.sampleImage)
+              dc_image: JSON.stringify(dc.dcImage || []),
+              sample_image: JSON.stringify(dc.sampleImage || [])
           };
 
           const { error } = await supabase.from('delivery_challans').update(payload).eq('id', id);
-          if (error) throw error;
+          if (error) {
+              console.error("Supabase Update Error:", error);
+              throw error;
+          }
 
           setDeliveryChallans(prev => prev.map(d => d.id === id ? dc : d));
       } catch (error: any) {
           console.error("Error updating delivery challan:", error);
-          alert("Failed to update delivery challan: " + error.message);
+          const msg = error?.message || error?.details || JSON.stringify(error);
+          alert("Failed to update delivery challan: " + msg);
+          throw error;
       }
   };
 
@@ -1170,11 +1195,13 @@ const App: React.FC = () => {
           setInvoices(prev => [...prev, newInvoice]);
 
           // 4. Update Challan Status to 'Rework'
+          // Extract all challan numbers from the invoice items
           const challanNumbersToUpdate = inv.items.flatMap(item => 
-              item.challanNumber.split(',').map(s => s.trim())
+              (item.challanNumber || '').split(',').map(s => s.trim())
           ).filter(s => s);
 
           if (challanNumbersToUpdate.length > 0) {
+              // Update in Supabase
               const { error: statusError } = await supabase
                   .from('delivery_challans')
                   .update({ status: 'Rework' })
@@ -1182,6 +1209,7 @@ const App: React.FC = () => {
               
               if (statusError) throw statusError;
 
+              // Update local state immediately to reflect 'Rework' status
               setDeliveryChallans(prev => prev.map(dc => 
                   challanNumbersToUpdate.includes(dc.challanNumber) 
                       ? { ...dc, status: 'Rework' } 

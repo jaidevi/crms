@@ -58,24 +58,47 @@
   }
   
   @media print {
-    body * {
+    /* Hide everything by default */
+    body {
       visibility: hidden;
     }
-    #printable-invoice, #printable-invoice *,
-    #printable-payslip, #printable-payslip *,
-    #printable-challan, #printable-challan * {
+
+    /* Show specific printable containers */
+    #printable-invoice, 
+    #printable-payslip, 
+    #printable-challan {
       visibility: visible;
-    }
-    #printable-invoice, #printable-payslip, #printable-challan {
       position: absolute;
       left: 0;
       top: 0;
       width: 100%;
       margin: 0;
-      padding: 0;
+      padding: 20px; /* Add some padding for print margin */
+      background-color: white;
+      z-index: 9999; /* Ensure it sits on top of everything */
     }
+
+    /* Ensure children of printable areas are also visible */
+    #printable-invoice *, 
+    #printable-payslip *, 
+    #printable-challan * {
+      visibility: visible;
+    }
+
+    /* Explicitly hide elements with no-print class */
     .no-print {
       display: none !important;
+    }
+
+    /* Ensure colors are printed (backgrounds etc) */
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    @page {
+        size: auto;
+        margin: 0mm;
     }
   }
 </style>

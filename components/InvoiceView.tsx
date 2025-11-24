@@ -28,7 +28,7 @@ const numberFormat = (num: number, options?: Intl.NumberFormatOptions) => {
 };
 
 // Vel Logo SVG Data URI
-const VEL_LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTUwIj4KICA8cGF0aCBkPSJNNDUgMTUwIEw0NSA5MCBMNTUgOTAgTDU1IDE1MCBaIiBmaWxsPSIjZjk3MzE2IiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMTQ1IiByPSI1IiBmaWxsPSIjZjk3MzE2IiAvPgogIDxwYXRoIGQ9Ik01MCAxMCBDIDkwIDYwIDkwIDkwIDUwIDExMCBDIDEwIDkwIDEwIDYwIDUwIDEwIFoiIGZpbGw9IiNmOTczMTYiIHN0cm9rZT0iI2I0NTMwOSIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPHBhdGggZD0iTTUwIDQwIEMgNjAgNjAgNjAgODAgNTAgOTAgQyA0MCA4MCA0MCA2MCA1MCA0MCBaIiBmaWxsPSIjMTk3NmQyIiAvPgogIDxsaW5lIHgxPSIzNSIgeTE9IjI1IiB4Mj0iNjUiIHkyPSIyNSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIC8+CiAgPGxpbmUgeDE9IjMyIiB5MT0iMzIiIHgyPSI2OCIgeTI9IjMyIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIgLz4KICA8bGluZSB4MT0iMzUiIHkxPSIzOSIgeDI9IjY1IiB5Mj0iMzkiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIyIiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMzIiIHI9IjIuNSIgZmlsbD0iI2RjMjYyNiIgLz4KPC9zdmc+";
+const VEL_LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTUwIj48cmVjdCB4PSI0NiIgeT0iMTAwIiB3aWR0aD0iOCIgaGVpZ2h0PSI1MCIgZmlsbD0iI2I0NTMwOSIgLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjE0OCIgcj0iNCIgZmlsbD0iI2I0NTMwOSIgLz48cGF0aCBkPSJNNDAgMTAwIFE1MCAxMTAgNjAgMTAwIiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNDIgMTA1IFE1MCAxMTUgNTggMTA1IiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNDQgMTEwIFE1MCAxMTggNTYgMTEwIiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNTAgNSBDIDg1IDQwIDg1IDgwIDUwIDEwMCBDIDE1IDgwIDE1IDQwIDUwIDUgWiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZjk3MzE2IiBzdHJva2Utd2lkdGg9IjQiIC8+PHBhdGggZD0iTTUwIDQ1IEMgNjUgNjAgNjUgODAgNTAgOTAgQyAzNSA4MCAzNSA2MCA1MCA0NSBaIiBmaWxsPSIjMWQ0ZWQ4IiAvPjxsaW5lIHgxPSIzNSIgeTE9IjI1IiB4Mj0iNjUiIHkyPSIyNSIgc3Ryb2tlPSIjOWNhM2FmIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgLz48bGluZSB4MT0iMzIiIHkxPSIzMiIgeDI9IjY4IiB5Mj0iMzIiIHN0cm9rZT0iIzljYTNhZiIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiIC8+PGxpbmUgeDE9IjM1IiB5MT0iMzkiIHgyPSI2NSIgeTI9IjM5IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiAvPjxjaXJjbGUgY3g9IjUwIiBjeT0iMzIiIHI9IjQiIGZpbGw9IiNkYzI2MjYiIC8+PC9zdmc+";
 
 const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetails, onBack }) => {
     
@@ -57,13 +57,17 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                     <button onClick={onBack} className="px-4 py-2 mr-2 bg-secondary-200 text-secondary-800 rounded-md text-sm font-semibold hover:bg-secondary-300">
                         Back to List
                     </button>
-                    <button onClick={handlePrint} className="px-4 py-2 bg-primary-600 text-white rounded-md text-sm font-semibold hover:bg-primary-700">
+                    <button 
+                        type="button"
+                        onClick={handlePrint} 
+                        className="px-4 py-2 bg-primary-600 text-white rounded-md text-sm font-semibold hover:bg-primary-700 shadow-sm"
+                    >
                         Print Invoice
                     </button>
                 </div>
             </div>
 
-            <div id="printable-invoice" className="max-w-5xl mx-auto bg-white p-8 text-gray-800 font-sans">
+            <div id="printable-invoice" className="max-w-5xl mx-auto bg-white p-8 text-gray-800 font-sans border border-secondary-200">
                 
                 {/* Header Section */}
                 <div className="flex justify-between items-start mb-4">
@@ -170,7 +174,6 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                         
                         {/* Bank Details */}
                         <div className="mt-8 text-sm">
-                            {/* Bank details based on the request */}
                             <div className="text-gray-800">
                                 <div className="font-bold mb-1">Note:</div>
                                 <p className="font-semibold">{companyDetails.bankName}: {companyDetails.bankAccountNumber}</p>

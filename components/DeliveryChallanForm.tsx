@@ -30,6 +30,7 @@ const BLANK_CHALLAN: Omit<DeliveryChallan, 'id' | 'challanNumber'> = {
     partyName: '',
     partyDCNo: '',
     process: [],
+    splitProcess: [],
     designNo: '',
     pcs: 1,
     mtr: 1,
@@ -94,14 +95,20 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
     const [showAddClientModal, setShowAddClientModal] = useState(false);
     const [showAddShopModal, setShowAddShopModal] = useState(false);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
+    
     const [isProcessDropdownOpen, setProcessDropdownOpen] = useState(false);
+    const [isSplitProcessDropdownOpen, setSplitProcessDropdownOpen] = useState(false);
+    
     const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
     const [showAddProcessModal, setShowAddProcessModal] = useState(false);
     const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
     const dcImageInputRef = useRef<HTMLInputElement>(null);
     const sampleImageInputRef = useRef<HTMLInputElement>(null);
     const processDropdownRef = useRef<HTMLDivElement>(null);
+    const splitProcessDropdownRef = useRef<HTMLDivElement>(null);
+    
     useClickOutside(processDropdownRef, () => setProcessDropdownOpen(false));
+    useClickOutside(splitProcessDropdownRef, () => setSplitProcessDropdownOpen(false));
 
     const partyList = useMemo(() => clients.map(c => c.name), [clients]);
     const processNames = useMemo(() => processTypes.map(p => p.name), [processTypes]);
@@ -120,7 +127,10 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
     useEffect(() => {
         if (challanToEdit) {
             const { id, ...rest } = challanToEdit;
-            setChallan(rest);
+            setChallan({
+                ...rest,
+                splitProcess: rest.splitProcess || [] // Ensure splitProcess is array
+            });
             setChallanNumber(rest.challanNumber);
              if (rest.isOutsourcing && rest.partyName.includes('|')) {
                 const fromMatch = rest.partyName.match(/FROM: (.*?)\|/);
@@ -138,6 +148,7 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                 isOutsourcing: isOutsourcingScreen,
                 workingUnit: isOutsourcingScreen ? 'Outsourcing' : 'Unit I',
                 status: isOutsourcingScreen ? 'Not Delivered' : '',
+                splitProcess: []
             });
             const paddedNumber = String(deliveryChallanNumberConfig.nextNumber).padStart(4, '0');
             const newChallanNumber = `${deliveryChallanNumberConfig.prefix}-${paddedNumber}`;
@@ -230,6 +241,16 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
         if (errors.process) setErrors(prev => ({...prev, process: ''}));
     };
 
+    const handleSplitProcessToggle = (processName: string) => {
+        setChallan(prev => {
+            const currentSplit = prev.splitProcess || [];
+            const newSplitProcesses = currentSplit.includes(processName)
+                ? currentSplit.filter(p => p !== processName)
+                : [...currentSplit, processName];
+            return { ...prev, splitProcess: newSplitProcesses };
+        });
+    };
+
     const handleSaveClient = (newClientName: string) => {
         const newClient: Omit<Client, 'id'> = { name: newClientName, phone: '', email: '', address: '', city: '', state: '', pincode: '', gstNo: '', panNo: '', paymentTerms: 'Due on receipt', processes: [] };
         onAddClient(newClient);
@@ -246,10 +267,8 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
     
     const handleSaveProcess = (processData: { name: string, rate: number }) => {
         onAddProcessType(processData);
-        setChallan(prev => ({
-            ...prev,
-            process: [...prev.process, processData.name],
-        }));
+        // Determine if adding to main process or split process based on context? 
+        // For simplicity, just add to type master. User can then select.
         setShowAddProcessModal(false);
     };
 
@@ -447,50 +466,87 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                                     </div>
                                 </div>
 
-                                <div ref={processDropdownRef} className="relative">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Process <span className="text-red-500">*</span></label>
-                                    <button type="button" onClick={() => setProcessDropdownOpen(p => !p)} className={`flex items-center justify-between w-full text-left ${commonInputClasses} ${errors.process ? 'border-red-500' : ''}`}>
-                                        <span className="truncate pr-8">{challan.process.length > 0 ? challan.process.join(', ') : 'Select processes'}</span>
-                                        <ChevronDownIcon className="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
-                                    </button>
-                                    {isProcessDropdownOpen && (
-                                        <div className="absolute top-full mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg z-10 flex flex-col">
-                                            <div className="p-2 border-b border-gray-200">
-                                                <input
-                                                    type="text"
-                                                    placeholder="Search processes..."
-                                                    value={processSearch}
-                                                    onChange={(e) => setProcessSearch(e.target.value)}
-                                                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                                                />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Process Dropdown */}
+                                    <div ref={processDropdownRef} className="relative">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Process <span className="text-red-500">*</span></label>
+                                        <button type="button" onClick={() => setProcessDropdownOpen(p => !p)} className={`flex items-center justify-between w-full text-left ${commonInputClasses} ${errors.process ? 'border-red-500' : ''}`}>
+                                            <span className="truncate pr-8">{challan.process.length > 0 ? challan.process.join(', ') : 'Select processes'}</span>
+                                            <ChevronDownIcon className="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
+                                        </button>
+                                        {isProcessDropdownOpen && (
+                                            <div className="absolute top-full mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg z-10 flex flex-col">
+                                                <div className="p-2 border-b border-gray-200">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Search processes..."
+                                                        value={processSearch}
+                                                        onChange={(e) => setProcessSearch(e.target.value)}
+                                                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                                                    />
+                                                </div>
+                                                <div className="max-h-48 overflow-y-auto">
+                                                    {filteredProcessNames.map(p => (
+                                                        <label key={p} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
+                                                            <input type="checkbox" checked={challan.process.includes(p)} onChange={() => handleProcessToggle(p)} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                                            <span className="ml-3">{p}</span>
+                                                        </label>
+                                                    ))}
+                                                    {filteredProcessNames.length === 0 && (
+                                                        <div className="px-4 py-2 text-sm text-gray-500">No process found.</div>
+                                                    )}
+                                                </div>
+                                                <div className="border-t border-gray-200">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setProcessDropdownOpen(false);
+                                                            setShowAddProcessModal(true);
+                                                        }}
+                                                        className="w-full text-left px-4 py-2 text-sm text-blue-600 font-semibold hover:bg-gray-100"
+                                                    >
+                                                        ++ Add New Process ++
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <div className="max-h-48 overflow-y-auto">
-                                                {filteredProcessNames.map(p => (
-                                                    <label key={p} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
-                                                        <input type="checkbox" checked={challan.process.includes(p)} onChange={() => handleProcessToggle(p)} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                                                        <span className="ml-3">{p}</span>
-                                                    </label>
-                                                ))}
-                                                {filteredProcessNames.length === 0 && (
-                                                    <div className="px-4 py-2 text-sm text-gray-500">No process found.</div>
-                                                )}
+                                        )}
+                                        {errors.process && <p className="mt-1 text-sm text-red-500">{errors.process}</p>}
+                                    </div>
+
+                                    {/* Split Process Dropdown */}
+                                    <div ref={splitProcessDropdownRef} className="relative">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Split Process</label>
+                                        <button type="button" onClick={() => setSplitProcessDropdownOpen(p => !p)} className={`flex items-center justify-between w-full text-left ${commonInputClasses}`}>
+                                            <span className="truncate pr-8">{challan.splitProcess && challan.splitProcess.length > 0 ? challan.splitProcess.join(', ') : 'Select split processes'}</span>
+                                            <ChevronDownIcon className="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
+                                        </button>
+                                        {isSplitProcessDropdownOpen && (
+                                            <div className="absolute top-full mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg z-10 flex flex-col">
+                                                 <div className="p-2 border-b border-gray-200">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Search processes..."
+                                                        value={processSearch}
+                                                        onChange={(e) => setProcessSearch(e.target.value)}
+                                                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                                                    />
+                                                </div>
+                                                <div className="max-h-48 overflow-y-auto">
+                                                    {filteredProcessNames.map(p => (
+                                                        <label key={`split-${p}`} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
+                                                            <input type="checkbox" checked={(challan.splitProcess || []).includes(p)} onChange={() => handleSplitProcessToggle(p)} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                                            <span className="ml-3">{p}</span>
+                                                        </label>
+                                                    ))}
+                                                     {filteredProcessNames.length === 0 && (
+                                                        <div className="px-4 py-2 text-sm text-gray-500">No process found.</div>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div className="border-t border-gray-200">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setProcessDropdownOpen(false);
-                                                        setShowAddProcessModal(true);
-                                                    }}
-                                                    className="w-full text-left px-4 py-2 text-sm text-blue-600 font-semibold hover:bg-gray-100"
-                                                >
-                                                    ++ Add New Process ++
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                    {errors.process && <p className="mt-1 text-sm text-red-500">{errors.process}</p>}
+                                        )}
+                                    </div>
                                 </div>
+
                                 <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">No of pcs</label>
