@@ -287,6 +287,12 @@ export interface MasterItem {
     rate: number;
 }
 
+// Helper to sanitize date strings for Supabase (convert empty strings to null)
+const sanitizeDate = (dateStr: string | undefined | null): string | null => {
+    if (!dateStr || dateStr.trim() === '') return null;
+    return dateStr;
+};
+
 const App: React.FC = () => {
   const [activeScreen, setActiveScreen] = useState('Dashboard');
   
@@ -694,7 +700,11 @@ const App: React.FC = () => {
           }
       } catch (error: any) {
           console.error("Error adding client:", error);
-          alert("Failed to add client: " + error.message);
+          if (error.code === '23505') {
+             alert("Failed to add client: A client with this name already exists.");
+          } else {
+             alert("Failed to add client: " + error.message);
+          }
       }
   };
 
@@ -768,7 +778,11 @@ const App: React.FC = () => {
           setPurchaseShops(prev => [...prev, shop]);
       } catch (error: any) {
           console.error("Error adding shop:", error);
-          alert("Failed to add shop: " + error.message);
+          if (error.code === '23505') {
+              alert("Failed to add shop: A shop with this name already exists.");
+          } else {
+              alert("Failed to add shop: " + error.message);
+          }
       }
   };
 
@@ -828,7 +842,11 @@ const App: React.FC = () => {
           }]);
       } catch (error: any) {
           console.error("Error adding employee:", error);
-          alert("Failed to add employee: " + error.message);
+          if (error.code === '23505') {
+              alert("Failed to add employee: An employee with this name already exists.");
+          } else {
+              alert("Failed to add employee: " + error.message);
+          }
       }
   };
 
@@ -868,7 +886,11 @@ const App: React.FC = () => {
           setProcessTypes(prev => [...prev, { ...proc, id: data.id }]);
       } catch (error: any) {
           console.error("Error adding process type:", error);
-          alert("Failed to add process type: " + error.message);
+          if (error.code === '23505') {
+              alert("Failed to add process type: A process type with this name already exists.");
+          } else {
+              alert("Failed to add process type: " + error.message);
+          }
       }
   };
 
@@ -908,7 +930,7 @@ const App: React.FC = () => {
               payment_terms: order.paymentTerms,
               reference_id: order.referenceId,
               bank_name: order.bankName,
-              cheque_date: order.chequeDate
+              cheque_date: sanitizeDate(order.chequeDate)
           }]).select().single();
 
           if (poError) throw poError;
@@ -916,7 +938,7 @@ const App: React.FC = () => {
           // 2. Insert items
           if (order.items.length > 0) {
               const itemsPayload = order.items.map(item => ({
-                  purchase_order_id: poData.id,
+                  po_id: poData.id,
                   name: item.name,
                   quantity: item.quantity,
                   rate: item.rate,
@@ -958,7 +980,12 @@ const App: React.FC = () => {
 
       } catch (error: any) {
           console.error("Error adding PO:", error);
-          alert("Failed to add Purchase Order: " + error.message);
+          if (error.code === '23505') {
+              alert("Failed to add Purchase Order: A Purchase Order with this number already exists.");
+          } else {
+              const msg = error.message || error.details || JSON.stringify(error);
+              alert("Failed to add Purchase Order: " + msg);
+          }
       }
   };
 
@@ -974,18 +1001,18 @@ const App: React.FC = () => {
               payment_terms: updated.paymentTerms,
               reference_id: updated.referenceId,
               bank_name: updated.bankName,
-              cheque_date: updated.chequeDate
+              cheque_date: sanitizeDate(updated.chequeDate)
           }).eq('po_number', poNumber).select().single();
 
           if (poError) throw poError;
 
           // Delete old items
-          await supabase.from('purchase_order_items').delete().eq('purchase_order_id', poData.id);
+          await supabase.from('purchase_order_items').delete().eq('po_id', poData.id);
 
           // Insert new items
           if (updated.items.length > 0) {
               const itemsPayload = updated.items.map(item => ({
-                  purchase_order_id: poData.id,
+                  po_id: poData.id,
                   name: item.name,
                   quantity: item.quantity,
                   rate: item.rate,
@@ -999,7 +1026,8 @@ const App: React.FC = () => {
 
       } catch (error: any) {
           console.error("Error updating PO:", error);
-          alert("Failed to update Purchase Order: " + error.message);
+          const msg = error.message || error.details || JSON.stringify(error);
+          alert("Failed to update Purchase Order: " + msg);
       }
   };
 
@@ -1224,7 +1252,12 @@ const App: React.FC = () => {
 
       } catch (error: any) {
           console.error("Error adding invoice:", error);
-          alert("Failed to add invoice: " + error.message);
+          if (error.code === '23505') {
+              alert("Failed to add invoice: An invoice with this number already exists.");
+          } else {
+              const msg = error.message || error.details || JSON.stringify(error);
+              alert("Failed to add invoice: " + msg);
+          }
       }
   };
   
@@ -1254,7 +1287,8 @@ const App: React.FC = () => {
           setPaymentsReceived(prev => [...prev, { ...pr, id: data.id }]);
       } catch (error: any) {
           console.error("Error adding payment:", error);
-          alert("Failed to add payment: " + error.message);
+          const msg = error.message || error.details || JSON.stringify(error);
+          alert("Failed to add payment: " + msg);
       }
   };
 
@@ -1386,7 +1420,7 @@ const App: React.FC = () => {
               payment_status: exp.paymentStatus,
               payment_terms: exp.paymentTerms,
               bank_name: exp.bankName,
-              cheque_date: exp.chequeDate
+              cheque_date: sanitizeDate(exp.chequeDate)
           }]).select().single();
 
           if (error) throw error;
@@ -1408,7 +1442,7 @@ const App: React.FC = () => {
               payment_status: exp.paymentStatus,
               payment_terms: exp.paymentTerms,
               bank_name: exp.bankName,
-              cheque_date: exp.chequeDate
+              cheque_date: sanitizeDate(exp.chequeDate)
           }).eq('id', exp.id);
 
           if (error) throw error;
@@ -1445,14 +1479,14 @@ const App: React.FC = () => {
               payment_status: exp.paymentStatus,
               payment_terms: exp.paymentTerms,
               bank_name: exp.bankName,
-              cheque_date: exp.chequeDate
+              cheque_date: sanitizeDate(exp.chequeDate)
           }]).select().single();
 
           if (error) throw error;
           setTimberExpenses(prev => [...prev, { ...exp, id: data.id }]);
       } catch (error: any) {
           console.error("Error adding timber expense:", error);
-          alert("Failed to add timber expense: " + error.message);
+          alert("Failed to add timber expense: " + (error.message || JSON.stringify(error)));
       }
   };
 
@@ -1471,14 +1505,14 @@ const App: React.FC = () => {
               payment_status: exp.paymentStatus,
               payment_terms: exp.paymentTerms,
               bank_name: exp.bankName,
-              cheque_date: exp.chequeDate
+              cheque_date: sanitizeDate(exp.chequeDate)
           }).eq('id', exp.id);
 
           if (error) throw error;
           setTimberExpenses(prev => prev.map(e => e.id === exp.id ? exp : e));
       } catch (error: any) {
           console.error("Error updating timber expense:", error);
-          alert("Failed to update timber expense: " + error.message);
+          alert("Failed to update timber expense: " + (error.message || JSON.stringify(error)));
       }
   };
 
@@ -1554,7 +1588,11 @@ const App: React.FC = () => {
           return newItem;
       } catch (error: any) {
           console.error("Error adding master item:", error);
-          alert("Failed to add item: " + error.message);
+          if (error.code === '23505') {
+              alert("Failed to add item: An item with this name already exists.");
+          } else {
+              alert("Failed to add item: " + error.message);
+          }
           throw error;
       }
   };
@@ -1568,7 +1606,11 @@ const App: React.FC = () => {
           return newCat;
       } catch (error: any) {
           console.error("Error adding category:", error);
-          alert("Failed to add category: " + error.message);
+          if (error.code === '23505') {
+              alert("Failed to add category: A category with this name already exists.");
+          } else {
+              alert("Failed to add category: " + error.message);
+          }
           throw error;
       }
   };
