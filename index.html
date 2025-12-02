@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF--8" />
+    <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Textile ERP</title>
@@ -66,7 +66,8 @@
     /* Show specific printable containers */
     #printable-invoice, 
     #printable-payslip, 
-    #printable-challan {
+    #printable-challan,
+    #printable-statement {
       visibility: visible;
       position: absolute;
       left: 0;
@@ -81,7 +82,8 @@
     /* Ensure children of printable areas are also visible */
     #printable-invoice *, 
     #printable-payslip *, 
-    #printable-challan * {
+    #printable-challan *,
+    #printable-statement * {
       visibility: visible;
     }
 

@@ -1107,7 +1107,34 @@ const App: React.FC = () => {
       try {
           const { error } = await supabase.from('delivery_challans').delete().eq('id', id);
           if (error) throw error;
-          setDeliveryChallans(prev => prev.filter(c => c.id !== id));
+          
+          const updatedChallans = deliveryChallans.filter(c => c.id !== id);
+          setDeliveryChallans(updatedChallans);
+
+          // Recalculate next number based on remaining challans matching current prefix
+          const currentPrefix = deliveryChallanNumberConfig.prefix;
+          
+          // Helper to extract number
+          const extractNumber = (str: string) => {
+              // Matches number at the end of the string
+              const match = str.match(/(\d+)$/);
+              return match ? parseInt(match[1], 10) : 0;
+          };
+
+          const relevantNumbers = updatedChallans
+              .filter(c => c.challanNumber.startsWith(currentPrefix))
+              .map(c => extractNumber(c.challanNumber));
+          
+          const maxNumber = relevantNumbers.length > 0 ? Math.max(...relevantNumbers) : 0;
+          const newNextNumber = maxNumber + 1;
+
+          setDeliveryChallanNumberConfig(prev => ({ ...prev, nextNumber: newNextNumber }));
+          await supabase.from('numbering_configs').upsert({ 
+              id: 'dc', 
+              prefix: currentPrefix, 
+              next_number: newNextNumber 
+          });
+
       } catch (error: any) {
           alert(`Error deleting challan: ${error.message || error}`);
       }

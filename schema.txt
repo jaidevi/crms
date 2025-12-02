@@ -310,6 +310,17 @@ BEGIN
     END IF;
 END $$;
 
+-- Safely add hsn_sac column if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'company_details' AND column_name = 'hsn_sac'
+    ) THEN
+        ALTER TABLE company_details ADD COLUMN hsn_sac TEXT;
+    END IF;
+END $$;
+
 -- 13. Numbering Configs Table
 -- Stores configuration for auto-numbering of documents.
 CREATE TABLE IF NOT EXISTS numbering_configs (

@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import type { Client, DeliveryChallan, ProcessType, Invoice, InvoiceNumberConfig, CompanyDetails } from '../App';
 import { CalendarIcon, SearchIcon } from './Icons';
@@ -159,6 +160,7 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
             invoices={invoices.filter(inv => inv.clientName === viewingStatementForClient.name)}
             challans={deliveryChallans.filter(c => c.partyName === viewingStatementForClient.name)}
             processTypes={processTypes}
+            companyDetails={companyDetails}
             onBack={() => setViewingStatementForClient(null)}
         />
     }

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import type { DeliveryChallan, ProcessType, Invoice, InvoiceItem, InvoiceNumberConfig, Client, CompanyDetails } from '../App';
 import DatePicker from './DatePicker';
@@ -53,26 +54,40 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
 
         const groupedItemsMap = new Map<string, any>();
 
+        // Helper to normalize strings for comparison (case-insensitive, trimmed)
+        const normalize = (str: string) => str.trim().toLowerCase().replace(/^"/, '').replace(/"$/, '');
+
         sortedChallans.forEach(challan => {
             const processName = challan.process.join(', ');
             
             // Calculate cumulative rate for all processes
             let totalRate = 0;
-            challan.process.forEach(procName => {
+            
+            // Robustly split processes by comma, even if they are inside array elements
+            // This handles cases like ["Process A, Process B"] or ["Process A", "Process B"]
+            const individualProcesses = challan.process
+                .flatMap(p => p.split(','))
+                .map(p => p.trim())
+                .filter(p => p !== '');
+
+            individualProcesses.forEach(procName => {
+                const normalizedProcName = normalize(procName);
+
                 // 1. Check if client has a specific rate for this process
-                const clientProcessRate = client.processes.find(p => p.processName === procName);
+                const clientProcessRate = client.processes.find(p => normalize(p.processName) === normalizedProcName);
                 
                 if (clientProcessRate) {
                     totalRate += clientProcessRate.rate;
                 } else {
                     // 2. Fallback to master process rate
-                    const masterProcess = processTypes.find(p => p.name === procName);
+                    const masterProcess = processTypes.find(p => normalize(p.name) === normalizedProcName);
                     totalRate += (masterProcess?.rate || 0);
                 }
             });
 
             // Use configured HSN/SAC or default to 998821
             const hsnSac = companyDetails.hsnSac || '998821';
+            // Include totalRate in key to differentiate if somehow rate calculation varies
             const groupKey = `${processName}|${totalRate}|${hsnSac}`;
 
             if (!groupedItemsMap.has(groupKey)) {
