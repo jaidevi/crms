@@ -114,6 +114,7 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
                                     <tr>
                                         <th className="px-4 py-3 border-b">Challan #</th>
                                         <th className="px-4 py-3 border-b">Date</th>
+                                        <th className="px-4 py-3 border-b">Party DC No</th>
                                         <th className="px-4 py-3 border-b">Process</th>
                                         <th className="px-4 py-3 border-b">Design No</th>
                                         <th className="px-4 py-3 border-b text-right">Pcs</th>
@@ -130,6 +131,7 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
                                             <tr key={challan.id} className="bg-white border-b hover:bg-gray-50">
                                                 <td className="px-4 py-3 font-medium text-gray-900">{challan.challanNumber}</td>
                                                 <td className="px-4 py-3">{formatDate(challan.date)}</td>
+                                                <td className="px-4 py-3">{challan.partyDCNo || '-'}</td>
                                                 <td className="px-4 py-3">{challan.process.join(', ')}</td>
                                                 <td className="px-4 py-3">{challan.designNo}</td>
                                                 <td className="px-4 py-3 text-right">{challan.pcs}</td>
