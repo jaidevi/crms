@@ -201,7 +201,11 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
     return sortedList.filter(challan => 
         challan.partyName.toLowerCase().includes(lowercasedTerm) ||
         challan.challanNumber.toLowerCase().includes(lowercasedTerm) ||
-        challan.designNo.toLowerCase().includes(lowercasedTerm)
+        challan.designNo.toLowerCase().includes(lowercasedTerm) ||
+        (challan.partyDCNo && challan.partyDCNo.toLowerCase().includes(lowercasedTerm)) ||
+        challan.process.some(p => p.toLowerCase().includes(lowercasedTerm)) ||
+        challan.pcs.toString().includes(lowercasedTerm) ||
+        challan.mtr.toString().includes(lowercasedTerm)
     );
   }, [deliveryChallans, searchTerm, activeTab, invoicedChallanNumbers]);
   
