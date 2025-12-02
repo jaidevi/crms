@@ -57,7 +57,7 @@ const DeliveryChallanNumberSettingsScreen: React.FC<DeliveryChallanNumberSetting
             <input
               type="text"
               id="dc-prefix"
-              value={prefix}
+              value={prefix || ''}
               onChange={(e) => setPrefix(e.target.value)}
               className={commonInputClasses}
               maxLength={20}

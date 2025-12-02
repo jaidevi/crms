@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import type { DeliveryChallan, ProcessType, Invoice, InvoiceItem, InvoiceNumberConfig, Client, CompanyDetails } from '../App';
 import DatePicker from './DatePicker';
@@ -25,7 +24,7 @@ const numberFormat = (num: number, options?: Intl.NumberFormatOptions) => {
     return new Intl.NumberFormat('en-IN', { ...defaultOptions, ...options }).format(num);
 };
 
-// Vel Logo SVG Data URI
+// Default Logo (Fallback)
 const VEL_LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTUwIj48cmVjdCB4PSI0NiIgeT0iMTAwIiB3aWR0aD0iOCIgaGVpZ2h0PSI1MCIgZmlsbD0iI2I0NTMwOSIgLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjE0OCIgcj0iNCIgZmlsbD0iI2I0NTMwOSIgLz48cGF0aCBkPSJNNDAgMTAwIFE1MCAxMTAgNjAgMTAwIiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNDIgMTA1IFE1MCAxMTUgNTggMTA1IiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNDQgMTEwIFE1MCAxMTggNTYgMTEwIiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNTAgNSBDIDg1IDQwIDg1IDgwIDUwIDEwMCBDIDE1IDgwIDE1IDQwIDUwIDUgWiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZjk3MzE2IiBzdHJva2Utd2lkdGg9IjQiIC8+PHBhdGggZD0iTTUwIDQ1IEMgNjUgNjAgNjUgODAgNTAgOTAgQyAzNSA4MCAzNSA2MCA1MCA0NSBaIiBmaWxsPSIjMWQ0ZWQ4IiAvPjxsaW5lIHgxPSIzNSIgeTE9IjI1IiB4Mj0iNjUiIHkyPSIyNSIgc3Ryb2tlPSIjOWNhM2FmIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgLz48bGluZSB4MT0iMzIiIHkxPSIzMiIgeDI9IjY4IiB5Mj0iMzIiIHN0cm9rZT0iIzljYTNhZiIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiIC8+PGxpbmUgeDE9IjM1IiB5MT0iMzkiIHgyPSI2NSIgeTI9IjM5IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiAvPjxjaXJjbGUgY3g9IjUwIiBjeT0iMzIiIHI9IjQiIGZpbGw9IiNkYzI2MjYiIC8+PC9zdmc+";
 
 const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onSave, client, challansToInvoice, invoiceNumberConfig, processTypes, companyDetails }) => {
@@ -72,7 +71,8 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                 }
             });
 
-            const hsnSac = '998821';
+            // Use configured HSN/SAC or default to 998821
+            const hsnSac = companyDetails.hsnSac || '998821';
             const groupKey = `${processName}|${totalRate}|${hsnSac}`;
 
             if (!groupedItemsMap.has(groupKey)) {
@@ -123,7 +123,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
         });
 
         setLineItems(initialLineItems);
-    }, [client, challansToInvoice, invoiceNumberConfig, processTypes]);
+    }, [client, challansToInvoice, invoiceNumberConfig, processTypes, companyDetails]);
 
     const handleItemChange = (itemId: string, field: 'rate' | 'mtr' | 'hsnSac', value: string | number) => {
         setLineItems(prevItems =>
@@ -208,7 +208,8 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
 
     const { prefix: displayPrefix, number: displayNumber } = getInvoiceNumberParts(invoiceNumber);
 
-    const editableInputClasses = "w-full text-right bg-transparent border-b border-gray-300 focus:border-blue-500 focus:outline-none focus:ring-0 p-1";
+    // Removed border-b to remove line under input
+    const editableInputClasses = "w-full text-right bg-transparent focus:border-blue-500 focus:outline-none focus:ring-0 p-1";
     
     return (
         <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 lg:p-8">
@@ -230,15 +231,16 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                 <header className="flex justify-between items-start pb-4">
                      <div className="flex items-start w-1/2">
                         <div className="w-24 h-32 mr-4 flex-shrink-0">
-                             <img src={VEL_LOGO_URL} alt="Company Logo" className="w-full h-full object-contain" />
+                             <img src={companyDetails.logoUrl || VEL_LOGO_URL} alt="Company Logo" className="w-full h-full object-contain" />
                         </div>
                         <div>
-                            <h2 className="text-2xl font-bold text-blue-700">{companyDetails.name}</h2>
+                            <h2 className="text-xl font-extrabold text-blue-700">{companyDetails.name}</h2>
                             <p className="text-gray-600 whitespace-pre-line">{companyDetails.addressLine1}</p>
                             <p className="text-gray-600 whitespace-pre-line">{companyDetails.addressLine2}</p>
                             <p className="text-gray-600 mt-2"><span role="img" aria-label="phone">☎️</span> {companyDetails.phone}</p>
                             <p className="text-gray-600"><span role="img" aria-label="email">@</span> {companyDetails.email}</p>
                             <p className="text-gray-600"><span role="img" aria-label="gst">ⓘ</span> GSTIN: {companyDetails.gstin}</p>
+                            <p className="text-gray-600 font-bold">HSN/SAC: {companyDetails.hsnSac}</p>
                         </div>
                     </div>
                     <div className="w-1/2 text-right">
@@ -293,15 +295,14 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                 <section>
                     <table className="w-full text-left border-collapse">
                         <thead>
-                           <tr className="bg-blue-600 text-white text-xs uppercase">
-                                <th className="p-2 w-12 text-center font-semibold">S.No</th>
-                                <th className="p-2 font-semibold">Product/Service Name</th>
-                                <th className="p-2 w-24 text-center font-semibold">HSN/SAC</th>
-                                <th className="p-2 w-24 text-right font-semibold">Qty</th>
-                                <th className="p-2 w-28 text-right font-semibold">Unit Price</th>
-                                <th className="p-2 w-24 text-right font-semibold">CGST</th>
-                                <th className="p-2 w-24 text-right font-semibold">SGST</th>
-                                <th className="p-2 w-32 text-right font-semibold">Amount</th>
+                           <tr className="border-b-2 border-blue-600 text-blue-600 text-sm uppercase">
+                                <th className="py-1 px-2 w-12 text-center font-bold">S.No</th>
+                                <th className="py-1 px-2 font-bold">Product/Service Name</th>
+                                <th className="py-1 px-2 w-24 text-right font-bold">Qty</th>
+                                <th className="py-1 px-2 w-28 text-right font-bold">Unit Price</th>
+                                <th className="py-1 px-2 w-24 text-right font-bold">CGST (2.5%)</th>
+                                <th className="py-1 px-2 w-24 text-right font-bold">SGST (2.5%)</th>
+                                <th className="py-1 px-2 w-32 text-right font-bold">Amount</th>
                             </tr>
                         </thead>
                         <tbody className="text-gray-700">
@@ -309,10 +310,6 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                                 <tr key={item.id} className="border-b border-gray-200">
                                     <td className="p-2 text-center">{index + 1}</td>
                                     <td className="p-2 font-medium">{item.process}</td>
-                                    <td className="p-2 text-center">
-                                        <input type="text" value={item.hsnSac} onChange={e => handleItemChange(item.id, 'hsnSac', e.target.value)} className={`${editableInputClasses} text-center no-print`} />
-                                        <span className="hidden print:inline">{item.hsnSac}</span>
-                                    </td>
                                     <td className="p-2 text-right">
                                         <input type="number" value={item.mtr} onChange={e => handleItemChange(item.id, 'mtr', Number(e.target.value))} className={`${editableInputClasses} no-print`} />
                                         <span className="hidden print:inline">{numberFormat(item.mtr)}</span>
@@ -329,7 +326,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                         </tbody>
                          <tfoot>
                             <tr className="font-bold bg-gray-50 border-t-2 border-gray-300">
-                                <td colSpan={3} className="p-2 text-right">Total</td>
+                                <td colSpan={2} className="p-2 text-right">Total</td>
                                 <td className="p-2 text-right">{numberFormat(totalQty)}</td>
                                 <td className="p-2"></td>
                                 <td className="p-2 text-right">{numberFormat(totalCgst)}</td>
@@ -367,10 +364,6 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                             <tr className="text-base font-bold text-gray-900 border-t border-gray-200">
                                 <td className="py-2 pr-4">Total Amount</td>
                                 <td className="py-2">₹{numberFormat(roundedTotal, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
-                            </tr>
-                            <tr className="text-lg font-bold text-blue-600">
-                                <td className="py-1.5 pr-4">Amount Due</td>
-                                <td className="py-1.5">₹{numberFormat(roundedTotal, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
                             </tr>
                         </tbody>
                     </table>

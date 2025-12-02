@@ -299,6 +299,17 @@ CREATE POLICY "Public company_details are viewable by everyone." ON company_deta
 CREATE POLICY "Users can insert their own company_details." ON company_details FOR INSERT WITH CHECK (true);
 CREATE POLICY "Users can update their own company_details." ON company_details FOR UPDATE USING (true);
 
+-- Safely add logo_url column if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'company_details' AND column_name = 'logo_url'
+    ) THEN
+        ALTER TABLE company_details ADD COLUMN logo_url TEXT;
+    END IF;
+END $$;
+
 -- 13. Numbering Configs Table
 -- Stores configuration for auto-numbering of documents.
 CREATE TABLE IF NOT EXISTS numbering_configs (

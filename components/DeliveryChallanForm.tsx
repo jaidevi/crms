@@ -18,6 +18,7 @@ interface DeliveryChallanFormProps {
     processTypes: ProcessType[];
     onAddProcessType: (process: { name: string, rate: number }) => void;
     challanToEdit?: DeliveryChallan | null;
+    existingChallans: DeliveryChallan[];
     deliveryChallanNumberConfig: DeliveryChallanNumberConfig;
     employees: Employee[];
     onAddEmployee: (employee: Omit<Employee, 'id'>) => void;
@@ -79,7 +80,8 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
     onAddPurchaseShop, 
     processTypes, 
     onAddProcessType, 
-    challanToEdit, 
+    challanToEdit,
+    existingChallans,
     deliveryChallanNumberConfig, 
     employees, 
     onAddEmployee, 
@@ -288,6 +290,26 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
         if (challan.pcs <= 0) newErrors.pcs = "No of pcs must be positive.";
         if (challan.mtr <= 0) newErrors.mtr = "Mtr must be positive.";
         if (!challan.status) newErrors.status = "Status is required.";
+
+        // Duplicate Check for Party DC No
+        if (challan.partyDCNo && challan.partyDCNo.trim() !== '') {
+            const currentPartyName = challan.isOutsourcing ? `FROM: ${fromParty} | TO: ${toParty}` : challan.partyName;
+            
+            // Only check if we have a party name to check against
+            if (currentPartyName) {
+                const duplicate = existingChallans.find(c => 
+                    c.partyDCNo?.trim().toLowerCase() === challan.partyDCNo?.trim().toLowerCase() && 
+                    c.date === challan.date &&
+                    c.partyName === currentPartyName &&
+                    (!challanToEdit || c.id !== challanToEdit.id)
+                );
+
+                if (duplicate) {
+                    newErrors.partyDCNo = "A challan with this Party DC No already exists for this party on this date.";
+                }
+            }
+        }
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -458,7 +480,8 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Party DC No</label>
-                                        <input name="partyDCNo" type="text" value={challan.partyDCNo} onChange={handleChange} className={commonInputClasses} />
+                                        <input name="partyDCNo" type="text" value={challan.partyDCNo} onChange={handleChange} className={`${commonInputClasses} ${errors.partyDCNo ? 'border-red-500' : ''}`} />
+                                        {errors.partyDCNo && <p className="mt-1 text-sm text-red-500">{errors.partyDCNo}</p>}
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Program / Design No</label>
@@ -466,7 +489,7 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="mb-4">
                                     {/* Process Dropdown */}
                                     <div ref={processDropdownRef} className="relative">
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Process <span className="text-red-500">*</span></label>
@@ -511,39 +534,6 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                                             </div>
                                         )}
                                         {errors.process && <p className="mt-1 text-sm text-red-500">{errors.process}</p>}
-                                    </div>
-
-                                    {/* Split Process Dropdown */}
-                                    <div ref={splitProcessDropdownRef} className="relative">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Split Process</label>
-                                        <button type="button" onClick={() => setSplitProcessDropdownOpen(p => !p)} className={`flex items-center justify-between w-full text-left ${commonInputClasses}`}>
-                                            <span className="truncate pr-8">{challan.splitProcess && challan.splitProcess.length > 0 ? challan.splitProcess.join(', ') : 'Select split processes'}</span>
-                                            <ChevronDownIcon className="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
-                                        </button>
-                                        {isSplitProcessDropdownOpen && (
-                                            <div className="absolute top-full mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg z-10 flex flex-col">
-                                                 <div className="p-2 border-b border-gray-200">
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Search processes..."
-                                                        value={processSearch}
-                                                        onChange={(e) => setProcessSearch(e.target.value)}
-                                                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                                                    />
-                                                </div>
-                                                <div className="max-h-48 overflow-y-auto">
-                                                    {filteredProcessNames.map(p => (
-                                                        <label key={`split-${p}`} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
-                                                            <input type="checkbox" checked={(challan.splitProcess || []).includes(p)} onChange={() => handleSplitProcessToggle(p)} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                                                            <span className="ml-3">{p}</span>
-                                                        </label>
-                                                    ))}
-                                                     {filteredProcessNames.length === 0 && (
-                                                        <div className="px-4 py-2 text-sm text-gray-500">No process found.</div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
 

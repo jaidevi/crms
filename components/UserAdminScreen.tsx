@@ -1,26 +1,99 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { CompanyDetails } from '../App';
+import { SpinnerIcon, CheckIcon, TrashIcon } from './Icons';
 
 interface UserAdminScreenProps {
   companyDetails: CompanyDetails;
-  onUpdate: (details: CompanyDetails) => void;
+  onUpdate: (details: CompanyDetails) => Promise<void>;
 }
+
+const resizeImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target?.result as string;
+            img.onload = () => {
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > maxWidth) {
+                        height *= maxWidth / width;
+                        width = maxWidth;
+                    }
+                } else {
+                    if (height > maxHeight) {
+                        width *= maxHeight / height;
+                        height = maxHeight;
+                    }
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0, width, height);
+                    // Compress to JPEG with 0.7 quality to reduce size significantly
+                    resolve(canvas.toDataURL('image/jpeg', 0.7));
+                } else {
+                    reject(new Error('Could not get canvas context'));
+                }
+            };
+            img.onerror = (e) => reject(e);
+        };
+        reader.onerror = (e) => reject(e);
+        reader.readAsDataURL(file);
+    });
+};
 
 const UserAdminScreen: React.FC<UserAdminScreenProps> = ({ companyDetails, onUpdate }) => {
   const [details, setDetails] = useState(companyDetails);
   const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Sync state with props when data is fetched
+  useEffect(() => {
+    setDetails(companyDetails);
+  }, [companyDetails]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setDetails(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+        const file = e.target.files[0];
+        try {
+            // Resize image to max 300x300 to ensure it fits in DB text column
+            const resizedBase64 = await resizeImage(file, 300, 300);
+            setDetails(prev => ({ ...prev, logoUrl: resizedBase64 }));
+        } catch (error) {
+            console.error("Error resizing image:", error);
+            alert("Failed to process image. Please try a different file.");
+        }
+    }
+  };
+
+  const handleRemoveLogo = () => {
+      setDetails(prev => ({ ...prev, logoUrl: '' }));
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdate(details);
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2500);
+    setIsSaving(true);
+    try {
+        await onUpdate(details);
+        setIsSaved(true);
+        setTimeout(() => setIsSaved(false), 2500);
+    } catch (e) {
+        // Error handling is managed by onUpdate in App.tsx which shows an alert.
+    } finally {
+        setIsSaving(false);
+    }
   };
 
   const commonInputClasses = "block w-full px-3 py-2.5 text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500";
@@ -58,6 +131,38 @@ const UserAdminScreen: React.FC<UserAdminScreenProps> = ({ companyDetails, onUpd
                 <label htmlFor="gstin" className="block text-sm font-medium text-gray-700 mb-1">GSTIN</label>
                 <input type="text" id="gstin" name="gstin" value={details.gstin} onChange={handleChange} className={commonInputClasses} />
             </div>
+             <div>
+                <label htmlFor="hsnSac" className="block text-sm font-medium text-gray-700 mb-1">Default HSN/SAC</label>
+                <input type="text" id="hsnSac" name="hsnSac" value={details.hsnSac || ''} onChange={handleChange} className={commonInputClasses} placeholder="998821" />
+            </div>
+            <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Company Logo</label>
+                <div className="flex items-center space-x-4">
+                    {details.logoUrl ? (
+                        <div className="relative group">
+                            <div className="flex-shrink-0 h-20 w-20 border rounded bg-gray-50 flex items-center justify-center overflow-hidden">
+                                <img src={details.logoUrl} alt="Logo Preview" className="h-full w-full object-contain" />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleRemoveLogo}
+                                className="absolute -top-2 -right-2 bg-red-100 text-red-600 rounded-full p-1 hover:bg-red-200 shadow-sm"
+                                title="Remove Logo"
+                            >
+                                <TrashIcon className="w-4 h-4" />
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="h-20 w-20 border-2 border-dashed border-gray-300 rounded flex items-center justify-center bg-gray-50 text-gray-400 text-xs text-center p-1">
+                            No Logo
+                        </div>
+                    )}
+                    <div className="flex-1">
+                        <input type="file" accept="image/*" onChange={handleLogoChange} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                        <p className="text-xs text-gray-500 mt-1">Upload a PNG or JPG image. It will be resized automatically.</p>
+                    </div>
+                </div>
+            </div>
         </fieldset>
         
         <fieldset className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 pt-6 border-t">
@@ -79,11 +184,24 @@ const UserAdminScreen: React.FC<UserAdminScreenProps> = ({ companyDetails, onUpd
        <div className="flex items-center justify-start space-x-3 p-5 bg-gray-50 border-t border-gray-200">
           <button 
             type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            disabled={isSaving}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors"
           >
-            Save Changes
+            {isSaving ? (
+                <>
+                    <SpinnerIcon className="w-4 h-4 mr-2" />
+                    Saving...
+                </>
+            ) : (
+                'Save Changes'
+            )}
           </button>
-          {isSaved && <span className="text-sm text-green-600 transition-opacity duration-300">Details saved successfully!</span>}
+          {isSaved && (
+              <span className="flex items-center text-sm text-green-600 transition-opacity duration-300">
+                  <CheckIcon className="w-4 h-4 mr-1" />
+                  Details saved successfully!
+              </span>
+          )}
       </div>
     </form>
   );

@@ -308,6 +308,7 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
           onAddProcessType={onAddProcessType}
           deliveryChallanNumberConfig={deliveryChallanNumberConfig}
           challanToEdit={challanToEdit}
+          existingChallans={deliveryChallans}
           employees={employees}
           onAddEmployee={onAddEmployee}
           companyDetails={companyDetails}

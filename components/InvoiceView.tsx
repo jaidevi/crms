@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type { Invoice, Client, CompanyDetails } from '../App';
 
@@ -27,7 +26,7 @@ const numberFormat = (num: number, options?: Intl.NumberFormatOptions) => {
     return new Intl.NumberFormat('en-IN', { ...defaultOptions, ...options }).format(num);
 };
 
-// Vel Logo SVG Data URI
+// Default Logo (Fallback)
 const VEL_LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTUwIj48cmVjdCB4PSI0NiIgeT0iMTAwIiB3aWR0aD0iOCIgaGVpZ2h0PSI1MCIgZmlsbD0iI2I0NTMwOSIgLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjE0OCIgcj0iNCIgZmlsbD0iI2I0NTMwOSIgLz48cGF0aCBkPSJNNDAgMTAwIFE1MCAxMTAgNjAgMTAwIiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNDIgMTA1IFE1MCAxMTUgNTggMTA1IiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNDQgMTEwIFE1MCAxMTggNTYgMTEwIiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNTAgNSBDIDg1IDQwIDg1IDgwIDUwIDEwMCBDIDE1IDgwIDE1IDQwIDUwIDUgWiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZjk3MzE2IiBzdHJva2Utd2lkdGg9IjQiIC8+PHBhdGggZD0iTTUwIDQ1IEMgNjUgNjAgNjUgODAgNTAgOTAgQyAzNSA4MCAzNSA2MCA1MCA0NSBaIiBmaWxsPSIjMWQ0ZWQ4IiAvPjxsaW5lIHgxPSIzNSIgeTE9IjI1IiB4Mj0iNjUiIHkyPSIyNSIgc3Ryb2tlPSIjOWNhM2FmIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgLz48bGluZSB4MT0iMzIiIHkxPSIzMiIgeDI9IjY4IiB5Mj0iMzIiIHN0cm9rZT0iIzljYTNhZiIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiIC8+PGxpbmUgeDE9IjM1IiB5MT0iMzkiIHgyPSI2NSIgeTI9IjM5IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiAvPjxjaXJjbGUgY3g9IjUwIiBjeT0iMzIiIHI9IjQiIGZpbGw9IiNkYzI2MjYiIC8+PC9zdmc+";
 
 const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetails, onBack }) => {
@@ -73,10 +72,10 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                 <div className="flex justify-between items-start mb-4">
                      <div className="flex items-start">
                         <div className="w-24 h-32 mr-4">
-                             <img src={VEL_LOGO_URL} alt="Company Logo" className="w-full h-full object-contain" />
+                             <img src={companyDetails.logoUrl || VEL_LOGO_URL} alt="Company Logo" className="w-full h-full object-contain" />
                         </div>
                         <div>
-                            <h2 className="text-3xl font-bold text-blue-700 mb-1">{companyDetails.name}</h2>
+                            <h2 className="text-xl font-bold text-blue-700 mb-1">{companyDetails.name}</h2>
                             <p className="text-gray-700 text-sm whitespace-pre-line">{companyDetails.addressLine1}</p>
                             <p className="text-gray-700 text-sm whitespace-pre-line">{companyDetails.addressLine2}</p>
                             <div className="flex items-center text-sm text-gray-700 mt-2">
@@ -128,11 +127,10 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                             <tr className="bg-blue-600 text-white text-xs font-bold uppercase">
                                <th className="py-2 px-2 text-center w-12">S.NO</th>
                                <th className="py-2 px-2 text-left">PRODUCT/SERVICE NAME</th>
-                               <th className="py-2 px-2 text-center w-24">HSN/SAC</th>
                                <th className="py-2 px-2 text-center w-20">QTY</th>
                                <th className="py-2 px-2 text-right w-24">UNIT PRICE</th>
-                               <th className="py-2 px-2 text-right w-24">CGST</th>
-                               <th className="py-2 px-2 text-right w-24">SGST</th>
+                               <th className="py-2 px-2 text-right w-24">CGST (2.5%)</th>
+                               <th className="py-2 px-2 text-right w-24">SGST (2.5%)</th>
                                <th className="py-2 px-2 text-right w-28">AMOUNT</th>
                             </tr>
                          </thead>
@@ -141,7 +139,6 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                                 <tr key={item.id} className="border-b border-gray-200">
                                     <td className="py-3 px-2 text-center">{index + 1}</td>
                                     <td className="py-3 px-2 font-semibold">{item.process}</td>
-                                    <td className="py-3 px-2 text-center">{item.hsnSac}</td>
                                     <td className="py-3 px-2 text-center">{numberFormat(item.mtr)}</td>
                                     <td className="py-3 px-2 text-right">{numberFormat(item.rate)}</td>
                                     <td className="py-3 px-2 text-right">{numberFormat(item.cgst)}</td>
@@ -152,7 +149,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                          </tbody>
                          <tfoot>
                              <tr className="border-t-2 border-gray-300 font-bold text-sm">
-                                 <td colSpan={3} className="py-2 px-2 text-right">Total</td>
+                                 <td colSpan={2} className="py-2 px-2 text-right">Total</td>
                                  <td className="py-2 px-2 text-center">{numberFormat(totalQty)}</td>
                                  <td className="py-2 px-2"></td>
                                  <td className="py-2 px-2 text-right">{numberFormat(invoice.totalCgst)}</td>
