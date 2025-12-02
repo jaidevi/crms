@@ -95,47 +95,16 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
                      </div>
                 </div>
 
-                {/* Client Info */}
-                <div className="mb-8 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <h3 className="text-lg font-bold text-gray-800 mb-2">Statement for:</h3>
-                    <p className="text-xl font-semibold text-primary-800">{client.name}</p>
+                {/* Client Info (Restyled) */}
+                <div className="mb-8">
+                    <p className="text-sm text-gray-500 mb-1">To,</p>
+                    <h3 className="text-lg font-bold text-gray-900 uppercase">{client.name}</h3>
                     <p className="text-gray-600">{client.address}</p>
                     <p className="text-gray-600">{client.city} - {client.pincode}</p>
                     {client.gstNo && <p className="text-gray-600 mt-1"><span className="font-semibold">GSTIN:</span> {client.gstNo}</p>}
                 </div>
 
-                {/* Invoices Section */}
-                <div className="mb-8">
-                    <h2 className="text-lg font-semibold text-gray-800 mb-3 border-b pb-1">Invoices</h2>
-                    {invoices.length > 0 ? (
-                        <div className="overflow-hidden border rounded-lg">
-                            <table className="w-full text-sm text-left text-gray-500">
-                                <thead className="text-xs text-gray-700 uppercase bg-gray-100">
-                                    <tr>
-                                        <th className="px-6 py-3 border-b">Invoice #</th>
-                                        <th className="px-6 py-3 border-b">Date</th>
-                                        <th className="px-6 py-3 border-b text-right">Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {invoices.map(invoice => (
-                                        <tr key={invoice.id} className="bg-white border-b hover:bg-gray-50">
-                                            <td className="px-6 py-3 font-medium text-primary-600">{invoice.invoiceNumber}</td>
-                                            <td className="px-6 py-3">{formatDate(invoice.invoiceDate)}</td>
-                                            <td className="px-6 py-3 text-right font-medium text-gray-900">₹{invoice.totalAmount.toFixed(2)}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    ) : (
-                        <div className="text-center p-4 border rounded-lg text-gray-500 italic">
-                            No invoices found for this client.
-                        </div>
-                    )}
-                </div>
-
-                {/* Challans Section */}
+                {/* Delivery Challans Section */}
                 <div>
                     <h2 className="text-lg font-semibold text-gray-800 mb-3 border-b pb-1">Delivery Challans</h2>
                      {challans.length > 0 ? (
