@@ -1,5 +1,6 @@
+
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import type { Employee, AttendanceRecord, AttendanceStatus } from '../App';
+import type { Employee, AttendanceRecord, AttendanceStatus } from '../types';
 import { ChevronLeftIcon, ChevronRightIcon, SpinnerIcon, CheckIcon, EditIcon } from './Icons';
 
 interface AttendanceScreenProps {

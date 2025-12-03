@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { CloseIcon, CalendarIcon } from './Icons';
 import DatePicker from './DatePicker';
 import AddShopModal from './AddShopModal'; // Re-using for adding clients quickly
-import type { PaymentReceived, Client, PaymentMode } from '../App';
+import type { PaymentReceived, Client, PaymentMode } from '../types';
 
 interface PaymentReceivedFormProps {
     onClose: () => void;

@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { CloseIcon } from './Icons';
-import type { PurchaseShop } from '../App';
+import type { PurchaseShop } from '../types';
 import { indianStates } from '../data/indian-locations';
 
 interface PurchaseShopModalProps {

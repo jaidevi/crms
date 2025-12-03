@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import type { PONumberConfig } from '../App';
+import type { PONumberConfig } from '../types';
 import { InfoIcon } from './Icons';
 
 interface PONumberSettingsScreenProps {

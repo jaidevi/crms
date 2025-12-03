@@ -1,6 +1,6 @@
 
 import React from 'react';
-import type { DeliveryChallan, CompanyDetails } from '../App';
+import type { DeliveryChallan, CompanyDetails } from '../types';
 
 interface ChallanViewProps {
     challan: DeliveryChallan;

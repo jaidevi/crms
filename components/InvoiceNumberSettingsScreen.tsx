@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import type { InvoiceNumberConfig } from '../App';
+import type { InvoiceNumberConfig } from '../types';
 import { InfoIcon } from './Icons';
 
 interface InvoiceNumberSettingsScreenProps {

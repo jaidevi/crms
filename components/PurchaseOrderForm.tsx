@@ -6,7 +6,7 @@ import CustomSelect from './CustomSelect';
 import AddPurchaseShopModal from './AddPurchaseShopModal';
 import AddBankModal from './AddBankModal';
 import AddItemModal from './AddItemModal';
-import type { PurchaseOrder, PurchaseShop, PONumberConfig, MasterItem, LineItem, PaymentMode, OrderStatus } from '../App';
+import type { PurchaseOrder, PurchaseShop, PONumberConfig, MasterItem, LineItem, PaymentMode, OrderStatus } from '../types';
 
 interface PurchaseOrderFormProps {
     onClose: () => void;

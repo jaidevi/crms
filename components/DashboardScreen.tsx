@@ -1,7 +1,7 @@
 
 import React, { useMemo } from 'react';
 import { DollarSignIcon, PackageIcon, ShoppingCartIcon, CustomersIcon, InvoiceIcon, PaymentsIcon } from './Icons';
-import type { Invoice, PaymentReceived, DeliveryChallan, PurchaseOrder, OtherExpense, EmployeeAdvance } from '../App';
+import type { Invoice, PaymentReceived, DeliveryChallan, PurchaseOrder, OtherExpense, EmployeeAdvance } from '../types';
 
 interface DashboardScreenProps {
     invoices: Invoice[];

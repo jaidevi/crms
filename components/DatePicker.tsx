@@ -31,9 +31,10 @@ interface DatePickerProps {
   value: string; // YYYY-MM-DD or empty
   onChange: (date: string) => void;
   onClose: () => void;
+  align?: 'left' | 'right';
 }
 
-const DatePicker: React.FC<DatePickerProps> = ({ value, onChange, onClose }) => {
+const DatePicker: React.FC<DatePickerProps> = ({ value, onChange, onClose, align = 'left' }) => {
     const datepickerRef = useRef<HTMLDivElement>(null);
     useClickOutside(datepickerRef, onClose);
 
@@ -119,8 +120,10 @@ const DatePicker: React.FC<DatePickerProps> = ({ value, onChange, onClose }) => 
         return classes;
     };
 
+    const alignClass = align === 'right' ? 'right-0' : 'left-0';
+
     return (
-        <div ref={datepickerRef} className="absolute top-full mt-2 w-72 bg-white border border-secondary-200 rounded-md shadow-lg z-50 animate-fade-in-down p-3">
+        <div ref={datepickerRef} className={`absolute top-full mt-2 w-72 bg-white border border-secondary-200 rounded-md shadow-lg z-50 animate-fade-in-down p-3 ${alignClass} no-print`}>
             <div className="flex items-center justify-between mb-3 px-1">
                 <div className="font-semibold text-secondary-800 text-sm">
                     {viewDate.toLocaleString('default', { month: 'long', year: 'numeric' })}

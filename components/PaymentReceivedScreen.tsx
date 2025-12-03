@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import PaymentReceivedForm from './PaymentReceivedForm';
 import ConfirmationModal from './ConfirmationModal';
 import { PlusIcon, SearchIcon, EditIcon, TrashIcon } from './Icons';
-import type { PaymentReceived, Client } from '../App';
+import type { PaymentReceived, Client } from '../types';
 
 interface PaymentReceivedScreenProps {
     payments: PaymentReceived[];

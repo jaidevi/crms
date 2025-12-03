@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { PlusIcon, EditIcon, TrashIcon, SearchIcon } from './Icons';
-import type { ProcessType } from '../App';
+import type { ProcessType } from '../types';
 import ProcessTypeModal from './PartyDCProcessModal';
 import ConfirmationModal from './ConfirmationModal';
 

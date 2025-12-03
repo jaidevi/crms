@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import DeliveryChallanForm from './DeliveryChallanForm';
 import { PlusIcon, SearchIcon, EditIcon, TrashIcon, CameraIcon, PrintIcon } from './Icons';
-import type { DeliveryChallan, Client, ProcessType, DeliveryChallanNumberConfig, Invoice, CompanyDetails, Employee, PurchaseShop } from '../App';
+import type { DeliveryChallan, Client, ProcessType, DeliveryChallanNumberConfig, Invoice, CompanyDetails, Employee, PurchaseShop } from '../types';
 import ConfirmationModal from './ConfirmationModal';
 import InvoiceView from './InvoiceView';
 import ChallanView from './ChallanView';

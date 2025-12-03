@@ -6,7 +6,7 @@ import OtherExpenseForm from './OtherExpenseForm';
 import TimberExpenseForm from './TimberExpenseForm';
 import TimberPaymentForm from './TimberPaymentForm';
 import { PlusIcon, SearchIcon, TrashIcon, ChevronUpIcon, ChevronDownIcon, EditIcon, WalletIcon } from './Icons';
-import type { PurchaseOrder, PurchaseShop, PONumberConfig, MasterItem, Employee, EmployeeAdvance, OtherExpense, ExpenseCategory, TimberExpense, SupplierPayment, SupplierPaymentNumberConfig } from '../App';
+import type { PurchaseOrder, PurchaseShop, PONumberConfig, MasterItem, Employee, EmployeeAdvance, OtherExpense, ExpenseCategory, TimberExpense, SupplierPayment, SupplierPaymentNumberConfig } from '../types';
 import ConfirmationModal from './ConfirmationModal';
 
 interface PurchaseOrderScreenProps {

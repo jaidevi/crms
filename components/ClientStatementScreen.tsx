@@ -1,6 +1,6 @@
 
 import React from 'react';
-import type { Client, Invoice, DeliveryChallan, ProcessType, CompanyDetails } from '../App';
+import type { Client, Invoice, DeliveryChallan, ProcessType, CompanyDetails } from '../types';
 import { PrintIcon } from './Icons';
 
 interface ClientStatementScreenProps {

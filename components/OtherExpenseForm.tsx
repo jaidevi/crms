@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CloseIcon, CalendarIcon } from './Icons';
 import DatePicker from './DatePicker';
-import type { OtherExpense, ExpenseCategory, PaymentMode, OrderStatus } from '../App';
+import type { OtherExpense, ExpenseCategory, PaymentMode, OrderStatus } from '../types';
 import AddExpenseCategoryModal from './AddExpenseCategoryModal';
 import AddBankModal from './AddBankModal';
 

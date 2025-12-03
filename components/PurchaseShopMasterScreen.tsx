@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { PlusIcon, EditIcon, TrashIcon } from './Icons';
-import type { PurchaseShop } from '../App';
+import type { PurchaseShop } from '../types';
 import PurchaseShopModal from './PurchaseShopModal';
 import ConfirmationModal from './ConfirmationModal';
 

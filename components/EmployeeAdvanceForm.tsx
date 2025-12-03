@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CloseIcon, CalendarIcon } from './Icons';
 import DatePicker from './DatePicker';
-import type { EmployeeAdvance, Employee } from '../App';
+import type { EmployeeAdvance, Employee } from '../types';
 
 interface EmployeeAdvanceFormProps {
     onClose: () => void;

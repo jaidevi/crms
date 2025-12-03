@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { CloseIcon } from './Icons';
-import type { Employee } from '../App';
+import type { Employee } from '../types';
 
 interface EmployeeModalProps {
     onClose: () => void;

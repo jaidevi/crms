@@ -1,5 +1,6 @@
+
 import React, { useState, useMemo } from 'react';
-import type { PurchaseShop } from '../App';
+import type { PurchaseShop } from '../types';
 import { indianStates } from '../data/indian-locations';
 
 interface NewPartyScreenProps {

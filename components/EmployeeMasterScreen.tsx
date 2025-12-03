@@ -1,6 +1,7 @@
+
 import React, { useState, useMemo } from 'react';
 import { PlusIcon, EditIcon, TrashIcon, SearchIcon } from './Icons';
-import type { Employee } from '../App';
+import type { Employee } from '../types';
 import EmployeeModal from './EmployeeModal';
 import ConfirmationModal from './ConfirmationModal';
 

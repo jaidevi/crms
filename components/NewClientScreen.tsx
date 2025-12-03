@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { PlusIcon, TrashIcon } from './Icons';
-import type { Client, ProcessType } from '../App';
+import type { Client, ProcessType } from '../types';
 import { indianStates } from '../data/indian-locations';
 import ProcessTypeModal from './PartyDCProcessModal';
 

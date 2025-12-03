@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import type { DeliveryChallan, ProcessType, Invoice, InvoiceItem, InvoiceNumberConfig, Client, CompanyDetails } from '../App';
+import type { DeliveryChallan, ProcessType, Invoice, InvoiceItem, InvoiceNumberConfig, Client, CompanyDetails } from '../types';
 import DatePicker from './DatePicker';
 import { CloseIcon, CalendarIcon, PrintIcon } from './Icons';
 
@@ -289,9 +289,12 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                                 </button>
                                 <span className="font-medium text-gray-900 hidden print:inline">{formatDateForDisplay(invoiceDate)}</span>
                                 {isDatePickerOpen && (
-                                    <div className="absolute right-0 z-10 no-print">
-                                        <DatePicker value={invoiceDate} onChange={d => { setInvoiceDate(d); setDatePickerOpen(false); }} onClose={() => setDatePickerOpen(false)} />
-                                    </div>
+                                    <DatePicker
+                                        value={invoiceDate}
+                                        onChange={d => { setInvoiceDate(d); setDatePickerOpen(false); }}
+                                        onClose={() => setDatePickerOpen(false)}
+                                        align="right"
+                                    />
                                 )}
                             </div>
                         </div>

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CloseIcon, CalendarIcon } from './Icons';
 import DatePicker from './DatePicker';
-import type { TimberExpense, PurchaseShop, PaymentMode, OrderStatus } from '../App';
+import type { TimberExpense, PurchaseShop, PaymentMode, OrderStatus } from '../types';
 import PurchaseShopModal from './PurchaseShopModal';
 import AddBankModal from './AddBankModal';
 

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { CloseIcon } from './Icons';
-import type { ProcessType } from '../App';
+import type { ProcessType } from '../types';
 
 interface ProcessTypeModalProps {
     onClose: () => void;

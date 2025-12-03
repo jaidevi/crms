@@ -1,8 +1,9 @@
+
 import React, { useState, useMemo, useCallback } from 'react';
 import EmployeeAdvanceForm from './EmployeeAdvanceForm';
 import ConfirmationModal from './ConfirmationModal';
 import { PlusIcon, SearchIcon, EditIcon, TrashIcon } from './Icons';
-import type { EmployeeAdvance, Employee, PurchaseOrder } from '../App';
+import type { EmployeeAdvance, Employee, PurchaseOrder } from '../types';
 
 interface DisplayAdvance extends EmployeeAdvance {
     employeeName: string;

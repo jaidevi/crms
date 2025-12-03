@@ -1,5 +1,6 @@
+
 import React, { useState, useMemo } from 'react';
-import type { Employee, AttendanceRecord, EmployeeAdvance, CompanyDetails, AttendanceStatus } from '../App';
+import type { Employee, AttendanceRecord, EmployeeAdvance, CompanyDetails, AttendanceStatus } from '../types';
 import DatePicker from './DatePicker';
 import PayslipView from './PayslipView';
 import { CalendarIcon, SearchIcon } from './Icons';

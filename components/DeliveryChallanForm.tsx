@@ -6,7 +6,7 @@ import AddShopModal from './AddShopModal';
 import EmployeeModal from './EmployeeModal';
 import PurchaseShopModal from './PurchaseShopModal';
 import ProcessTypeModal from './PartyDCProcessModal';
-import type { DeliveryChallan, Client, ProcessType, DeliveryChallanNumberConfig, Employee, PurchaseShop, CompanyDetails } from '../App';
+import type { DeliveryChallan, Client, ProcessType, DeliveryChallanNumberConfig, Employee, PurchaseShop, CompanyDetails } from '../types';
 
 interface DeliveryChallanFormProps {
     onClose: () => void;

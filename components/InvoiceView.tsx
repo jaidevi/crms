@@ -1,5 +1,6 @@
+
 import React from 'react';
-import type { Invoice, Client, CompanyDetails } from '../App';
+import type { Invoice, Client, CompanyDetails } from '../types';
 
 interface InvoiceViewProps {
     invoice: Invoice;

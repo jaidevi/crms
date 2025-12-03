@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import type { Client, DeliveryChallan, ProcessType, Invoice, InvoiceNumberConfig, CompanyDetails } from '../App';
+import type { Client, DeliveryChallan, ProcessType, Invoice, InvoiceNumberConfig, CompanyDetails } from '../types';
 import { CalendarIcon, SearchIcon } from './Icons';
 import DatePicker from './DatePicker';
 import InvoiceCreateScreen from './InvoiceCreateScreen';

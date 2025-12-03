@@ -1,5 +1,6 @@
+
 import React from 'react';
-import type { Employee, CompanyDetails, Payslip } from '../App';
+import type { Employee, CompanyDetails, Payslip } from '../types';
 
 type PayslipData = Pick<Payslip, 
     'payslipDate' | 

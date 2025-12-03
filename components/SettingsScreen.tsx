@@ -3,7 +3,7 @@ import React from 'react';
 import PONumberSettingsScreen from './PONumberSettingsScreen';
 import DeliveryChallanNumberSettingsScreen from './DeliveryChallanNumberSettingsScreen';
 import InvoiceNumberSettingsScreen from './InvoiceNumberSettingsScreen';
-import type { PONumberConfig, DeliveryChallanNumberConfig, InvoiceNumberConfig } from '../App';
+import type { PONumberConfig, DeliveryChallanNumberConfig, InvoiceNumberConfig } from '../types';
 
 interface SettingsScreenProps {
   poConfig: PONumberConfig;

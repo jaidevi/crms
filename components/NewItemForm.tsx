@@ -2,7 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { QuestionMarkIcon, ImageIcon, CloseIcon } from './Icons';
 import ShopMasterModal from './ShopMasterModal';
-import type { Client, ProcessType } from '../App';
+import type { Client, ProcessType } from '../types';
 
 interface FormLabelProps {
   htmlFor: string;

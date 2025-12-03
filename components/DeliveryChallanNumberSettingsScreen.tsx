@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import type { DeliveryChallanNumberConfig } from '../App';
+import type { DeliveryChallanNumberConfig } from '../types';
 import { InfoIcon } from './Icons';
 
 interface DeliveryChallanNumberSettingsScreenProps {

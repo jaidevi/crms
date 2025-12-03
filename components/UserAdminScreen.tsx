@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import type { CompanyDetails } from '../App';
+import type { CompanyDetails } from '../types';
 import { SpinnerIcon, CheckIcon, TrashIcon } from './Icons';
 
 interface UserAdminScreenProps {

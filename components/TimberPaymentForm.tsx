@@ -2,7 +2,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { CloseIcon, CalendarIcon, ImageIcon } from './Icons';
 import DatePicker from './DatePicker';
-import type { SupplierPayment, PurchaseShop, SupplierPaymentNumberConfig, PaymentMode, TimberExpense } from '../App';
+import type { SupplierPayment, PurchaseShop, SupplierPaymentNumberConfig, PaymentMode, TimberExpense } from '../types';
 
 interface TimberPaymentFormProps {
     onClose: () => void;
