@@ -152,8 +152,9 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                 status: isOutsourcingScreen ? 'Not Delivered' : '',
                 splitProcess: []
             });
+            // Ensure proper zero padding for display
             const paddedNumber = String(deliveryChallanNumberConfig.nextNumber).padStart(4, '0');
-            const newChallanNumber = `${deliveryChallanNumberConfig.prefix}-${paddedNumber}`;
+            const newChallanNumber = `${deliveryChallanNumberConfig.prefix || 'DC'}-${paddedNumber}`;
             setChallanNumber(newChallanNumber);
             setFromParty('');
             setToParty('');
@@ -291,21 +292,35 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
         if (challan.mtr <= 0) newErrors.mtr = "Mtr must be positive.";
         if (!challan.status) newErrors.status = "Status is required.";
 
-        // Duplicate Check for Party DC No
+        // Duplicate Check
         if (challan.partyDCNo && challan.partyDCNo.trim() !== '') {
             const currentPartyName = challan.isOutsourcing ? `FROM: ${fromParty} | TO: ${toParty}` : challan.partyName;
             
             // Only check if we have a party name to check against
             if (currentPartyName) {
-                const duplicate = existingChallans.find(c => 
-                    c.partyDCNo?.trim().toLowerCase() === challan.partyDCNo?.trim().toLowerCase() && 
-                    c.date === challan.date &&
-                    c.partyName === currentPartyName &&
-                    (!challanToEdit || c.id !== challanToEdit.id)
-                );
+                const duplicate = existingChallans.find(c => {
+                    const isSelf = challanToEdit && c.id === challanToEdit.id;
+                    if (isSelf) return false;
+
+                    const sameDC = c.partyDCNo?.trim().toLowerCase() === challan.partyDCNo?.trim().toLowerCase();
+                    const sameDate = c.date === challan.date;
+                    const sameParty = c.partyName === currentPartyName;
+                    
+                    if (sameDC && sameDate && sameParty) {
+                        // Check if content (process and mtr) is also the same
+                        const sameMtr = Math.abs(c.mtr - challan.mtr) < 0.01; // float comparison safe
+                        
+                        const p1 = [...(c.process || [])].sort().join(',');
+                        const p2 = [...(challan.process || [])].sort().join(',');
+                        const sameProcess = p1 === p2;
+
+                        return sameMtr && sameProcess;
+                    }
+                    return false;
+                });
 
                 if (duplicate) {
-                    newErrors.partyDCNo = "A challan with this Party DC No already exists for this party on this date.";
+                    newErrors.partyDCNo = "Duplicate Entry: A record with this Party DC No, Date, Process, and Meters already exists.";
                 }
             }
         }
