@@ -72,12 +72,11 @@ const ChallanView: React.FC<ChallanViewProps> = ({ challan, companyDetails, onBa
                              <tr className="border-b">
                                 <td className="p-2 text-center border align-top">1</td>
                                 <td className="p-2 font-medium border align-top leading-relaxed">
-                                    <span className="font-semibold">Process:</span> {challan.process.join(', ')} <br/>
-                                    {challan.splitProcess && challan.splitProcess.length > 0 && (
-                                        <>
-                                            <span className="font-semibold">Split Process:</span> {challan.splitProcess.join(', ')} <br/>
-                                        </>
-                                    )}
+                                    <span className="font-semibold">Process:</span> {
+                                        challan.splitProcess && challan.splitProcess.length > 0 
+                                        ? challan.splitProcess.join(', ') 
+                                        : challan.process.join(', ')
+                                    } <br/>
                                     <span className="font-semibold">Design No:</span> {challan.designNo} <br/>
                                     <span className="font-semibold">Party DC No:</span> {challan.partyDCNo}
                                 </td>

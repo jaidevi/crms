@@ -74,7 +74,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeScreen, setActiveScreen }) => {
   );
 
   const mainNavItems = [
-    { icon: <PlusIcon />, label: "New Screen" },
     { icon: <ReportsIcon />, label: "Reports" },
     { icon: <CustomersIcon />, label: "User Admin" },
   ];
