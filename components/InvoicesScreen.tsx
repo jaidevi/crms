@@ -1,7 +1,7 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import type { Client, DeliveryChallan, ProcessType, Invoice, InvoiceNumberConfig, CompanyDetails } from '../types';
-import { CalendarIcon, SearchIcon } from './Icons';
+import { CalendarIcon, SearchIcon, ChevronDownIcon } from './Icons';
 import DatePicker from './DatePicker';
 import InvoiceCreateScreen from './InvoiceCreateScreen';
 import InvoiceView from './InvoiceView';
@@ -11,6 +11,23 @@ const formatDateForDisplay = (isoDate: string) => {
     if (!isoDate || !/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return 'N/A';
     const [year, month, day] = isoDate.split('-');
     return `${day}-${month}-${year}`;
+};
+
+const useClickOutside = (ref: React.RefObject<HTMLElement>, handler: () => void) => {
+    useEffect(() => {
+        const listener = (event: MouseEvent | TouchEvent) => {
+            if (!ref.current || ref.current.contains(event.target as Node)) {
+                return;
+            }
+            handler();
+        };
+        document.addEventListener('mousedown', listener);
+        document.addEventListener('touchstart', listener);
+        return () => {
+            document.removeEventListener('mousedown', listener);
+            document.removeEventListener('touchstart', listener);
+        };
+    }, [ref, handler]);
 };
 
 interface InvoicesScreenProps {
@@ -31,6 +48,12 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
 
     const [isFromDatePickerOpen, setFromDatePickerOpen] = useState(false);
     const [isToDatePickerOpen, setToDatePickerOpen] = useState(false);
+    
+    // Client Dropdown State
+    const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+    const [clientSearchTerm, setClientSearchTerm] = useState('');
+    const clientDropdownRef = useRef<HTMLDivElement>(null);
+    useClickOutside(clientDropdownRef, () => setIsClientDropdownOpen(false));
     
     const [filteredChallans, setFilteredChallans] = useState<DeliveryChallan[]>([]);
     const [selectedChallanIds, setSelectedChallanIds] = useState<Set<string>>(new Set());
@@ -57,6 +80,12 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
             )
         );
     }, [invoices]);
+
+    const filteredClients = useMemo(() => {
+        const sorted = [...clients].sort((a, b) => a.name.localeCompare(b.name));
+        if (!clientSearchTerm) return sorted;
+        return sorted.filter(c => c.name.toLowerCase().includes(clientSearchTerm.toLowerCase()));
+    }, [clients, clientSearchTerm]);
 
     const handleSearch = () => {
         if (!selectedClient || !fromDate || !toDate) {
@@ -216,19 +245,60 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
                     </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                    <div className="md:col-span-2">
-                        <label htmlFor="client-select" className="block text-sm font-medium text-gray-700 mb-1">Client</label>
-                        <select
-                            id="client-select"
-                            value={selectedClient}
-                            onChange={e => setSelectedClient(e.target.value)}
-                            className="block w-full px-3 py-2.5 text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                        >
-                            <option value="">-- Select a Client --</option>
-                            {clients.map(client => (
-                                <option key={client.name} value={client.name}>{client.name}</option>
-                            ))}
-                        </select>
+                    <div className="md:col-span-2" ref={clientDropdownRef}>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
+                        <div className="relative">
+                            <button
+                                type="button"
+                                className="relative w-full bg-white border border-gray-300 rounded-md shadow-sm pl-3 pr-10 py-2.5 text-left cursor-default focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                onClick={() => setIsClientDropdownOpen(!isClientDropdownOpen)}
+                            >
+                                <span className={`block truncate ${selectedClient ? 'text-gray-900' : 'text-gray-500'}`}>
+                                    {selectedClient || '-- Select a Client --'}
+                                </span>
+                                <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                                    <ChevronDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                                </span>
+                            </button>
+
+                            {isClientDropdownOpen && (
+                                <div className="absolute z-20 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                                    <div className="sticky top-0 z-10 bg-white px-2 py-1.5 border-b border-gray-200">
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                                                <SearchIcon className="h-4 w-4 text-gray-400" />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                className="block w-full pl-8 pr-3 py-1 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                                placeholder="Search client..."
+                                                value={clientSearchTerm}
+                                                onChange={(e) => setClientSearchTerm(e.target.value)}
+                                                autoFocus
+                                            />
+                                        </div>
+                                    </div>
+                                    {filteredClients.map((client) => (
+                                        <div
+                                            key={client.name}
+                                            className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-blue-50 ${selectedClient === client.name ? 'text-blue-900 bg-blue-100 font-medium' : 'text-gray-900'}`}
+                                            onClick={() => {
+                                                setSelectedClient(client.name);
+                                                setIsClientDropdownOpen(false);
+                                                setClientSearchTerm('');
+                                            }}
+                                        >
+                                            <span className="block truncate">{client.name}</span>
+                                        </div>
+                                    ))}
+                                    {filteredClients.length === 0 && (
+                                        <div className="cursor-default select-none relative py-2 pl-3 pr-9 text-gray-500 text-center">
+                                            No clients found
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>

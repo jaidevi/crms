@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import Sidebar from './components/Sidebar';
@@ -16,6 +17,7 @@ import UserAdminScreen from './components/UserAdminScreen';
 import ProductsScreen from './components/NewItemForm';
 import SalaryScreen from './components/SalaryScreen';
 import AttendanceScreen from './components/AttendanceScreen';
+import ReportsScreen from './components/ReportsScreen';
 import type {
   PaymentMode, OrderStatus, AttendanceStatus, CompanyDetails, ProcessType,
   Client, ClientProcess, PurchaseShop, Employee, MasterItem, LineItem,
@@ -1367,6 +1369,7 @@ const App: React.FC = () => {
           {activeScreen === 'New Screen' && <ProductsScreen clients={clients} onAddClient={handleAddClient} processTypes={processTypes} onAddProcessType={handleAddProcessType} />}
           {activeScreen === 'Salary & Payslips' && <SalaryScreen employees={employees} attendanceRecords={attendanceRecords} onUpdateEmployee={handleUpdateEmployee} advances={advances} onSavePayslip={handleSavePayslip} onDeletePayslip={handleDeletePayslip} companyDetails={companyDetails} payslips={payslips} />}
           {activeScreen === 'Attendance' && <AttendanceScreen employees={employees} attendanceRecords={attendanceRecords} onSave={handleSaveAttendance} />}
+          {activeScreen === 'Reports' && <ReportsScreen employees={employees} attendanceRecords={attendanceRecords} />}
         </main>
       </div>
     </div>
