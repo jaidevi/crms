@@ -186,13 +186,15 @@ const App: React.FC = () => {
                         if (Array.isArray(parsed)) return parsed;
                     } catch(e) {}
                     // Fallback string parsing for legacy data
-                    return d.process.split(',').map((s: string) => 
-                        s.trim()
-                         .replace(/^\[/, '').replace(/\]$/, '') // Remove brackets
-                         .trim()
-                         .replace(/^"/, '').replace(/"$/, '') // Remove quotes
-                         .replace(/\\"/g, '"') // Unescape
-                    ).filter((s: string) => s !== "");
+                    return d.process.split(',').map((s: string) => {
+                        let str = s.trim().replace(/^\[/, '').replace(/\]$/, '').trim();
+                        // Only remove quotes if they are wrapping quotes (start AND end)
+                        // This preserves inch marks like '58"'
+                        if (str.startsWith('"') && str.endsWith('"') && str.length >= 2) {
+                            str = str.substring(1, str.length - 1);
+                        }
+                        return str.replace(/\\"/g, '"'); // Unescape
+                    }).filter((s: string) => s !== "");
                 })()
             ) : [],
             splitProcess: d.split_process ? (Array.isArray(d.split_process) ? d.split_process : []) : [],
@@ -322,7 +324,18 @@ const App: React.FC = () => {
     })));
 
     // 16. Attendance
-    fetchTable('attendance', setAttendanceRecords);
+    fetchTable('attendance', setAttendanceRecords, (data: any[]) => data.map(d => ({
+        id: d.id,
+        employee_id: d.employee_id,
+        date: d.date,
+        morningStatus: d.morning_status || 'Present',
+        eveningStatus: d.evening_status || 'Present',
+        morningOvertimeHours: d.morning_overtime_hours || 0,
+        eveningOvertimeHours: d.evening_overtime_hours || 0,
+        metersProduced: d.meters_produced || 0,
+        createdAt: d.created_at,
+        updatedAt: d.updated_at
+    })));
 
     // 17. Payslips
     fetchTable('payslips', setPayslips, (data: any[]) => data.map(d => ({

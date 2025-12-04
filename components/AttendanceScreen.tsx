@@ -166,8 +166,8 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ employees, attendan
             if (recYear === year && (recMonth - 1) === month) {
                 const key = `${rec.employee_id}|${rec.date}`;
                 populatedMap.set(key, { 
-                    morningStatus: rec.morningStatus, 
-                    eveningStatus: rec.eveningStatus,
+                    morningStatus: rec.morningStatus || 'Present', // Ensure fallback
+                    eveningStatus: rec.eveningStatus || 'Present', // Ensure fallback
                     overtimeHours: (rec.morningOvertimeHours || 0) + (rec.eveningOvertimeHours || 0),
                     metersProduced: rec.metersProduced || 0,
                     createdAt: rec.createdAt,
@@ -274,21 +274,18 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ employees, attendan
     
     const handleSave = async () => {
         setSaveState('saving');
-        // FIX: The `onSave` function expects a parameter of type `Omit<AttendanceRecord, "id">[]`,
-        // which includes `createdAt` and `updatedAt` properties. The original implementation was creating
-        // objects that were missing these properties, causing a type mismatch.
         const recordsToSave: Omit<AttendanceRecord, 'id'>[] = [];
         localAttendance.forEach((value, key) => {
             const [employee_id, date] = key.split('|');
             recordsToSave.push({
                 employee_id,
                 date,
-                morningStatus: value.morningStatus,
-                eveningStatus: value.eveningStatus,
+                morningStatus: value.morningStatus || 'Present', // Ensure fallback
+                eveningStatus: value.eveningStatus || 'Present', // Ensure fallback
                 morningOvertimeHours: 0,
                 eveningOvertimeHours: value.overtimeHours,
                 metersProduced: value.metersProduced,
-                createdAt: value.createdAt || '', // Add dummy/existing values to satisfy the type
+                createdAt: value.createdAt || '',
                 updatedAt: value.updatedAt || '',
             });
         });
