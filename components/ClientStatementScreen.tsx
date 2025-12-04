@@ -91,7 +91,6 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
                      </div>
                      <div className="text-right">
                         <h1 className="text-2xl font-bold text-gray-800 uppercase">Statement of Account</h1>
-                        <p className="text-gray-600 mt-1">Date: {new Date().toLocaleDateString('en-GB')}</p>
                      </div>
                 </div>
 

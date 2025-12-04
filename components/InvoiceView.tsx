@@ -76,7 +76,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                              <img src={companyDetails.logoUrl || VEL_LOGO_URL} alt="Company Logo" className="w-full h-full object-contain" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-blue-700 mb-1">{companyDetails.name}</h2>
+                            <h2 className="text-[10px] text-xl font-extrabold text-blue-700 mb-1">{companyDetails.name}</h2>
                             <p className="text-gray-700 text-sm whitespace-pre-line">{companyDetails.addressLine1}</p>
                             <p className="text-gray-700 text-sm whitespace-pre-line">{companyDetails.addressLine2}</p>
                             <div className="flex items-center text-sm text-gray-700 mt-2">
@@ -125,14 +125,14 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                     <div className="w-full h-1 bg-blue-600 mb-0"></div>
                     <table className="w-full border-collapse">
                          <thead>
-                            <tr className="bg-blue-600 text-white text-xs font-bold uppercase">
-                               <th className="py-2 px-2 text-center w-12">S.NO</th>
-                               <th className="py-2 px-2 text-left">PRODUCT/SERVICE NAME</th>
-                               <th className="py-2 px-2 text-center w-20">QTY</th>
-                               <th className="py-2 px-2 text-right w-24">UNIT PRICE</th>
-                               <th className="py-2 px-2 text-right w-24">CGST (2.5%)</th>
-                               <th className="py-2 px-2 text-right w-24">SGST (2.5%)</th>
-                               <th className="py-2 px-2 text-right w-28">AMOUNT</th>
+                            <tr className="border-b-2 border-blue-600 text-blue-600 text-sm uppercase">
+                               <th className="py-2 px-2 text-center w-12 font-bold">S.NO</th>
+                               <th className="py-2 px-2 text-left font-bold">PRODUCT/SERVICE NAME</th>
+                               <th className="py-2 px-2 text-center w-20 font-bold">QTY</th>
+                               <th className="py-2 px-2 text-right w-24 font-bold">UNIT PRICE</th>
+                               <th className="py-2 px-2 text-right w-24 font-bold">CGST (2.5%)</th>
+                               <th className="py-2 px-2 text-right w-24 font-bold">SGST (2.5%)</th>
+                               <th className="py-2 px-2 text-right w-28 font-bold">AMOUNT</th>
                             </tr>
                          </thead>
                          <tbody className="text-gray-800 text-sm">
@@ -140,7 +140,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                                 <tr key={item.id} className="border-b border-gray-200">
                                     <td className="py-3 px-2 text-center">{index + 1}</td>
                                     <td className="py-3 px-2 font-semibold">{item.process}</td>
-                                    <td className="py-3 px-2 text-center">{numberFormat(item.mtr)}</td>
+                                    <td className="py-3 px-2 text-center">{numberFormat(item.mtr, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
                                     <td className="py-3 px-2 text-right">{numberFormat(item.rate)}</td>
                                     <td className="py-3 px-2 text-right">{numberFormat(item.cgst)}</td>
                                     <td className="py-3 px-2 text-right">{numberFormat(item.sgst)}</td>
@@ -151,7 +151,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                          <tfoot>
                              <tr className="border-t-2 border-gray-300 font-bold text-sm">
                                  <td colSpan={2} className="py-2 px-2 text-right">Total</td>
-                                 <td className="py-2 px-2 text-center">{numberFormat(totalQty)}</td>
+                                 <td className="py-2 px-2 text-center">{numberFormat(totalQty, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
                                  <td className="py-2 px-2"></td>
                                  <td className="py-2 px-2 text-right">{numberFormat(invoice.totalCgst)}</td>
                                  <td className="py-2 px-2 text-right">{numberFormat(invoice.totalSgst)}</td>
@@ -177,6 +177,15 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                                 <p className="font-semibold">{companyDetails.bankName}: {companyDetails.bankAccountNumber}</p>
                                 <p>IFSC CODE: {companyDetails.bankIfscCode}</p>
                             </div>
+                        </div>
+
+                        {/* Terms and Conditions */}
+                        <div className="mt-6 text-xs text-gray-600">
+                            <div className="font-bold mb-1 text-gray-800">Terms & Conditions:</div>
+                            <ol className="list-decimal list-inside space-y-0.5">
+                                <li>Interest : @18% P.A will be charged if the payment is not within 60 days.</li>
+                                <li>Subject to "SALEM JURISDICTION" only.</li>
+                            </ol>
                         </div>
                      </div>
 

@@ -27,6 +27,7 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
     const [selectedClient, setSelectedClient] = useState<string>('');
     const [fromDate, setFromDate] = useState<string>('');
     const [toDate, setToDate] = useState<string>('');
+    const [invoiceType, setInvoiceType] = useState<'process' | 'design'>('process');
 
     const [isFromDatePickerOpen, setFromDatePickerOpen] = useState(false);
     const [isToDatePickerOpen, setToDatePickerOpen] = useState(false);
@@ -35,7 +36,7 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
     const [selectedChallanIds, setSelectedChallanIds] = useState<Set<string>>(new Set());
     const [hasSearched, setHasSearched] = useState(false);
     
-    const [creationData, setCreationData] = useState<{ client: Client, challans: DeliveryChallan[] } | null>(null);
+    const [creationData, setCreationData] = useState<{ client: Client, challans: DeliveryChallan[], invoiceType: 'process' | 'design' } | null>(null);
     const [viewingInvoiceId, setViewingInvoiceId] = useState<string | null>(null);
     const [viewingStatementForClient, setViewingStatementForClient] = useState<Client | null>(null);
 
@@ -136,7 +137,7 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
             return;
         }
         const selected = deliveryChallans.filter(c => selectedChallanIds.has(c.id));
-        setCreationData({ client, challans: selected });
+        setCreationData({ client, challans: selected, invoiceType });
     };
 
     const handleCancelCreation = () => {
@@ -174,6 +175,7 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
             invoiceNumberConfig={invoiceNumberConfig}
             processTypes={processTypes}
             companyDetails={companyDetails}
+            invoiceType={creationData.invoiceType}
         />;
     }
 
@@ -184,8 +186,34 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
     return (
         <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="mb-4">
+                <div className="mb-4 flex flex-col md:flex-row justify-between md:items-center">
                     <h1 className="text-xl font-semibold text-gray-800">Select Challans for Invoice</h1>
+                    
+                    <div className="flex items-center space-x-4 mt-2 md:mt-0">
+                        <span className="text-sm font-medium text-gray-700">Invoice Type:</span>
+                        <label className="inline-flex items-center cursor-pointer">
+                            <input 
+                                type="radio" 
+                                className="form-radio h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500" 
+                                name="invoiceType" 
+                                value="process" 
+                                checked={invoiceType === 'process'} 
+                                onChange={() => setInvoiceType('process')} 
+                            />
+                            <span className="ml-2 text-sm text-gray-700">Process Based</span>
+                        </label>
+                        <label className="inline-flex items-center cursor-pointer">
+                            <input 
+                                type="radio" 
+                                className="form-radio h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500" 
+                                name="invoiceType" 
+                                value="design" 
+                                checked={invoiceType === 'design'} 
+                                onChange={() => setInvoiceType('design')} 
+                            />
+                            <span className="ml-2 text-sm text-gray-700">Design Based</span>
+                        </label>
+                    </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                     <div className="md:col-span-2">

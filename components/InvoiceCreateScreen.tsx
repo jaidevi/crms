@@ -12,6 +12,7 @@ interface InvoiceCreateScreenProps {
     invoiceNumberConfig: InvoiceNumberConfig;
     processTypes: ProcessType[];
     companyDetails: CompanyDetails;
+    invoiceType?: 'process' | 'design';
 }
 
 const formatDateForDisplay = (isoDate: string) => {
@@ -28,7 +29,7 @@ const numberFormat = (num: number, options?: Intl.NumberFormatOptions) => {
 // Default Logo (Fallback)
 const VEL_LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTUwIj48cmVjdCB4PSI0NiIgeT0iMTAwIiB3aWR0aD0iOCIgaGVpZ2h0PSI1MCIgZmlsbD0iI2I0NTMwOSIgLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjE0OCIgcj0iNCIgZmlsbD0iI2I0NTMwOSIgLz48cGF0aCBkPSJNNDAgMTAwIFE1MCAxMTAgNjAgMTAwIiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNDIgMTA1IFE1MCAxMTUgNTggMTA1IiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNDQgMTEwIFE1MCAxMTggNTYgMTEwIiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNTAgNSBDIDg1IDQwIDg1IDgwIDUwIDEwMCBDIDE1IDgwIDE1IDQwIDUwIDUgWiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZjk3MzE2IiBzdHJva2Utd2lkdGg9IjQiIC8+PHBhdGggZD0iTTUwIDQ1IEMgNjUgNjAgNjUgODAgNTAgOTAgQyAzNSA4MCAzNSA2MCA1MCA0NSBaIiBmaWxsPSIjMWQ0ZWQ4IiAvPjxsaW5lIHgxPSIzNSIgeTE9IjI1IiB4Mj0iNjUiIHkyPSIyNSIgc3Ryb2tlPSIjOWNhM2FmIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgLz48bGluZSB4MT0iMzIiIHkxPSIzMiIgeDI9IjY4IiB5Mj0iMzIiIHN0cm9rZT0iIzljYTNhZiIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiIC8+PGxpbmUgeDE9IjM1IiB5MT0iMzkiIHgyPSI2NSIgeTI9IjM5IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiAvPjxjaXJjbGUgY3g9IjUwIiBjeT0iMzIiIHI9IjQiIGZpbGw9IiNkYzI2MjYiIC8+PC9zdmc+";
 
-const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onSave, client, challansToInvoice, invoiceNumberConfig, processTypes, companyDetails }) => {
+const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onSave, client, challansToInvoice, invoiceNumberConfig, processTypes, companyDetails, invoiceType = 'process' }) => {
     const [invoiceNumber, setInvoiceNumber] = useState('');
     const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
     const [isDatePickerOpen, setDatePickerOpen] = useState(false);
@@ -44,10 +45,15 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
         }
         
         const sortedChallans = [...challansToInvoice].sort((a, b) => {
-            const processA = a.process.join(', ');
-            const processB = b.process.join(', ');
-            if (processA !== processB) {
-                return processA.localeCompare(processB);
+            // Adjust sort order based on grouping type for better aggregation
+            if (invoiceType === 'design') {
+                const designA = a.designNo || '';
+                const designB = b.designNo || '';
+                if (designA !== designB) return designA.localeCompare(designB);
+            } else {
+                const processA = a.process.join(', ');
+                const processB = b.process.join(', ');
+                if (processA !== processB) return processA.localeCompare(processB);
             }
             return new Date(a.date).getTime() - new Date(b.date).getTime();
         });
@@ -87,12 +93,22 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
 
             // Use configured HSN/SAC or default to 998821
             const hsnSac = companyDetails.hsnSac || '998821';
+            
+            // Determine grouping key and display name based on invoiceType
+            let groupIdentifier = processName;
+            if (invoiceType === 'design') {
+                // If grouping by design, use design number. Fallback if empty.
+                const designPart = challan.designNo ? `Design: ${challan.designNo}` : 'Design: N/A';
+                // Append process name as requested to display both
+                groupIdentifier = `${designPart} - ${processName}`;
+            }
+
             // Include totalRate in key to differentiate if somehow rate calculation varies
-            const groupKey = `${processName}|${totalRate}|${hsnSac}`;
+            const groupKey = `${groupIdentifier}|${totalRate}|${hsnSac}`;
 
             if (!groupedItemsMap.has(groupKey)) {
                 groupedItemsMap.set(groupKey, {
-                    process: processName,
+                    displayName: groupIdentifier, // Used for display
                     rate: totalRate,
                     hsnSac: hsnSac,
                     pcs: 0,
@@ -114,7 +130,9 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
         });
 
         const initialLineItems: InvoiceItem[] = Array.from(groupedItemsMap.entries()).map(([groupKey, group]) => {
-            const subtotal = group.mtr * group.rate;
+            // Round off quantity to nearest integer
+            const roundedMtr = Math.round(group.mtr);
+            const subtotal = roundedMtr * group.rate;
             const cgst = subtotal * 0.025;
             const sgst = subtotal * 0.025;
             const amount = subtotal + cgst + sgst;
@@ -123,12 +141,12 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                 id: groupKey,
                 challanNumber: group._challanNumbers.sort().join(', '),
                 challanDate: group._challanDates.sort().pop() || '',
-                process: group.process,
+                process: group.displayName,
                 description: '',
                 designNo: Array.from(group._designNos).sort().join(', '),
                 hsnSac: group.hsnSac,
                 pcs: group.pcs,
-                mtr: group.mtr,
+                mtr: roundedMtr, // Use rounded quantity
                 rate: group.rate,
                 subtotal,
                 cgst,
@@ -138,7 +156,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
         });
 
         setLineItems(initialLineItems);
-    }, [client, challansToInvoice, invoiceNumberConfig, processTypes, companyDetails]);
+    }, [client, challansToInvoice, invoiceNumberConfig, processTypes, companyDetails, invoiceType]);
 
     const handleItemChange = (itemId: string, field: 'rate' | 'mtr' | 'hsnSac', value: string | number) => {
         setLineItems(prevItems =>
@@ -249,7 +267,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                              <img src={companyDetails.logoUrl || VEL_LOGO_URL} alt="Company Logo" className="w-full h-full object-contain" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-extrabold text-blue-700">{companyDetails.name}</h2>
+                            <h2 className="text-[18px] text-xl font-extrabold text-blue-700">{companyDetails.name}</h2>
                             <p className="text-gray-600 whitespace-pre-line">{companyDetails.addressLine1}</p>
                             <p className="text-gray-600 whitespace-pre-line">{companyDetails.addressLine2}</p>
                             <p className="text-gray-600 mt-2"><span role="img" aria-label="phone">☎️</span> {companyDetails.phone}</p>
@@ -330,7 +348,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                                     <td className="p-2 font-medium">{item.process}</td>
                                     <td className="p-2 text-right">
                                         <input type="number" value={item.mtr} onChange={e => handleItemChange(item.id, 'mtr', Number(e.target.value))} className={`${editableInputClasses} no-print`} />
-                                        <span className="hidden print:inline">{numberFormat(item.mtr)}</span>
+                                        <span className="hidden print:inline">{numberFormat(item.mtr, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                                     </td>
                                     <td className="p-2 text-right">
                                         <input type="number" value={item.rate} onChange={e => handleItemChange(item.id, 'rate', Number(e.target.value))} className={`${editableInputClasses} no-print ${errors[`rate_${item.id}`] ? 'border-red-500' : ''}`} />
@@ -345,7 +363,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                          <tfoot>
                             <tr className="font-bold bg-gray-50 border-t-2 border-gray-300">
                                 <td colSpan={2} className="p-2 text-right">Total</td>
-                                <td className="p-2 text-right">{numberFormat(totalQty)}</td>
+                                <td className="p-2 text-right">{numberFormat(totalQty, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
                                 <td className="p-2"></td>
                                 <td className="p-2 text-right">{numberFormat(totalCgst)}</td>
                                 <td className="p-2 text-right">{numberFormat(totalSgst)}</td>
@@ -366,6 +384,15 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                             <p className="font-semibold text-gray-800">{companyDetails.bankName}</p>
                             <p>A/C No: {companyDetails.bankAccountNumber}</p>
                             <p>IFSC CODE: {companyDetails.bankIfscCode}</p>
+                        </div>
+
+                        {/* Terms and Conditions */}
+                        <div className="mt-6 text-xs text-gray-600">
+                            <div className="font-bold mb-1 text-gray-800">Terms & Conditions:</div>
+                            <ol className="list-decimal list-inside space-y-0.5">
+                                <li>Interest : @18% P.A will be charged if the payment is not within 60 days.</li>
+                                <li>Subject to "SALEM JURISDICTION" only.</li>
+                            </ol>
                         </div>
                     </div>
                     <div className="text-right flex flex-col justify-end">
