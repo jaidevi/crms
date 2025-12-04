@@ -47,7 +47,7 @@ const ChallanView: React.FC<ChallanViewProps> = ({ challan, companyDetails, onBa
                     </div>
                     <div className="text-right">
                         <h1 className="text-2xl font-bold tracking-wide uppercase text-secondary-800">
-                            Delivery Challan
+                            Job Work Challan
                         </h1>
                         <p className="text-secondary-600 mt-2">Challan No: <span className="font-semibold">{challan.challanNumber}</span></p>
                         <p className="text-secondary-600">Date: <span className="font-semibold">{formatDateForDisplay(challan.date)}</span></p>
@@ -72,11 +72,16 @@ const ChallanView: React.FC<ChallanViewProps> = ({ challan, companyDetails, onBa
                              <tr className="border-b">
                                 <td className="p-2 text-center border align-top">1</td>
                                 <td className="p-2 font-medium border align-top leading-relaxed">
-                                    <span className="font-semibold">Process:</span> {
-                                        challan.splitProcess && challan.splitProcess.length > 0 
-                                        ? challan.splitProcess.join(', ') 
-                                        : challan.process.join(', ')
-                                    } <br/>
+                                    {/* Logic: If split process exists, show ONLY split process. Else show main process. */}
+                                    {challan.splitProcess && challan.splitProcess.length > 0 ? (
+                                        <>
+                                            <span className="font-semibold">Process:</span> {challan.splitProcess.join(', ')} <br/>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="font-semibold">Process:</span> {challan.process.join(', ')} <br/>
+                                        </>
+                                    )}
                                     <span className="font-semibold">Design No:</span> {challan.designNo} <br/>
                                     <span className="font-semibold">Party DC No:</span> {challan.partyDCNo}
                                 </td>
