@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import type { Employee, AttendanceRecord, AttendanceStatus, EmployeeAdvance, CompanyDetails, Payslip } from '../types';
-import { CalendarIcon, SearchIcon, SpinnerIcon, CheckIcon } from './Icons';
+import { CalendarIcon, SearchIcon, SpinnerIcon, CheckIcon, TrashIcon } from './Icons';
 import DatePicker from './DatePicker';
 import PayslipView from './PayslipView';
+import ConfirmationModal from './ConfirmationModal';
 
 interface SalaryScreenProps {
     employees: Employee[];
@@ -10,6 +11,7 @@ interface SalaryScreenProps {
     onUpdateEmployee: (id: string, employee: Employee) => Promise<void>;
     advances: EmployeeAdvance[];
     onSavePayslip: (payslip: Omit<Payslip, 'id'>) => Promise<void>;
+    onDeletePayslip: (id: string) => Promise<void>;
     companyDetails: CompanyDetails;
     payslips: Payslip[];
 }
@@ -47,7 +49,7 @@ const formatDateForDisplay = (isoDate: string) => {
     return `${day}-${month}-${year}`;
 };
 
-const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecords, onUpdateEmployee, advances, onSavePayslip, companyDetails, payslips }) => {
+const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecords, onUpdateEmployee, advances, onSavePayslip, onDeletePayslip, companyDetails, payslips }) => {
     const [activeTab, setActiveTab] = useState('calculator');
 
     // == SALARY CALCULATOR LOGIC ==
@@ -283,6 +285,7 @@ const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecord
     // == PAYSLIPS LIST LOGIC ==
     const [payslipSearchTerm, setPayslipSearchTerm] = useState('');
     const [viewingPayslip, setViewingPayslip] = useState<Payslip | null>(null);
+    const [payslipToDelete, setPayslipToDelete] = useState<Payslip | null>(null);
 
     const filteredPayslips = useMemo(() => {
         const sorted = [...payslips].sort((a,b) => new Date(b.payslipDate).getTime() - new Date(a.payslipDate).getTime());
@@ -295,6 +298,13 @@ const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecord
         if (!viewingPayslip) return null;
         return employees.find(e => e.id === viewingPayslip.employeeId);
     }, [viewingPayslip, employees]);
+
+    const confirmDeletePayslip = async () => {
+        if (payslipToDelete) {
+            await onDeletePayslip(payslipToDelete.id);
+            setPayslipToDelete(null);
+        }
+    };
 
     const tabButtonClasses = (tabName: string) => 
         `whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm ${
@@ -309,6 +319,15 @@ const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecord
 
     return (
         <div className="space-y-6">
+            {payslipToDelete && (
+                <ConfirmationModal
+                    isOpen={!!payslipToDelete}
+                    onClose={() => setPayslipToDelete(null)}
+                    onConfirm={confirmDeletePayslip}
+                    title="Delete Payslip"
+                    message={`Are you sure you want to delete the payslip for ${payslipToDelete.employeeName} (${formatDateForDisplay(payslipToDelete.payslipDate)})? This action cannot be undone.`}
+                />
+            )}
             <div className="bg-white rounded-lg shadow-sm">
                  <div className="p-5">
                     <h1 className="text-2xl font-bold text-secondary-800">Salary &amp; Payslips</h1>
@@ -547,7 +566,12 @@ const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecord
                                             <td className="px-6 py-4 text-xs text-secondary-500">{formatDateForDisplay(ps.payPeriodStart)} - {formatDateForDisplay(ps.payPeriodEnd)}</td>
                                             <td className="px-6 py-4 text-right font-bold text-success-600">₹{ps.netSalary.toFixed(2)}</td>
                                             <td className="px-6 py-4 text-center">
-                                                <button onClick={() => setViewingPayslip(ps)} className="text-primary-600 hover:underline text-sm font-medium">View</button>
+                                                <div className="flex items-center justify-center gap-3">
+                                                    <button onClick={() => setViewingPayslip(ps)} className="text-primary-600 hover:underline text-sm font-medium">View</button>
+                                                    <button onClick={() => setPayslipToDelete(ps)} className="text-danger-600 hover:text-danger-800" title="Delete Payslip">
+                                                        <TrashIcon className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import Sidebar from './components/Sidebar';
@@ -1322,6 +1321,16 @@ const App: React.FC = () => {
       }
   };
 
+  const handleDeletePayslip = async (id: string) => {
+      try {
+          const { error } = await supabase.from('payslips').delete().eq('id', id);
+          if (error) throw error;
+          setPayslips(prev => prev.filter(p => p.id !== id));
+      } catch (error: any) {
+          alert(`Error deleting payslip: ${error.message || error}`);
+      }
+  };
+
   const handleUpdatePoConfig = async (newConfig: PONumberConfig) => {
       setPoNumberConfig(newConfig);
       await supabase.from('numbering_configs').upsert({ id: 'po', prefix: newConfig.prefix, next_number: newConfig.nextNumber });
@@ -1356,7 +1365,7 @@ const App: React.FC = () => {
           {activeScreen === 'Add Process' && <PartyDCProcessMasterScreen processTypes={processTypes} onAddProcessType={handleAddProcessType} onUpdateProcessType={handleUpdateProcessType} onDeleteProcessType={handleDeleteProcessType} />}
           {activeScreen === 'User Admin' && <UserAdminScreen companyDetails={companyDetails} onUpdate={handleUpdateCompanyDetails} />}
           {activeScreen === 'New Screen' && <ProductsScreen clients={clients} onAddClient={handleAddClient} processTypes={processTypes} onAddProcessType={handleAddProcessType} />}
-          {activeScreen === 'Salary & Payslips' && <SalaryScreen employees={employees} attendanceRecords={attendanceRecords} onUpdateEmployee={handleUpdateEmployee} advances={advances} onSavePayslip={handleSavePayslip} companyDetails={companyDetails} payslips={payslips} />}
+          {activeScreen === 'Salary & Payslips' && <SalaryScreen employees={employees} attendanceRecords={attendanceRecords} onUpdateEmployee={handleUpdateEmployee} advances={advances} onSavePayslip={handleSavePayslip} onDeletePayslip={handleDeletePayslip} companyDetails={companyDetails} payslips={payslips} />}
           {activeScreen === 'Attendance' && <AttendanceScreen employees={employees} attendanceRecords={attendanceRecords} onSave={handleSaveAttendance} />}
         </main>
       </div>
