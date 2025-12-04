@@ -47,7 +47,7 @@ const ChallanView: React.FC<ChallanViewProps> = ({ challan, companyDetails, onBa
                     </div>
                     <div className="text-right">
                         <h1 className="text-2xl font-bold tracking-wide uppercase text-secondary-800">
-                            Job Work Challan
+                            JOB WORK CHALLAN
                         </h1>
                         <p className="text-secondary-600 mt-2">Challan No: <span className="font-semibold">{challan.challanNumber}</span></p>
                         <p className="text-secondary-600">Date: <span className="font-semibold">{formatDateForDisplay(challan.date)}</span></p>
@@ -102,9 +102,8 @@ const ChallanView: React.FC<ChallanViewProps> = ({ challan, companyDetails, onBa
                 <section className="flex justify-between mt-12">
                      <div className="text-xs text-secondary-500 space-y-1">
                         <h4 className="font-bold mb-1 text-secondary-700">Terms & Conditions:</h4>
-                        <p>1. Goods once sold will not be taken back.</p>
-                        <p>2. Interest @18% p.a. will be charged if the bill is not paid within the due date.</p>
-                        <p>3. This is a computer generated challan.</p>
+                        <p>1. Interest @18% p.a. will be charged if the bill is not paid within the due date.</p>
+                        <p>2. This is a computer generated challan.</p>
                     </div>
                     <div className="text-right flex flex-col items-end">
                         <div className="mt-20 w-56 text-center">
