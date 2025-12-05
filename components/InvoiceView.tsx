@@ -27,6 +27,27 @@ const numberFormat = (num: number, options?: Intl.NumberFormatOptions) => {
     return new Intl.NumberFormat('en-IN', { ...defaultOptions, ...options }).format(num);
 };
 
+const numberToWords = (num: number): string => {
+    const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+    const format = (n: number): string => {
+        if (n === 0) return '';
+        if (n < 20) return a[n] + ' ';
+        if (n < 100) return b[Math.floor(n / 10)] + ' ' + format(n % 10);
+        if (n < 1000) return a[Math.floor(n / 100)] + ' Hundred ' + (n % 100 !== 0 ? 'and ' : '') + format(n % 100);
+        if (n < 100000) return format(Math.floor(n / 1000)) + 'Thousand ' + format(n % 1000);
+        if (n < 10000000) return format(Math.floor(n / 100000)) + 'Lakh ' + format(n % 100000);
+        return format(Math.floor(n / 10000000)) + 'Crore ' + format(n % 10000000);
+    };
+
+    if (num === 0) return 'Zero Rupees Only';
+    
+    // Process integer part
+    const intPart = Math.floor(num);
+    return format(intPart).trim() + ' Rupees Only';
+};
+
 // Default Logo (Fallback)
 const VEL_LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTUwIj48cmVjdCB4PSI0NiIgeT0iMTAwIiB3aWR0aD0iOCIgaGVpZ2h0PSI1MCIgZmlsbD0iI2I0NTMwOSIgLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjE0OCIgcj0iNCIgZmlsbD0iI2I0NTMwOSIgLz48cGF0aCBkPSJNNDAgMTAwIFE1MCAxMTAgNjAgMTAwIiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNDIgMTA1IFE1MCAxMTUgNTggMTA1IiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNDQgMTEwIFE1MCAxMTggNTYgMTEwIiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNTAgNSBDIDg1IDQwIDg1IDgwIDUwIDEwMCBDIDE1IDgwIDE1IDQwIDUwIDUgWiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZjk3MzE2IiBzdHJva2Utd2lkdGg9IjQiIC8+PHBhdGggZD0iTTUwIDQ1IEMgNjUgNjAgNjUgODAgNTAgOTAgQyAzNSA4MCAzNSA2MCA1MCA0NSBaIiBmaWxsPSIjMWQ0ZWQ4IiAvPjxsaW5lIHgxPSIzNSIgeTE9IjI1IiB4Mj0iNjUiIHkyPSIyNSIgc3Ryb2tlPSIjOWNhM2FmIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgLz48bGluZSB4MT0iMzIiIHkxPSIzMiIgeDI9IjY4IiB5Mj0iMzIiIHN0cm9rZT0iIzljYTNhZiIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiIC8+PGxpbmUgeDE9IjM1IiB5MT0iMzkiIHgyPSI2NSIgeTI9IjM5IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiAvPjxjaXJjbGUgY3g9IjUwIiBjeT0iMzIiIHI9IjQiIGZpbGw9IiNkYzI2MjYiIC8+PC9zdmc+";
 
@@ -130,6 +151,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                                <th className="py-2 px-2 text-left font-bold">PRODUCT/SERVICE NAME</th>
                                <th className="py-2 px-2 text-center w-20 font-bold">QTY</th>
                                <th className="py-2 px-2 text-right w-24 font-bold">UNIT PRICE</th>
+                               <th className="py-2 px-2 text-right w-28 font-bold">TAXABLE VALUE</th>
                                <th className="py-2 px-2 text-right w-24 font-bold">CGST (2.5%)</th>
                                <th className="py-2 px-2 text-right w-24 font-bold">SGST (2.5%)</th>
                                <th className="py-2 px-2 text-right w-28 font-bold">AMOUNT</th>
@@ -142,6 +164,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                                     <td className="py-3 px-2 font-semibold">{item.process}</td>
                                     <td className="py-3 px-2 text-center">{numberFormat(item.mtr, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
                                     <td className="py-3 px-2 text-right">{numberFormat(item.rate)}</td>
+                                    <td className="py-3 px-2 text-right">{numberFormat(item.subtotal)}</td>
                                     <td className="py-3 px-2 text-right">{numberFormat(item.cgst)}</td>
                                     <td className="py-3 px-2 text-right">{numberFormat(item.sgst)}</td>
                                     <td className="py-3 px-2 text-right font-bold">₹{numberFormat(item.amount)}</td>
@@ -153,6 +176,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                                  <td colSpan={2} className="py-2 px-2 text-right">Total</td>
                                  <td className="py-2 px-2 text-center">{numberFormat(totalQty, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
                                  <td className="py-2 px-2"></td>
+                                 <td className="py-2 px-2 text-right">{numberFormat(invoice.subTotal)}</td>
                                  <td className="py-2 px-2 text-right">{numberFormat(invoice.totalCgst)}</td>
                                  <td className="py-2 px-2 text-right">{numberFormat(invoice.totalSgst)}</td>
                                  <td className="py-2 px-2 text-right">₹{numberFormat(invoice.totalAmount - invoice.roundedOff)}</td>
@@ -164,6 +188,12 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                 {/* Footer Section */}
                 <div className="grid grid-cols-2 gap-8">
                      <div className="flex flex-col justify-between">
+                        {/* Amount in Words */}
+                        <div className="mt-4">
+                            <p className="text-sm font-semibold text-gray-700">Amount in Words:</p>
+                            <p className="text-sm  font-medium text-gray-900">{numberToWords(Math.round(invoice.totalAmount))}</p>
+                        </div>
+
                         {/* Signature Area */}
                         <div className="mt-8">
                            <p className="text-sm font-semibold text-gray-800">Authorized Signature</p>

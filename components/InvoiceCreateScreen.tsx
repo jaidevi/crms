@@ -26,6 +26,27 @@ const numberFormat = (num: number, options?: Intl.NumberFormatOptions) => {
     return new Intl.NumberFormat('en-IN', { ...defaultOptions, ...options }).format(num);
 };
 
+const numberToWords = (num: number): string => {
+    const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+    const format = (n: number): string => {
+        if (n === 0) return '';
+        if (n < 20) return a[n] + ' ';
+        if (n < 100) return b[Math.floor(n / 10)] + ' ' + format(n % 10);
+        if (n < 1000) return a[Math.floor(n / 100)] + ' Hundred ' + (n % 100 !== 0 ? 'and ' : '') + format(n % 100);
+        if (n < 100000) return format(Math.floor(n / 1000)) + 'Thousand ' + format(n % 1000);
+        if (n < 10000000) return format(Math.floor(n / 100000)) + 'Lakh ' + format(n % 100000);
+        return format(Math.floor(n / 10000000)) + 'Crore ' + format(n % 10000000);
+    };
+
+    if (num === 0) return 'Zero Rupees Only';
+    
+    // Process integer part
+    const intPart = Math.floor(num);
+    return format(intPart).trim() + ' Rupees Only';
+};
+
 // Default Logo (Fallback)
 const VEL_LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTUwIj48cmVjdCB4PSI0NiIgeT0iMTAwIiB3aWR0aD0iOCIgaGVpZ2h0PSI1MCIgZmlsbD0iI2I0NTMwOSIgLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjE0OCIgcj0iNCIgZmlsbD0iI2I0NTMwOSIgLz48cGF0aCBkPSJNNDAgMTAwIFE1MCAxMTAgNjAgMTAwIiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNDIgMTA1IFE1MCAxMTUgNTggMTA1IiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNDQgMTEwIFE1MCAxMTggNTYgMTEwIiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNTAgNSBDIDg1IDQwIDg1IDgwIDUwIDEwMCBDIDE1IDgwIDE1IDQwIDUwIDUgWiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZjk3MzE2IiBzdHJva2Utd2lkdGg9IjQiIC8+PHBhdGggZD0iTTUwIDQ1IEMgNjUgNjAgNjUgODAgNTAgOTAgQyAzNSA4MCAzNSA2MCA1MCA0NSBaIiBmaWxsPSIjMWQ0ZWQ4IiAvPjxsaW5lIHgxPSIzNSIgeTE9IjI1IiB4Mj0iNjUiIHkyPSIyNSIgc3Ryb2tlPSIjOWNhM2FmIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgLz48bGluZSB4MT0iMzIiIHkxPSIzMiIgeDI9IjY4IiB5Mj0iMzIiIHN0cm9rZT0iIzljYTNhZiIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiIC8+PGxpbmUgeDE9IjM1IiB5MT0iMzkiIHgyPSI2NSIgeTI9IjM5IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiAvPjxjaXJjbGUgY3g9IjUwIiBjeT0iMzIiIHI9IjQiIGZpbGw9IiNkYzI2MjYiIC8+PC9zdmc+";
 
@@ -336,6 +357,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                                 <th className="py-1 px-2 font-bold">Product/Service Name</th>
                                 <th className="py-1 px-2 w-24 text-right font-bold">Qty</th>
                                 <th className="py-1 px-2 w-28 text-right font-bold">Unit Price</th>
+                                <th className="py-1 px-2 w-28 text-right font-bold">Taxable Value</th>
                                 <th className="py-1 px-2 w-24 text-right font-bold">CGST (2.5%)</th>
                                 <th className="py-1 px-2 w-24 text-right font-bold">SGST (2.5%)</th>
                                 <th className="py-1 px-2 w-32 text-right font-bold">Amount</th>
@@ -343,7 +365,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                         </thead>
                         <tbody className="text-gray-700">
                              {lineItems.map((item, index) => (
-                                <tr key={item.id} className="border-b border-gray-200">
+                                <tr key={item.id} className="border-b border-gray-800">
                                     <td className="p-2 text-center">{index + 1}</td>
                                     <td className="p-2 font-medium">{item.process}</td>
                                     <td className="p-2 text-right">
@@ -354,6 +376,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                                         <input type="number" value={item.rate} onChange={e => handleItemChange(item.id, 'rate', Number(e.target.value))} className={`${editableInputClasses} no-print ${errors[`rate_${item.id}`] ? 'border-red-500' : ''}`} />
                                         <span className="hidden print:inline">{numberFormat(item.rate)}</span>
                                     </td>
+                                    <td className="p-2 text-right">{numberFormat(item.subtotal)}</td>
                                     <td className="p-2 text-right">{numberFormat(item.cgst)}</td>
                                     <td className="p-2 text-right">{numberFormat(item.sgst)}</td>
                                     <td className="p-2 text-right font-semibold text-gray-900">₹{numberFormat(item.amount)}</td>
@@ -365,6 +388,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                                 <td colSpan={2} className="p-2 text-right">Total</td>
                                 <td className="p-2 text-right">{numberFormat(totalQty, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
                                 <td className="p-2"></td>
+                                <td className="p-2 text-right">{numberFormat(subTotal)}</td>
                                 <td className="p-2 text-right">{numberFormat(totalCgst)}</td>
                                 <td className="p-2 text-right">{numberFormat(totalSgst)}</td>
                                 <td className="p-2 text-right">₹{numberFormat(totalAmountBeforeRounding)}</td>
@@ -375,6 +399,12 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                 
                 <section className="grid grid-cols-2 gap-8 mt-8">
                     <div className="pt-4">
+                         {/* Amount in Words */}
+                        <div className="mb-8">
+                            <p className="text-sm font-semibold text-gray-700">Amount in Words:</p>
+                            <p className="text-sm italic font-medium text-gray-900">{numberToWords(Math.round(totalAmountBeforeRounding))}</p>
+                        </div>
+
                          <div className="text-xs text-gray-500 space-y-1 mb-8">
                             <p className="font-bold text-gray-700 mb-2">Authorized Signature</p>
                             <div className="h-16 border-b border-gray-300 w-48"></div>
