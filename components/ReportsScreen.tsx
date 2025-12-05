@@ -55,10 +55,9 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
         let uniqueDays = new Set<string>();
 
         reportData.forEach(rec => {
-            // Strict Calculation: A day is counted only if BOTH shifts are valid (Present or Holiday).
-            // If either shift is Absent or Leave, the day is not counted (0).
-            const isMorningValid = rec.morningStatus === 'Present' || rec.morningStatus === 'Holiday';
-            const isEveningValid = rec.eveningStatus === 'Present' || rec.eveningStatus === 'Holiday';
+            // Strict Calculation: A day is counted only if BOTH shifts are explicitly 'Present'.
+            const isMorningValid = rec.morningStatus === 'Present';
+            const isEveningValid = rec.eveningStatus === 'Present';
 
             if (isMorningValid && isEveningValid) {
                 totalDaysWorked += 1;
@@ -78,11 +77,42 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
         };
     }, [reportData]);
 
+    const getEmployeeName = (id: string) => employees.find(e => e.id === id)?.name || 'Unknown';
+
+    // Calculate per-employee summaries for the "All Employees" view
+    const employeeSummaries = useMemo(() => {
+        if (selectedEmployeeId !== 'all') return [];
+
+        const summaries: Record<string, { name: string, workingDays: number, ot: number, meters: number }> = {};
+
+        // Iterate through all filtered data (which is already filtered by date)
+        reportData.forEach(rec => {
+            if (!summaries[rec.employee_id]) {
+                summaries[rec.employee_id] = {
+                    name: getEmployeeName(rec.employee_id),
+                    workingDays: 0,
+                    ot: 0,
+                    meters: 0
+                };
+            }
+
+            const isMorningPresent = rec.morningStatus === 'Present';
+            const isEveningPresent = rec.eveningStatus === 'Present';
+
+            if (isMorningPresent && isEveningPresent) {
+                summaries[rec.employee_id].workingDays += 1;
+            }
+
+            summaries[rec.employee_id].ot += (rec.morningOvertimeHours || 0) + (rec.eveningOvertimeHours || 0);
+            summaries[rec.employee_id].meters += (rec.metersProduced || 0);
+        });
+
+        return Object.values(summaries).sort((a, b) => a.name.localeCompare(b.name));
+    }, [reportData, employees, selectedEmployeeId]);
+
     const handlePrint = () => {
         window.print();
     };
-
-    const getEmployeeName = (id: string) => employees.find(e => e.id === id)?.name || 'Unknown';
 
     return (
         <div className="space-y-6">
@@ -198,52 +228,90 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                     </div>
                 </div>
 
-                {/* Detailed Table */}
+                {/* Report Table */}
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left border-collapse">
-                        <thead className="text-xs text-secondary-700 uppercase bg-secondary-100">
-                            <tr>
-                                <th className="px-4 py-3 border border-secondary-200">Date</th>
-                                <th className="px-4 py-3 border border-secondary-200">Employee</th>
-                                <th className="px-4 py-3 border border-secondary-200 text-center">Morning</th>
-                                <th className="px-4 py-3 border border-secondary-200 text-center">Evening</th>
-                                <th className="px-4 py-3 border border-secondary-200 text-right">OT (Hrs)</th>
-                                <th className="px-4 py-3 border border-secondary-200 text-right">Meters</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {reportData.map((record, index) => {
-                                const isSunday = new Date(record.date).getDay() === 0;
-                                return (
-                                    <tr key={index} className={`border-b border-secondary-200 hover:bg-secondary-50 ${isSunday ? 'bg-secondary-50' : ''}`}>
-                                        <td className="px-4 py-2 border border-secondary-200 whitespace-nowrap">{formatDateForDisplay(record.date)}</td>
-                                        <td className="px-4 py-2 border border-secondary-200 font-medium text-secondary-900">{getEmployeeName(record.employee_id)}</td>
-                                        <td className={`px-4 py-2 border border-secondary-200 text-center ${record.morningStatus === 'Absent' ? 'text-red-600 font-medium' : ''}`}>{record.morningStatus}</td>
-                                        <td className={`px-4 py-2 border border-secondary-200 text-center ${record.eveningStatus === 'Absent' ? 'text-red-600 font-medium' : ''}`}>{record.eveningStatus}</td>
-                                        <td className="px-4 py-2 border border-secondary-200 text-right">{(record.morningOvertimeHours || 0) + (record.eveningOvertimeHours || 0)}</td>
-                                        <td className="px-4 py-2 border border-secondary-200 text-right font-medium">{record.metersProduced}</td>
+                    {selectedEmployeeId === 'all' ? (
+                        // Summary Table for All Employees
+                        <table className="w-full text-sm text-left border-collapse">
+                            <thead className="text-xs text-secondary-700 uppercase bg-secondary-100">
+                                <tr>
+                                    <th className="px-4 py-3 border border-secondary-200">Employee Name</th>
+                                    <th className="px-4 py-3 border border-secondary-200 text-right">Total Working Days</th>
+                                    <th className="px-4 py-3 border border-secondary-200 text-right">Total Meters Produced</th>
+                                    <th className="px-4 py-3 border border-secondary-200 text-right">Total Overtime Hours</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {employeeSummaries.map((summary, index) => (
+                                    <tr key={index} className="border-b border-secondary-200 hover:bg-secondary-50">
+                                        <td className="px-4 py-2 border border-secondary-200 font-medium text-secondary-900">{summary.name}</td>
+                                        <td className="px-4 py-2 border border-secondary-200 text-right">{summary.workingDays}</td>
+                                        <td className="px-4 py-2 border border-secondary-200 text-right">{summary.meters.toFixed(2)}</td>
+                                        <td className="px-4 py-2 border border-secondary-200 text-right">{summary.ot}</td>
                                     </tr>
-                                )
-                            })}
-                            {reportData.length === 0 && (
-                                <tr>
-                                    <td colSpan={6} className="px-4 py-8 text-center text-secondary-500 border border-secondary-200">
-                                        No records found for the selected criteria.
-                                    </td>
-                                </tr>
+                                ))}
+                                {employeeSummaries.length === 0 && (
+                                    <tr><td colSpan={4} className="px-4 py-8 text-center text-secondary-500 border border-secondary-200">No records found.</td></tr>
+                                )}
+                            </tbody>
+                            {employeeSummaries.length > 0 && (
+                                <tfoot className="bg-secondary-50 font-bold">
+                                    <tr>
+                                        <td className="px-4 py-3 border border-secondary-200 text-right">Total:</td>
+                                        <td className="px-4 py-3 border border-secondary-200 text-right">{summary.totalDaysWorked}</td>
+                                        <td className="px-4 py-3 border border-secondary-200 text-right">{summary.totalMeters.toFixed(2)}</td>
+                                        <td className="px-4 py-3 border border-secondary-200 text-right">{summary.totalOvertime}</td>
+                                    </tr>
+                                </tfoot>
                             )}
-                        </tbody>
-                        {reportData.length > 0 && (
-                            <tfoot className="bg-secondary-50 font-bold">
+                        </table>
+                    ) : (
+                        // Detailed Table for Single Employee
+                        <table className="w-full text-sm text-left border-collapse">
+                            <thead className="text-xs text-secondary-700 uppercase bg-secondary-100">
                                 <tr>
-                                    <td colSpan={2} className="px-4 py-3 border border-secondary-200 text-right">Total:</td>
-                                    <td colSpan={2} className="px-4 py-3 border border-secondary-200 text-center">{summary.totalDaysWorked} Days</td>
-                                    <td className="px-4 py-3 border border-secondary-200 text-right">{summary.totalOvertime}</td>
-                                    <td className="px-4 py-3 border border-secondary-200 text-right">{summary.totalMeters.toFixed(2)}</td>
+                                    <th className="px-4 py-3 border border-secondary-200">Date</th>
+                                    <th className="px-4 py-3 border border-secondary-200">Employee</th>
+                                    <th className="px-4 py-3 border border-secondary-200 text-center">Morning</th>
+                                    <th className="px-4 py-3 border border-secondary-200 text-center">Evening</th>
+                                    <th className="px-4 py-3 border border-secondary-200 text-right">OT (Hrs)</th>
+                                    <th className="px-4 py-3 border border-secondary-200 text-right">Meters</th>
                                 </tr>
-                            </tfoot>
-                        )}
-                    </table>
+                            </thead>
+                            <tbody>
+                                {reportData.map((record, index) => {
+                                    const isSunday = new Date(record.date).getDay() === 0;
+                                    return (
+                                        <tr key={index} className={`border-b border-secondary-200 hover:bg-secondary-50 ${isSunday ? 'bg-secondary-50' : ''}`}>
+                                            <td className="px-4 py-2 border border-secondary-200 whitespace-nowrap">{formatDateForDisplay(record.date)}</td>
+                                            <td className="px-4 py-2 border border-secondary-200 font-medium text-secondary-900">{getEmployeeName(record.employee_id)}</td>
+                                            <td className={`px-4 py-2 border border-secondary-200 text-center ${record.morningStatus === 'Absent' ? 'text-red-600 font-medium' : ''}`}>{record.morningStatus}</td>
+                                            <td className={`px-4 py-2 border border-secondary-200 text-center ${record.eveningStatus === 'Absent' ? 'text-red-600 font-medium' : ''}`}>{record.eveningStatus}</td>
+                                            <td className="px-4 py-2 border border-secondary-200 text-right">{(record.morningOvertimeHours || 0) + (record.eveningOvertimeHours || 0)}</td>
+                                            <td className="px-4 py-2 border border-secondary-200 text-right font-medium">{record.metersProduced}</td>
+                                        </tr>
+                                    )
+                                })}
+                                {reportData.length === 0 && (
+                                    <tr>
+                                        <td colSpan={6} className="px-4 py-8 text-center text-secondary-500 border border-secondary-200">
+                                            No records found for the selected criteria.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                            {reportData.length > 0 && (
+                                <tfoot className="bg-secondary-50 font-bold">
+                                    <tr>
+                                        <td colSpan={2} className="px-4 py-3 border border-secondary-200 text-right">Total:</td>
+                                        <td colSpan={2} className="px-4 py-3 border border-secondary-200 text-center">{summary.totalDaysWorked} Days</td>
+                                        <td className="px-4 py-3 border border-secondary-200 text-right">{summary.totalOvertime}</td>
+                                        <td className="px-4 py-3 border border-secondary-200 text-right">{summary.totalMeters.toFixed(2)}</td>
+                                    </tr>
+                                </tfoot>
+                            )}
+                        </table>
+                    )}
                 </div>
             </div>
         </div>
