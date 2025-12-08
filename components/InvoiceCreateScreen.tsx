@@ -119,7 +119,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
             let groupIdentifier = processName;
             if (invoiceType === 'design') {
                 // If grouping by design, use design number. Fallback if empty.
-                const designPart = challan.designNo ? `Design: ${challan.designNo}` : 'Design: N/A';
+                const designPart = challan.designNo ? `${challan.designNo}` : 'N/A';
                 // Append process name as requested to display both
                 groupIdentifier = `${designPart} - ${processName}`;
             }
@@ -218,7 +218,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
         const newErrors: { [key: string]: string } = {};
         if (!invoiceDate) newErrors.date = 'Invoice date is required.';
         if (lineItems.length === 0) newErrors.items = 'At least one item is required for the invoice.';
-        lineItems.forEach(item => { if (item.rate <= 0) newErrors[`rate_${item.id}`] = 'Rate must be positive.'; });
+        lineItems.forEach(item => { if (item.rate < 0) newErrors[`rate_${item.id}`] = 'Rate cannot be negative.'; });
         if (invoiceNumberConfig.mode === 'manual' && !invoiceNumber.trim()) {
             newErrors.invoiceNumber = 'Invoice Number is required.';
         }
@@ -227,24 +227,32 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
     };
 
     const handleSaveAndPrint = () => {
-        if (!validate()) return;
+        if (!validate()) {
+            alert('Please check the form for errors. Ensure all required fields are filled and rates are valid.');
+            return;
+        }
         
-        // Trigger print dialog for the current view
-        window.print();
+        try {
+            // Trigger print dialog for the current view
+            window.print();
 
-        // Then proceed to save
-        onSave({ 
-            invoiceNumber, 
-            invoiceDate, 
-            clientName: client.name, 
-            items: lineItems, 
-            subTotal, 
-            totalCgst, 
-            totalSgst, 
-            totalTaxAmount, 
-            roundedOff, 
-            totalAmount: roundedTotal 
-        });
+            // Then proceed to save
+            onSave({ 
+                invoiceNumber, 
+                invoiceDate, 
+                clientName: client.name, 
+                items: lineItems, 
+                subTotal, 
+                totalCgst, 
+                totalSgst, 
+                totalTaxAmount, 
+                roundedOff, 
+                totalAmount: roundedTotal 
+            });
+        } catch (error) {
+            console.error("Error during save and print:", error);
+            alert("An error occurred while saving.");
+        }
     };
     
     const handlePrintDraft = () => {
