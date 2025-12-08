@@ -45,6 +45,7 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
     const [fromDate, setFromDate] = useState<string>('');
     const [toDate, setToDate] = useState<string>('');
     const [invoiceType, setInvoiceType] = useState<'process' | 'design'>('process');
+    const [taxType, setTaxType] = useState<'GST' | 'NGST'>('GST');
 
     const [isFromDatePickerOpen, setFromDatePickerOpen] = useState(false);
     const [isToDatePickerOpen, setToDatePickerOpen] = useState(false);
@@ -59,7 +60,7 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
     const [selectedChallanIds, setSelectedChallanIds] = useState<Set<string>>(new Set());
     const [hasSearched, setHasSearched] = useState(false);
     
-    const [creationData, setCreationData] = useState<{ client: Client, challans: DeliveryChallan[], invoiceType: 'process' | 'design' } | null>(null);
+    const [creationData, setCreationData] = useState<{ client: Client, challans: DeliveryChallan[], invoiceType: 'process' | 'design', taxType: 'GST' | 'NGST' } | null>(null);
     const [viewingInvoiceId, setViewingInvoiceId] = useState<string | null>(null);
     const [viewingStatementForClient, setViewingStatementForClient] = useState<Client | null>(null);
 
@@ -166,7 +167,7 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
             return;
         }
         const selected = deliveryChallans.filter(c => selectedChallanIds.has(c.id));
-        setCreationData({ client, challans: selected, invoiceType });
+        setCreationData({ client, challans: selected, invoiceType, taxType });
     };
 
     const handleCancelCreation = () => {
@@ -205,6 +206,7 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
             processTypes={processTypes}
             companyDetails={companyDetails}
             invoiceType={creationData.invoiceType}
+            taxType={creationData.taxType}
         />;
     }
 
@@ -215,33 +217,61 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
     return (
         <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="mb-4 flex flex-col md:flex-row justify-between md:items-center">
+                <div className="mb-4 flex flex-col md:flex-row justify-between md:items-center gap-4">
                     <h1 className="text-xl font-semibold text-gray-800">Select Challans for Invoice</h1>
                     
-                    <div className="flex items-center space-x-4 mt-2 md:mt-0">
-                        <span className="text-sm font-medium text-gray-700">Invoice Type:</span>
-                        <label className="inline-flex items-center cursor-pointer">
-                            <input 
-                                type="radio" 
-                                className="form-radio h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500" 
-                                name="invoiceType" 
-                                value="process" 
-                                checked={invoiceType === 'process'} 
-                                onChange={() => setInvoiceType('process')} 
-                            />
-                            <span className="ml-2 text-sm text-gray-700">Process Based</span>
-                        </label>
-                        <label className="inline-flex items-center cursor-pointer">
-                            <input 
-                                type="radio" 
-                                className="form-radio h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500" 
-                                name="invoiceType" 
-                                value="design" 
-                                checked={invoiceType === 'design'} 
-                                onChange={() => setInvoiceType('design')} 
-                            />
-                            <span className="ml-2 text-sm text-gray-700">Design Based</span>
-                        </label>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="flex items-center space-x-4">
+                            <span className="text-sm font-medium text-gray-700">Invoice Type:</span>
+                            <label className="inline-flex items-center cursor-pointer">
+                                <input 
+                                    type="radio" 
+                                    className="form-radio h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500" 
+                                    name="invoiceType" 
+                                    value="process" 
+                                    checked={invoiceType === 'process'} 
+                                    onChange={() => setInvoiceType('process')} 
+                                />
+                                <span className="ml-2 text-sm text-gray-700">Process Based</span>
+                            </label>
+                            <label className="inline-flex items-center cursor-pointer">
+                                <input 
+                                    type="radio" 
+                                    className="form-radio h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500" 
+                                    name="invoiceType" 
+                                    value="design" 
+                                    checked={invoiceType === 'design'} 
+                                    onChange={() => setInvoiceType('design')} 
+                                />
+                                <span className="ml-2 text-sm text-gray-700">Design Based</span>
+                            </label>
+                        </div>
+
+                        <div className="flex items-center space-x-4 border-l pl-4 border-gray-300">
+                            <span className="text-sm font-medium text-gray-700">Tax Type:</span>
+                            <label className="inline-flex items-center cursor-pointer">
+                                <input 
+                                    type="radio" 
+                                    className="form-radio h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500" 
+                                    name="taxType" 
+                                    value="GST" 
+                                    checked={taxType === 'GST'} 
+                                    onChange={() => setTaxType('GST')} 
+                                />
+                                <span className="ml-2 text-sm text-gray-700">GST</span>
+                            </label>
+                            <label className="inline-flex items-center cursor-pointer">
+                                <input 
+                                    type="radio" 
+                                    className="form-radio h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500" 
+                                    name="taxType" 
+                                    value="NGST" 
+                                    checked={taxType === 'NGST'} 
+                                    onChange={() => setTaxType('NGST')} 
+                                />
+                                <span className="ml-2 text-sm text-gray-700">NGST</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">

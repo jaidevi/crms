@@ -13,6 +13,7 @@ interface InvoiceCreateScreenProps {
     processTypes: ProcessType[];
     companyDetails: CompanyDetails;
     invoiceType?: 'process' | 'design';
+    taxType?: 'GST' | 'NGST';
 }
 
 const formatDateForDisplay = (isoDate: string) => {
@@ -50,7 +51,7 @@ const numberToWords = (num: number): string => {
 // Default Logo (Fallback)
 const VEL_LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTUwIj48cmVjdCB4PSI0NiIgeT0iMTAwIiB3aWR0aD0iOCIgaGVpZ2h0PSI1MCIgZmlsbD0iI2I0NTMwOSIgLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjE0OCIgcj0iNCIgZmlsbD0iI2I0NTMwOSIgLz48cGF0aCBkPSJNNDAgMTAwIFE1MCAxMTAgNjAgMTAwIiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNDIgMTA1IFE1MCAxMTUgNTggMTA1IiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNDQgMTEwIFE1MCAxMTggNTYgMTEwIiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNTAgNSBDIDg1IDQwIDg1IDgwIDUwIDEwMCBDIDE1IDgwIDE1IDQwIDUwIDUgWiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZjk3MzE2IiBzdHJva2Utd2lkdGg9IjQiIC8+PHBhdGggZD0iTTUwIDQ1IEMgNjUgNjAgNjUgODAgNTAgOTAgQyAzNSA4MCAzNSA2MCA1MCA0NSBaIiBmaWxsPSIjMWQ0ZWQ4IiAvPjxsaW5lIHgxPSIzNSIgeTE9IjI1IiB4Mj0iNjUiIHkyPSIyNSIgc3Ryb2tlPSIjOWNhM2FmIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgLz48bGluZSB4MT0iMzIiIHkxPSIzMiIgeDI9IjY4IiB5Mj0iMzIiIHN0cm9rZT0iIzljYTNhZiIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiIC8+PGxpbmUgeDE9IjM1IiB5MT0iMzkiIHgyPSI2NSIgeTI9IjM5IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiAvPjxjaXJjbGUgY3g9IjUwIiBjeT0iMzIiIHI9IjQiIGZpbGw9IiNkYzI2MjYiIC8+PC9zdmc+";
 
-const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onSave, client, challansToInvoice, invoiceNumberConfig, processTypes, companyDetails, invoiceType = 'process' }) => {
+const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onSave, client, challansToInvoice, invoiceNumberConfig, processTypes, companyDetails, invoiceType = 'process', taxType = 'GST' }) => {
     const [invoiceNumber, setInvoiceNumber] = useState('');
     const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
     const [isDatePickerOpen, setDatePickerOpen] = useState(false);
@@ -154,8 +155,11 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
             // Round off quantity to nearest integer
             const roundedMtr = Math.round(group.mtr);
             const subtotal = roundedMtr * group.rate;
-            const cgst = subtotal * 0.025;
-            const sgst = subtotal * 0.025;
+            
+            // Calculate taxes ONLY if Tax Type is GST
+            const cgst = taxType === 'GST' ? subtotal * 0.025 : 0;
+            const sgst = taxType === 'GST' ? subtotal * 0.025 : 0;
+            
             const amount = subtotal + cgst + sgst;
 
             return {
@@ -177,7 +181,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
         });
 
         setLineItems(initialLineItems);
-    }, [client, challansToInvoice, invoiceNumberConfig, processTypes, companyDetails, invoiceType]);
+    }, [client, challansToInvoice, invoiceNumberConfig, processTypes, companyDetails, invoiceType, taxType]);
 
     const handleItemChange = (itemId: string, field: 'rate' | 'mtr' | 'hsnSac', value: string | number) => {
         setLineItems(prevItems =>
@@ -191,8 +195,11 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                     }
 
                     const subtotal = updatedItem.mtr * updatedItem.rate;
-                    const cgst = subtotal * 0.025;
-                    const sgst = subtotal * 0.025;
+                    
+                    // Recalculate taxes based on current Tax Type
+                    const cgst = taxType === 'GST' ? subtotal * 0.025 : 0;
+                    const sgst = taxType === 'GST' ? subtotal * 0.025 : 0;
+                    
                     updatedItem.subtotal = subtotal;
                     updatedItem.cgst = cgst;
                     updatedItem.sgst = sgst;
@@ -270,9 +277,11 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
 
     const { prefix: displayPrefix, number: displayNumber } = getInvoiceNumberParts(invoiceNumber);
 
-    // Removed border-b to remove line under input
     const editableInputClasses = "w-full text-right bg-transparent focus:border-blue-500 focus:outline-none focus:ring-0 p-1";
     
+    // Conditionally show tax columns based on taxType
+    const showTax = taxType === 'GST';
+
     return (
         <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 lg:p-8">
             {/* Top Toolbar - Hidden in Print */}
@@ -296,7 +305,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                              <img src={companyDetails.logoUrl || VEL_LOGO_URL} alt="Company Logo" className="w-full h-full object-contain" />
                         </div>
                         <div>
-                            <h2 className="text-[18px] text-xl font-extrabold text-blue-700">{companyDetails.name}</h2>
+                            <h2 className="text-xl font-extrabold text-blue-700">{companyDetails.name}</h2>
                             <p className="text-gray-600 whitespace-pre-line">{companyDetails.addressLine1}</p>
                             <p className="text-gray-600 whitespace-pre-line">{companyDetails.addressLine2}</p>
                             <p className="text-gray-600 mt-2"><span role="img" aria-label="phone">☎️</span> {companyDetails.phone}</p>
@@ -365,9 +374,10 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                                 <th className="py-1 px-2 font-bold">Product/Service Name</th>
                                 <th className="py-1 px-2 w-24 text-right font-bold">Qty</th>
                                 <th className="py-1 px-2 w-28 text-right font-bold">Unit Price</th>
-                                <th className="py-1 px-2 w-28 text-right font-bold">Taxable Value</th>
-                                <th className="py-1 px-2 w-24 text-right font-bold">CGST (2.5%)</th>
-                                <th className="py-1 px-2 w-24 text-right font-bold">SGST (2.5%)</th>
+                                {/* Conditionally Render Tax Headers */}
+                                {showTax && <th className="py-1 px-2 w-28 text-right font-bold">Taxable Value</th>}
+                                {showTax && <th className="py-1 px-2 w-24 text-right font-bold">CGST (2.5%)</th>}
+                                {showTax && <th className="py-1 px-2 w-24 text-right font-bold">SGST (2.5%)</th>}
                                 <th className="py-1 px-2 w-32 text-right font-bold">Amount</th>
                             </tr>
                         </thead>
@@ -384,9 +394,10 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                                         <input type="number" value={item.rate} onChange={e => handleItemChange(item.id, 'rate', Number(e.target.value))} className={`${editableInputClasses} no-print ${errors[`rate_${item.id}`] ? 'border-red-500' : ''}`} />
                                         <span className="hidden print:inline">{numberFormat(item.rate)}</span>
                                     </td>
-                                    <td className="p-2 text-right">{numberFormat(item.subtotal)}</td>
-                                    <td className="p-2 text-right">{numberFormat(item.cgst)}</td>
-                                    <td className="p-2 text-right">{numberFormat(item.sgst)}</td>
+                                    {/* Conditionally Render Tax Columns */}
+                                    {showTax && <td className="p-2 text-right">{numberFormat(item.subtotal)}</td>}
+                                    {showTax && <td className="p-2 text-right">{numberFormat(item.cgst)}</td>}
+                                    {showTax && <td className="p-2 text-right">{numberFormat(item.sgst)}</td>}
                                     <td className="p-2 text-right font-semibold text-gray-900">₹{numberFormat(item.amount)}</td>
                                 </tr>
                             ))}
@@ -396,9 +407,9 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                                 <td colSpan={2} className="p-2 text-right">Total</td>
                                 <td className="p-2 text-right">{numberFormat(totalQty, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
                                 <td className="p-2"></td>
-                                <td className="p-2 text-right">{numberFormat(subTotal)}</td>
-                                <td className="p-2 text-right">{numberFormat(totalCgst)}</td>
-                                <td className="p-2 text-right">{numberFormat(totalSgst)}</td>
+                                {showTax && <td className="p-2 text-right">{numberFormat(subTotal)}</td>}
+                                {showTax && <td className="p-2 text-right">{numberFormat(totalCgst)}</td>}
+                                {showTax && <td className="p-2 text-right">{numberFormat(totalSgst)}</td>}
                                 <td className="p-2 text-right">₹{numberFormat(totalAmountBeforeRounding)}</td>
                             </tr>
                         </tfoot>
@@ -436,13 +447,27 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({ onCancel, onS
                     <div className="text-right flex flex-col justify-end">
                     <table className="w-full text-right">
                         <tbody className="text-gray-700">
+                            {showTax && (
+                                <>
+                                    <tr>
+                                        <td className="py-1.5 pr-4 text-gray-600">Total Before Tax</td>
+                                        <td className="py-1.5 font-medium">₹{numberFormat(subTotal)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-1.5 pr-4 text-gray-600">Total Tax Amount</td>
+                                        <td className="py-1.5 font-medium">₹{numberFormat(totalTaxAmount)}</td>
+                                    </tr>
+                                </>
+                            )}
+                            {!showTax && (
+                                <tr>
+                                    <td className="py-1.5 pr-4 text-gray-600">Total Before Tax</td>
+                                    <td className="py-1.5 font-medium">₹{numberFormat(subTotal)}</td>
+                                </tr>
+                            )}
                             <tr>
-                                <td className="py-1.5 pr-4 text-gray-600">Total Before Tax</td>
-                                <td className="py-1.5 font-medium">₹{numberFormat(subTotal)}</td>
-                            </tr>
-                            <tr>
-                                <td className="py-1.5 pr-4 text-gray-600">Total Tax Amount</td>
-                                <td className="py-1.5 font-medium">₹{numberFormat(totalTaxAmount)}</td>
+                                <td className="py-1 text-gray-600 pr-4">Rounded Off</td>
+                                <td className="py-1 font-medium">{roundedOff > 0 ? '+' : ''}{roundedOff.toFixed(2)}</td>
                             </tr>
                             <tr className="text-base font-bold text-gray-900 border-t border-gray-200">
                                 <td className="py-2 pr-4">Total Amount</td>

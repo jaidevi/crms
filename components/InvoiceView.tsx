@@ -70,6 +70,9 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
     
     const { prefix, number } = getInvoiceNumberParts(invoice.invoiceNumber);
 
+    // Determine if we should show tax details (assume GST if tax amount > 0)
+    const showTax = invoice.totalTaxAmount > 0;
+
     return (
         <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 lg:p-8">
             <div className="flex justify-between items-center mb-6 no-print">
@@ -97,7 +100,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                              <img src={companyDetails.logoUrl || VEL_LOGO_URL} alt="Company Logo" className="w-full h-full object-contain" />
                         </div>
                         <div>
-                            <h2 className="text-[30px] text-xl font-extrabold text-blue-700 mb-1">{companyDetails.name}</h2>
+                            <h2 className="text-xl font-extrabold text-blue-700 mb-1">{companyDetails.name}</h2>
                             <p className="text-gray-700 text-sm whitespace-pre-line">{companyDetails.addressLine1}</p>
                             <p className="text-gray-700 text-sm whitespace-pre-line">{companyDetails.addressLine2}</p>
                             <div className="flex items-center text-sm text-gray-700 mt-2">
@@ -151,9 +154,10 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                                <th className="py-2 px-2 text-left font-bold">PRODUCT/SERVICE NAME</th>
                                <th className="py-2 px-2 text-center w-20 font-bold">QTY</th>
                                <th className="py-2 px-2 text-right w-24 font-bold">UNIT PRICE</th>
-                               <th className="py-2 px-2 text-right w-28 font-bold">TAXABLE VALUE</th>
-                               <th className="py-2 px-2 text-right w-24 font-bold">CGST (2.5%)</th>
-                               <th className="py-2 px-2 text-right w-24 font-bold">SGST (2.5%)</th>
+                               {/* Conditionally Render Tax Headers */}
+                               {showTax && <th className="py-2 px-2 text-right w-28 font-bold">TAXABLE VALUE</th>}
+                               {showTax && <th className="py-2 px-2 text-right w-24 font-bold">CGST (2.5%)</th>}
+                               {showTax && <th className="py-2 px-2 text-right w-24 font-bold">SGST (2.5%)</th>}
                                <th className="py-2 px-2 text-right w-28 font-bold">AMOUNT</th>
                             </tr>
                          </thead>
@@ -164,9 +168,9 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                                     <td className="py-3 px-2 font-semibold">{item.process}</td>
                                     <td className="py-3 px-2 text-center">{numberFormat(item.mtr, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
                                     <td className="py-3 px-2 text-right">{numberFormat(item.rate)}</td>
-                                    <td className="py-3 px-2 text-right">{numberFormat(item.subtotal)}</td>
-                                    <td className="py-3 px-2 text-right">{numberFormat(item.cgst)}</td>
-                                    <td className="py-3 px-2 text-right">{numberFormat(item.sgst)}</td>
+                                    {showTax && <td className="py-3 px-2 text-right">{numberFormat(item.subtotal)}</td>}
+                                    {showTax && <td className="py-3 px-2 text-right">{numberFormat(item.cgst)}</td>}
+                                    {showTax && <td className="py-3 px-2 text-right">{numberFormat(item.sgst)}</td>}
                                     <td className="py-3 px-2 text-right font-bold">₹{numberFormat(item.amount)}</td>
                                 </tr>
                             ))}
@@ -176,9 +180,9 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                                  <td colSpan={2} className="py-2 px-2 text-right">Total</td>
                                  <td className="py-2 px-2 text-center">{numberFormat(totalQty, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
                                  <td className="py-2 px-2"></td>
-                                 <td className="py-2 px-2 text-right">{numberFormat(invoice.subTotal)}</td>
-                                 <td className="py-2 px-2 text-right">{numberFormat(invoice.totalCgst)}</td>
-                                 <td className="py-2 px-2 text-right">{numberFormat(invoice.totalSgst)}</td>
+                                 {showTax && <td className="py-2 px-2 text-right">{numberFormat(invoice.subTotal)}</td>}
+                                 {showTax && <td className="py-2 px-2 text-right">{numberFormat(invoice.totalCgst)}</td>}
+                                 {showTax && <td className="py-2 px-2 text-right">{numberFormat(invoice.totalSgst)}</td>}
                                  <td className="py-2 px-2 text-right">₹{numberFormat(invoice.totalAmount - invoice.roundedOff)}</td>
                              </tr>
                          </tfoot>
@@ -222,14 +226,24 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                      <div>
                         <table className="w-full text-right text-sm">
                             <tbody>
-                                <tr>
-                                   <td className="py-1 text-gray-600 pr-4">Total Before Tax</td>
-                                   <td className="py-1 font-medium">₹{numberFormat(invoice.subTotal)}</td>
-                                </tr>
-                                <tr>
-                                   <td className="py-1 text-gray-600 pr-4">Total Tax Amount</td>
-                                   <td className="py-1 font-medium">₹{numberFormat(invoice.totalTaxAmount)}</td>
-                                </tr>
+                                {showTax && (
+                                    <>
+                                        <tr>
+                                           <td className="py-1 text-gray-600 pr-4">Total Before Tax</td>
+                                           <td className="py-1 font-medium">₹{numberFormat(invoice.subTotal)}</td>
+                                        </tr>
+                                        <tr>
+                                           <td className="py-1 text-gray-600 pr-4">Total Tax Amount</td>
+                                           <td className="py-1 font-medium">₹{numberFormat(invoice.totalTaxAmount)}</td>
+                                        </tr>
+                                    </>
+                                )}
+                                {!showTax && (
+                                    <tr>
+                                       <td className="py-1 text-gray-600 pr-4">Total Before Tax</td>
+                                       <td className="py-1 font-medium">₹{numberFormat(invoice.subTotal)}</td>
+                                    </tr>
+                                )}
                                 <tr>
                                    <td className="py-1 text-gray-600 pr-4">Rounded Off</td>
                                    <td className="py-1 font-medium">{invoice.roundedOff > 0 ? '+' : ''}{invoice.roundedOff.toFixed(2)}</td>
