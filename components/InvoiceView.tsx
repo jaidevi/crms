@@ -97,7 +97,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                              <img src={companyDetails.logoUrl || VEL_LOGO_URL} alt="Company Logo" className="w-full h-full object-contain" />
                         </div>
                         <div>
-                            <h2 className="text-[10px] text-xl font-extrabold text-blue-700 mb-1">{companyDetails.name}</h2>
+                            <h2 className="text-[30px] text-xl font-extrabold text-blue-700 mb-1">{companyDetails.name}</h2>
                             <p className="text-gray-700 text-sm whitespace-pre-line">{companyDetails.addressLine1}</p>
                             <p className="text-gray-700 text-sm whitespace-pre-line">{companyDetails.addressLine2}</p>
                             <div className="flex items-center text-sm text-gray-700 mt-2">
