@@ -15,12 +15,14 @@ const BLANK_EMPLOYEE: Omit<Employee, 'id'> = {
     designation: '',
     phone: '',
     dailyWage: 0,
+    monthlyWage: 0,
     ratePerMeter: 0,
 };
 
 const EmployeeModal: React.FC<EmployeeModalProps> = ({ onClose, onSave, existingEmployees, employeeToEdit }) => {
     const [employee, setEmployee] = useState(BLANK_EMPLOYEE);
     const [dailyWageInput, setDailyWageInput] = useState('0');
+    const [monthlyWageInput, setMonthlyWageInput] = useState('0');
     const [ratePerMeterInput, setRatePerMeterInput] = useState('0');
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
@@ -28,10 +30,12 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ onClose, onSave, existing
         if (employeeToEdit) {
             setEmployee(employeeToEdit);
             setDailyWageInput(String(employeeToEdit.dailyWage || '0'));
+            setMonthlyWageInput(String(employeeToEdit.monthlyWage || '0'));
             setRatePerMeterInput(String(employeeToEdit.ratePerMeter || '0'));
         } else {
             setEmployee(BLANK_EMPLOYEE);
             setDailyWageInput(String(BLANK_EMPLOYEE.dailyWage));
+            setMonthlyWageInput(String(BLANK_EMPLOYEE.monthlyWage));
             setRatePerMeterInput(String(BLANK_EMPLOYEE.ratePerMeter));
         }
     }, [employeeToEdit]);
@@ -44,11 +48,13 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ onClose, onSave, existing
         }
     };
 
-    const handleNumericChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'dailyWage' | 'ratePerMeter') => {
+    const handleNumericChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'dailyWage' | 'ratePerMeter' | 'monthlyWage') => {
         const { value } = e.target;
         if (value === '' || /^\d*\.?\d*$/.test(value)) {
             if (field === 'dailyWage') {
                 setDailyWageInput(value);
+            } else if (field === 'monthlyWage') {
+                setMonthlyWageInput(value);
             } else {
                 setRatePerMeterInput(value);
             }
@@ -81,6 +87,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ onClose, onSave, existing
             ...employee, 
             name: trimmedName,
             dailyWage: Number(employee.dailyWage) || 0,
+            monthlyWage: Number(employee.monthlyWage) || 0,
             ratePerMeter: Number(employee.ratePerMeter) || 0,
         });
     };
@@ -129,10 +136,14 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ onClose, onSave, existing
                     
                     <fieldset className="border border-gray-200 rounded-lg p-4">
                         <legend className="text-base font-semibold text-gray-900 px-2">Compensation</legend>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
                             <div>
                                 <label htmlFor="dailyWage" className="block text-sm font-medium text-gray-700 mb-1">Daily Wage</label>
                                 <input id="dailyWage" name="dailyWage" type="number" min="0" value={dailyWageInput} onChange={(e) => handleNumericChange(e, 'dailyWage')} className={commonInputClasses} placeholder="e.g., 500" />
+                            </div>
+                            <div>
+                                <label htmlFor="monthlyWage" className="block text-sm font-medium text-gray-700 mb-1">Monthly Wage</label>
+                                <input id="monthlyWage" name="monthlyWage" type="number" min="0" value={monthlyWageInput} onChange={(e) => handleNumericChange(e, 'monthlyWage')} className={commonInputClasses} placeholder="e.g., 15000" />
                             </div>
                             <div>
                                 <label htmlFor="ratePerMeter" className="block text-sm font-medium text-gray-700 mb-1">Rate per Meter</label>

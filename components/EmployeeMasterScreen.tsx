@@ -125,6 +125,7 @@ const EmployeeMasterScreen: React.FC<EmployeeMasterScreenProps> = ({ employees, 
                 <th scope="col" className="px-6 py-3">Designation</th>
                 <th scope="col" className="px-6 py-3">Phone</th>
                 <th scope="col" className="px-6 py-3 text-right">Daily Wage</th>
+                <th scope="col" className="px-6 py-3 text-right">Monthly Wage</th>
                 <th scope="col" className="px-6 py-3 text-right">Rate per Meter</th>
                 <th scope="col" className="px-6 py-3 text-center">Actions</th>
               </tr>
@@ -138,6 +139,7 @@ const EmployeeMasterScreen: React.FC<EmployeeMasterScreenProps> = ({ employees, 
                   <td className="px-6 py-4">{employee.designation || '-'}</td>
                   <td className="px-6 py-4">{employee.phone || '-'}</td>
                   <td className="px-6 py-4 text-right font-medium">₹{employee.dailyWage.toFixed(2)}</td>
+                  <td className="px-6 py-4 text-right font-medium">₹{(employee.monthlyWage || 0).toFixed(2)}</td>
                   <td className="px-6 py-4 text-right font-medium">₹{(employee.ratePerMeter || 0).toFixed(2)}</td>
                   <td className="px-6 py-4 text-center">
                      <div className="flex items-center justify-center gap-4">

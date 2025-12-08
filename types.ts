@@ -63,6 +63,7 @@ export interface Employee {
   designation: string;
   phone: string;
   dailyWage: number;
+  monthlyWage?: number;
   ratePerMeter: number;
 }
 

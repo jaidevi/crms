@@ -130,6 +130,7 @@ const App: React.FC = () => {
         designation: d.designation,
         phone: d.phone,
         dailyWage: d.daily_wage || 0,
+        monthlyWage: d.monthly_wage || 0,
         ratePerMeter: d.rate_per_meter || 0
     })));
 
@@ -234,8 +235,8 @@ const App: React.FC = () => {
             challanDate: i.challan_date,
             process: i.process,
             description: i.description,
-            designNo: i.design_no,
-            hsnSac: i.hsn_sac,
+            design_no: i.design_no,
+            hsn_sac: i.hsn_sac,
             pcs: i.pcs || 0,
             mtr: i.mtr || 0,
             rate: i.rate || 0,
@@ -551,6 +552,7 @@ const App: React.FC = () => {
               designation: newEmployee.designation,
               phone: newEmployee.phone,
               daily_wage: newEmployee.dailyWage,
+              monthly_wage: newEmployee.monthlyWage,
               rate_per_meter: newEmployee.ratePerMeter
           }]).select().single();
 
@@ -576,6 +578,7 @@ const App: React.FC = () => {
               designation: updatedEmployee.designation,
               phone: updatedEmployee.phone,
               daily_wage: updatedEmployee.dailyWage,
+              monthly_wage: updatedEmployee.monthlyWage,
               rate_per_meter: updatedEmployee.ratePerMeter
           }).eq('id', id);
 

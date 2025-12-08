@@ -58,8 +58,19 @@ CREATE TABLE IF NOT EXISTS employees (
     designation TEXT,
     phone TEXT,
     daily_wage NUMERIC DEFAULT 0,
-     rate_per_meter NUMERIC DEFAULT 0
+    rate_per_meter NUMERIC DEFAULT 0,
+    monthly_wage NUMERIC DEFAULT 0
 );
+-- Safely add monthly_wage column if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'employees' AND column_name = 'monthly_wage'
+    ) THEN
+        ALTER TABLE employees ADD COLUMN monthly_wage NUMERIC DEFAULT 0;
+    END IF;
+END $$;
 ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public employees are viewable by everyone." ON employees FOR SELECT USING (true);
 CREATE POLICY "Users can insert their own employees." ON employees FOR INSERT WITH CHECK (true);
