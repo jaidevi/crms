@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import type { Employee, AttendanceRecord, EmployeeAdvance, CompanyDetails, Payslip } from '../types';
+import type { Employee, AttendanceRecord, EmployeeAdvance, CompanyDetails, AttendanceStatus } from '../types';
 import DatePicker from './DatePicker';
 import PayslipView from './PayslipView';
 import { CalendarIcon, SearchIcon } from './Icons';
@@ -9,7 +9,7 @@ interface PayslipGeneratorProps {
     employees: Employee[];
     attendanceRecords: AttendanceRecord[];
     advances: EmployeeAdvance[];
-    onSave: (payslip: Omit<Payslip, 'id'>) => Promise<void>;
+    onFinalizeSalary: (employeeId: string, deductionAmount: number) => Promise<void>;
     companyDetails: CompanyDetails;
 }
 
@@ -41,7 +41,7 @@ const formatDateForDisplay = (isoDate: string) => {
 };
 
 
-const PayslipGenerator: React.FC<PayslipGeneratorProps> = ({ employees, attendanceRecords, advances, onSave, companyDetails }) => {
+const PayslipGenerator: React.FC<PayslipGeneratorProps> = ({ employees, attendanceRecords, advances, onFinalizeSalary, companyDetails }) => {
     const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -139,18 +139,6 @@ const PayslipGenerator: React.FC<PayslipGeneratorProps> = ({ employees, attendan
         });
     };
 
-    const handleFinalizeWrapper = async (employeeId: string, deductionAmount: number) => {
-        if (payslipData && selectedEmployee) {
-            const fullPayslip: Omit<Payslip, 'id'> = {
-                ...payslipData,
-                employeeId: selectedEmployee.id,
-                employeeName: selectedEmployee.name,
-            };
-            await onSave(fullPayslip);
-            setPayslipData(null);
-        }
-    };
-
     if (payslipData && selectedEmployee) {
         return (
             <PayslipView
@@ -158,7 +146,7 @@ const PayslipGenerator: React.FC<PayslipGeneratorProps> = ({ employees, attendan
                 payslip={payslipData}
                 companyDetails={companyDetails}
                 onBack={() => setPayslipData(null)}
-                onFinalizeSalary={handleFinalizeWrapper}
+                onFinalizeSalary={onFinalizeSalary}
             />
         );
     }
