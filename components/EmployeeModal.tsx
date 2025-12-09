@@ -24,6 +24,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ onClose, onSave, existing
     const [dailyWageInput, setDailyWageInput] = useState('0');
     const [monthlyWageInput, setMonthlyWageInput] = useState('0');
     const [ratePerMeterInput, setRatePerMeterInput] = useState('0');
+    const [wageType, setWageType] = useState<'daily' | 'monthly'>('daily');
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
     useEffect(() => {
@@ -32,11 +33,18 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ onClose, onSave, existing
             setDailyWageInput(String(employeeToEdit.dailyWage || '0'));
             setMonthlyWageInput(String(employeeToEdit.monthlyWage || '0'));
             setRatePerMeterInput(String(employeeToEdit.ratePerMeter || '0'));
+            
+            if ((employeeToEdit.monthlyWage || 0) > 0) {
+                setWageType('monthly');
+            } else {
+                setWageType('daily');
+            }
         } else {
             setEmployee(BLANK_EMPLOYEE);
             setDailyWageInput(String(BLANK_EMPLOYEE.dailyWage));
             setMonthlyWageInput(String(BLANK_EMPLOYEE.monthlyWage));
             setRatePerMeterInput(String(BLANK_EMPLOYEE.ratePerMeter));
+            setWageType('daily');
         }
     }, [employeeToEdit]);
 
@@ -83,11 +91,15 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ onClose, onSave, existing
             return;
         }
         
+        // Prepare final object based on selected wage type
+        const finalDailyWage = wageType === 'daily' ? (Number(employee.dailyWage) || 0) : 0;
+        const finalMonthlyWage = wageType === 'monthly' ? (Number(employee.monthlyWage) || 0) : 0;
+
         onSave({ 
             ...employee, 
             name: trimmedName,
-            dailyWage: Number(employee.dailyWage) || 0,
-            monthlyWage: Number(employee.monthlyWage) || 0,
+            dailyWage: finalDailyWage,
+            monthlyWage: finalMonthlyWage,
             ratePerMeter: Number(employee.ratePerMeter) || 0,
         });
     };
@@ -136,15 +148,47 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ onClose, onSave, existing
                     
                     <fieldset className="border border-gray-200 rounded-lg p-4">
                         <legend className="text-base font-semibold text-gray-900 px-2">Compensation</legend>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
-                            <div>
-                                <label htmlFor="dailyWage" className="block text-sm font-medium text-gray-700 mb-1">Daily Wage</label>
-                                <input id="dailyWage" name="dailyWage" type="number" min="0" value={dailyWageInput} onChange={(e) => handleNumericChange(e, 'dailyWage')} className={commonInputClasses} placeholder="e.g., 500" />
+                        
+                        <div className="mb-4 pt-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Wage Type</label>
+                            <div className="flex items-center space-x-4">
+                                <label className="flex items-center cursor-pointer">
+                                    <input 
+                                        type="radio" 
+                                        name="wageType" 
+                                        value="daily" 
+                                        checked={wageType === 'daily'} 
+                                        onChange={() => setWageType('daily')}
+                                        className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                    />
+                                    <span className="ml-2 text-sm text-gray-700">Daily Wages</span>
+                                </label>
+                                <label className="flex items-center cursor-pointer">
+                                    <input 
+                                        type="radio" 
+                                        name="wageType" 
+                                        value="monthly" 
+                                        checked={wageType === 'monthly'} 
+                                        onChange={() => setWageType('monthly')}
+                                        className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                    />
+                                    <span className="ml-2 text-sm text-gray-700">Monthly Wages</span>
+                                </label>
                             </div>
-                            <div>
-                                <label htmlFor="monthlyWage" className="block text-sm font-medium text-gray-700 mb-1">Monthly Wage</label>
-                                <input id="monthlyWage" name="monthlyWage" type="number" min="0" value={monthlyWageInput} onChange={(e) => handleNumericChange(e, 'monthlyWage')} className={commonInputClasses} placeholder="e.g., 15000" />
-                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                            {wageType === 'daily' ? (
+                                <div>
+                                    <label htmlFor="dailyWage" className="block text-sm font-medium text-gray-700 mb-1">Daily Wage</label>
+                                    <input id="dailyWage" name="dailyWage" type="number" min="0" value={dailyWageInput} onChange={(e) => handleNumericChange(e, 'dailyWage')} className={commonInputClasses} placeholder="e.g., 500" />
+                                </div>
+                            ) : (
+                                <div>
+                                    <label htmlFor="monthlyWage" className="block text-sm font-medium text-gray-700 mb-1">Monthly Wage</label>
+                                    <input id="monthlyWage" name="monthlyWage" type="number" min="0" value={monthlyWageInput} onChange={(e) => handleNumericChange(e, 'monthlyWage')} className={commonInputClasses} placeholder="e.g., 15000" />
+                                </div>
+                            )}
                             <div>
                                 <label htmlFor="ratePerMeter" className="block text-sm font-medium text-gray-700 mb-1">Rate per Meter</label>
                                 <input id="ratePerMeter" name="ratePerMeter" type="number" min="0" step="0.01" value={ratePerMeterInput} onChange={(e) => handleNumericChange(e, 'ratePerMeter')} className={commonInputClasses} placeholder="e.g., 1.25" />
