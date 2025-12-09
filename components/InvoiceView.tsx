@@ -24,10 +24,12 @@ const numberFormat = (num: number, options?: Intl.NumberFormatOptions) => {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     };
-    return new Intl.NumberFormat('en-IN', { ...defaultOptions, ...options }).format(num);
+    return new Intl.NumberFormat('en-IN', { ...defaultOptions, ...options }).format(num || 0);
 };
 
 const numberToWords = (num: number): string => {
+    if (isNaN(num) || num === undefined || num === null) return 'Zero Rupees Only';
+
     const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
     const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
 

@@ -242,6 +242,16 @@ CREATE TABLE IF NOT EXISTS invoices (
     rounded_off NUMERIC,
     total_amount NUMERIC
 );
+-- Safely add tax_type column if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'invoices' AND column_name = 'tax_type'
+    ) THEN
+        ALTER TABLE invoices ADD COLUMN tax_type TEXT DEFAULT 'GST';
+    END IF;
+END $$;
 ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public invoices are viewable by everyone." ON invoices FOR SELECT USING (true);
 CREATE POLICY "Users can insert their own invoices." ON invoices FOR INSERT WITH CHECK (true);
