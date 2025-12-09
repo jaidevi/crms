@@ -14,6 +14,7 @@ interface InvoiceCreateScreenProps {
     companyDetails: CompanyDetails;
     invoiceType?: 'process' | 'design';
     taxType?: 'GST' | 'NGST';
+    invoiceToEdit?: Invoice | null;
 }
 
 const formatDateForDisplay = (isoDate: string) => {
@@ -60,7 +61,8 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({
     processTypes, 
     companyDetails, 
     invoiceType = 'process', 
-    taxType = 'GST'
+    taxType = 'GST',
+    invoiceToEdit
 }) => {
     const [invoiceNumber, setInvoiceNumber] = useState('');
     const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
@@ -69,115 +71,121 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
     useEffect(() => {
-        if (invoiceNumberConfig.mode === 'auto') {
-            const prefix = invoiceNumberConfig.prefix;
-            setInvoiceNumber(`${prefix}${invoiceNumberConfig.nextNumber}`);
+        if (invoiceToEdit) {
+            setInvoiceNumber(invoiceToEdit.invoiceNumber);
+            setInvoiceDate(invoiceToEdit.invoiceDate);
+            setLineItems(invoiceToEdit.items);
         } else {
-            setInvoiceNumber('');
-        }
-        
-        const sortedChallans = [...challansToInvoice].sort((a, b) => {
-            if (invoiceType === 'design') {
-                const designA = a.designNo || '';
-                const designB = b.designNo || '';
-                if (designA !== designB) return designA.localeCompare(designB);
+            if (invoiceNumberConfig.mode === 'auto') {
+                const prefix = invoiceNumberConfig.prefix;
+                setInvoiceNumber(`${prefix}${invoiceNumberConfig.nextNumber}`);
             } else {
-                const processA = a.process.join(', ');
-                const processB = b.process.join(', ');
-                if (processA !== processB) return processA.localeCompare(processB);
+                setInvoiceNumber('');
             }
-            return new Date(a.date).getTime() - new Date(b.date).getTime();
-        });
-
-        const groupedItemsMap = new Map<string, any>();
-        const normalize = (str: string) => str.trim().toLowerCase().replace(/^"/, '').replace(/"$/, '');
-
-        sortedChallans.forEach(challan => {
-            // Determine processes to use: splitProcess if available, else standard process list
-            const processList = (challan.splitProcess && challan.splitProcess.length > 0) 
-                ? challan.splitProcess 
-                : challan.process;
-
-            const processName = processList.join(', ');
-            let totalRate = 0;
             
-            const individualProcesses = processList
-                .flatMap(p => p.split(','))
-                .map(p => p.trim())
-                .filter(p => p !== '');
-
-            individualProcesses.forEach(procName => {
-                const normalizedProcName = normalize(procName);
-                const clientProcessRate = client.processes?.find(p => normalize(p.processName) === normalizedProcName);
-                
-                if (clientProcessRate) {
-                    totalRate += clientProcessRate.rate;
+            const sortedChallans = [...challansToInvoice].sort((a, b) => {
+                if (invoiceType === 'design') {
+                    const designA = a.designNo || '';
+                    const designB = b.designNo || '';
+                    if (designA !== designB) return designA.localeCompare(designB);
                 } else {
-                    const masterProcess = processTypes.find(p => normalize(p.name) === normalizedProcName);
-                    totalRate += (masterProcess?.rate || 0);
+                    const processA = a.process.join(', ');
+                    const processB = b.process.join(', ');
+                    if (processA !== processB) return processA.localeCompare(processB);
                 }
+                return new Date(a.date).getTime() - new Date(b.date).getTime();
             });
 
-            const hsnSac = companyDetails.hsnSac || '998821';
-            let groupIdentifier = processName;
-            if (invoiceType === 'design') {
-                const designPart = challan.designNo ? `${challan.designNo}` : 'N/A';
-                groupIdentifier = `${designPart} - ${processName}`;
-            }
+            const groupedItemsMap = new Map<string, any>();
+            const normalize = (str: string) => str.trim().toLowerCase().replace(/^"/, '').replace(/"$/, '');
 
-            // Group key includes rate to separate items if rates differ
-            const groupKey = `${groupIdentifier}|${totalRate}|${hsnSac}`;
+            sortedChallans.forEach(challan => {
+                // Determine processes to use: splitProcess if available, else standard process list
+                const processList = (challan.splitProcess && challan.splitProcess.length > 0) 
+                    ? challan.splitProcess 
+                    : challan.process;
 
-            if (!groupedItemsMap.has(groupKey)) {
-                groupedItemsMap.set(groupKey, {
-                    displayName: groupIdentifier,
-                    rate: totalRate,
-                    hsnSac: hsnSac,
-                    pcs: 0,
-                    mtr: 0,
-                    _challanIds: [],
-                    _challanNumbers: [],
-                    _challanDates: [],
-                    _designNos: new Set<string>()
+                const processName = processList.join(', ');
+                let totalRate = 0;
+                
+                const individualProcesses = processList
+                    .flatMap(p => p.split(','))
+                    .map(p => p.trim())
+                    .filter(p => p !== '');
+
+                individualProcesses.forEach(procName => {
+                    const normalizedProcName = normalize(procName);
+                    const clientProcessRate = client.processes?.find(p => normalize(p.processName) === normalizedProcName);
+                    
+                    if (clientProcessRate) {
+                        totalRate += clientProcessRate.rate;
+                    } else {
+                        const masterProcess = processTypes.find(p => normalize(p.name) === normalizedProcName);
+                        totalRate += (masterProcess?.rate || 0);
+                    }
                 });
-            }
 
-            const group = groupedItemsMap.get(groupKey);
-            group.pcs += challan.pcs;
-            group.mtr += challan.mtr;
-            group._challanIds.push(challan.id);
-            group._challanNumbers.push(challan.challanNumber);
-            group._challanDates.push(challan.date);
-            group._designNos.add(challan.designNo);
-        });
+                const hsnSac = companyDetails.hsnSac || '998821';
+                let groupIdentifier = processName;
+                if (invoiceType === 'design') {
+                    const designPart = challan.designNo ? `${challan.designNo}` : 'N/A';
+                    groupIdentifier = `${designPart} - ${processName}`;
+                }
 
-        const initialLineItems: InvoiceItem[] = Array.from(groupedItemsMap.entries()).map(([groupKey, group]) => {
-            const roundedMtr = Math.round(group.mtr);
-            const subtotal = roundedMtr * group.rate;
-            const cgst = taxType === 'GST' ? subtotal * 0.025 : 0;
-            const sgst = taxType === 'GST' ? subtotal * 0.025 : 0;
-            const amount = subtotal + cgst + sgst;
+                // Group key includes rate to separate items if rates differ
+                const groupKey = `${groupIdentifier}|${totalRate}|${hsnSac}`;
 
-            return {
-                id: groupKey,
-                challanNumber: group._challanNumbers.sort().join(', '),
-                challanDate: group._challanDates.sort().pop() || '',
-                process: group.displayName,
-                description: '',
-                designNo: Array.from(group._designNos).sort().join(', '),
-                hsnSac: group.hsnSac,
-                pcs: group.pcs,
-                mtr: roundedMtr,
-                rate: group.rate,
-                subtotal,
-                cgst,
-                sgst,
-                amount,
-            };
-        });
+                if (!groupedItemsMap.has(groupKey)) {
+                    groupedItemsMap.set(groupKey, {
+                        displayName: groupIdentifier,
+                        rate: totalRate,
+                        hsnSac: hsnSac,
+                        pcs: 0,
+                        mtr: 0,
+                        _challanIds: [],
+                        _challanNumbers: [],
+                        _challanDates: [],
+                        _designNos: new Set<string>()
+                    });
+                }
 
-        setLineItems(initialLineItems);
-    }, [client, challansToInvoice, invoiceNumberConfig, processTypes, companyDetails, invoiceType, taxType]);
+                const group = groupedItemsMap.get(groupKey);
+                group.pcs += challan.pcs;
+                group.mtr += challan.mtr;
+                group._challanIds.push(challan.id);
+                group._challanNumbers.push(challan.challanNumber);
+                group._challanDates.push(challan.date);
+                group._designNos.add(challan.designNo);
+            });
+
+            const initialLineItems: InvoiceItem[] = Array.from(groupedItemsMap.entries()).map(([groupKey, group]) => {
+                const roundedMtr = Math.round(group.mtr);
+                const subtotal = roundedMtr * group.rate;
+                const cgst = taxType === 'GST' ? subtotal * 0.025 : 0;
+                const sgst = taxType === 'GST' ? subtotal * 0.025 : 0;
+                const amount = subtotal + cgst + sgst;
+
+                return {
+                    id: groupKey,
+                    challanNumber: group._challanNumbers.sort().join(', '),
+                    challanDate: group._challanDates.sort().pop() || '',
+                    process: group.displayName,
+                    description: '',
+                    designNo: Array.from(group._designNos).sort().join(', '),
+                    hsnSac: group.hsnSac,
+                    pcs: group.pcs,
+                    mtr: roundedMtr,
+                    rate: group.rate,
+                    subtotal,
+                    cgst,
+                    sgst,
+                    amount,
+                };
+            });
+
+            setLineItems(initialLineItems);
+        }
+    }, [client, challansToInvoice, invoiceNumberConfig, processTypes, companyDetails, invoiceType, taxType, invoiceToEdit]);
 
     const handleItemChange = (itemId: string, field: 'rate' | 'mtr' | 'hsnSac', value: string | number) => {
         setLineItems(prevItems =>
@@ -294,7 +302,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({
                     type="button"
                     className="px-5 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 shadow-sm"
                 >
-                    Save & Print Invoice
+                    {invoiceToEdit ? 'Update & Print Invoice' : 'Save & Print Invoice'}
                 </button>
             </div>
 

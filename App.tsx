@@ -967,6 +967,57 @@ const App: React.FC = () => {
       }
   };
 
+  const handleUpdateInvoice = async (id: string, updatedInvoice: Omit<Invoice, 'id'>) => {
+      try {
+          // 1. Update Invoice Details
+          const { error: invoiceError } = await supabase.from('invoices').update({
+              invoice_number: updatedInvoice.invoiceNumber,
+              invoice_date: updatedInvoice.invoiceDate,
+              client_name: updatedInvoice.clientName,
+              sub_total: updatedInvoice.subTotal,
+              total_cgst: updatedInvoice.totalCgst,
+              total_sgst: updatedInvoice.totalSgst,
+              total_tax_amount: updatedInvoice.totalTaxAmount,
+              rounded_off: updatedInvoice.roundedOff,
+              total_amount: updatedInvoice.totalAmount,
+              tax_type: updatedInvoice.taxType
+          }).eq('id', id);
+
+          if (invoiceError) throw invoiceError;
+
+          // 2. Delete old items
+          const { error: deleteError } = await supabase.from('invoice_items').delete().eq('invoice_id', id);
+          if (deleteError) throw deleteError;
+
+          // 3. Insert new items
+          const itemsToInsert = updatedInvoice.items.map(item => ({
+              invoice_id: id,
+              challan_number: item.challanNumber,
+              challan_date: item.challanDate,
+              process: item.process,
+              description: item.description,
+              design_no: item.designNo,
+              hsn_sac: item.hsnSac,
+              pcs: item.pcs,
+              mtr: item.mtr,
+              rate: item.rate,
+              amount: item.amount,
+              subtotal: item.subtotal,
+              cgst: item.cgst,
+              sgst: item.sgst
+          }));
+
+          const { error: itemsError } = await supabase.from('invoice_items').insert(itemsToInsert);
+          if (itemsError) throw itemsError;
+
+          // 4. Update State
+          setInvoices(prev => prev.map(inv => inv.id === id ? { ...updatedInvoice, id } : inv));
+
+      } catch (error: any) {
+          alert(`Error updating invoice: ${error.message || JSON.stringify(error)}`);
+      }
+  };
+
   const handleDeleteInvoice = async (id: string) => {
       try {
           const { error } = await supabase.from('invoices').delete().eq('id', id);
@@ -1379,7 +1430,7 @@ const App: React.FC = () => {
           {activeScreen === 'Expenses' && <PurchaseOrderScreen purchaseOrders={purchaseOrders} onAddOrder={handleAddPurchaseOrder} onUpdateOrder={handleUpdatePurchaseOrder} onDeleteOrder={handleDeletePurchaseOrder} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} bankNames={bankNames} onAddBankName={name => setBankNames(prev => [...prev, name])} poNumberConfig={poNumberConfig} masterItems={masterItems} onAddMasterItem={handleAddMasterItem} advances={advances} employees={employees} onAddAdvance={handleAddAdvance} onUpdateAdvance={handleUpdateAdvance} onDeleteAdvance={handleDeleteAdvance} otherExpenses={otherExpenses} onAddOtherExpense={handleAddOtherExpense} onUpdateOtherExpense={handleUpdateOtherExpense} onDeleteOtherExpense={handleDeleteOtherExpense} expenseCategories={expenseCategories} onAddExpenseCategory={handleAddExpenseCategory} timberExpenses={timberExpenses} onAddTimberExpense={handleAddTimberExpense} onUpdateTimberExpense={handleUpdateTimberExpense} onDeleteTimberExpense={handleDeleteTimberExpense} supplierPayments={supplierPayments} supplierPaymentConfig={supplierPaymentConfig} onAddSupplierPayment={handleAddSupplierPayment} />}
           {activeScreen === 'Delivery Challans' && <DeliveryChallanScreen deliveryChallans={deliveryChallans} onAddChallan={handleAddChallan} onUpdateChallan={handleUpdateChallan} onDeleteChallan={handleDeleteChallan} clients={clients} onAddClient={handleAddClient} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} processTypes={processTypes} onAddProcessType={handleAddProcessType} deliveryChallanNumberConfig={deliveryChallanNumberConfig} invoices={invoices} onDeleteInvoice={handleDeleteInvoice} companyDetails={companyDetails} employees={employees} onAddEmployee={handleAddEmployee} />}
           {activeScreen === 'Outsourcing' && <DeliveryChallanScreen deliveryChallans={deliveryChallans} onAddChallan={handleAddChallan} onUpdateChallan={handleUpdateChallan} onDeleteChallan={handleDeleteChallan} clients={clients} onAddClient={handleAddClient} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} processTypes={processTypes} onAddProcessType={handleAddProcessType} deliveryChallanNumberConfig={deliveryChallanNumberConfig} invoices={invoices} onDeleteInvoice={handleDeleteInvoice} companyDetails={companyDetails} employees={employees} onAddEmployee={handleAddEmployee} isOutsourcingScreen={true} />}
-          {activeScreen === 'Invoices' && <InvoicesScreen clients={clients} deliveryChallans={deliveryChallans} processTypes={processTypes} onAddInvoice={handleAddInvoice} invoiceNumberConfig={invoiceNumberConfig} ngstInvoiceNumberConfig={ngstInvoiceNumberConfig} invoices={invoices} companyDetails={companyDetails} />}
+          {activeScreen === 'Invoices' && <InvoicesScreen clients={clients} deliveryChallans={deliveryChallans} processTypes={processTypes} onAddInvoice={handleAddInvoice} onUpdateInvoice={handleUpdateInvoice} invoiceNumberConfig={invoiceNumberConfig} ngstInvoiceNumberConfig={ngstInvoiceNumberConfig} invoices={invoices} companyDetails={companyDetails} />}
           {activeScreen === 'Payment Received' && <PaymentReceivedScreen payments={paymentsReceived} onAddPayment={handleAddPaymentReceived} onUpdatePayment={handleUpdatePaymentReceived} onDeletePayment={handleDeletePaymentReceived} clients={clients} onAddClient={handleAddClient} />}
           {activeScreen === 'Settings' && <SettingsScreen poConfig={poNumberConfig} onUpdatePoConfig={handleUpdatePoConfig} dcConfig={deliveryChallanNumberConfig} onUpdateDcConfig={handleUpdateDcConfig} invConfig={invoiceNumberConfig} ngstInvConfig={ngstInvoiceNumberConfig} onUpdateInvConfig={handleUpdateInvConfig} />}
           {activeScreen === 'Add Client' && <ShopMasterScreen clients={clients} onAddClient={handleAddClient} onUpdateClient={handleUpdateClient} onDeleteClient={handleDeleteClient} processTypes={processTypes} onAddProcessType={handleAddProcessType} />}

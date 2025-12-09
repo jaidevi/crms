@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import type { Client, DeliveryChallan, ProcessType, Invoice, InvoiceNumberConfig, CompanyDetails } from '../types';
-import { CalendarIcon, SearchIcon, ChevronDownIcon, PlusIcon } from './Icons';
+import { CalendarIcon, SearchIcon, ChevronDownIcon, PlusIcon, EditIcon } from './Icons';
 import DatePicker from './DatePicker';
 import InvoiceCreateScreen from './InvoiceCreateScreen';
 import InvoiceView from './InvoiceView';
@@ -35,13 +35,14 @@ interface InvoicesScreenProps {
     deliveryChallans: DeliveryChallan[];
     processTypes: ProcessType[];
     onAddInvoice: (newInvoice: Omit<Invoice, 'id'>) => void;
+    onUpdateInvoice: (id: string, updatedInvoice: Omit<Invoice, 'id'>) => void;
     invoiceNumberConfig: InvoiceNumberConfig;
     ngstInvoiceNumberConfig: InvoiceNumberConfig;
     invoices: Invoice[];
     companyDetails: CompanyDetails;
 }
 
-const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChallans, processTypes, onAddInvoice, invoiceNumberConfig, ngstInvoiceNumberConfig, invoices, companyDetails }) => {
+const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChallans, processTypes, onAddInvoice, onUpdateInvoice, invoiceNumberConfig, ngstInvoiceNumberConfig, invoices, companyDetails }) => {
     const [activeTab, setActiveTab] = useState<'create' | 'generated'>('create');
     const [selectedClient, setSelectedClient] = useState<string>('');
     const [fromDate, setFromDate] = useState<string>('');
@@ -63,6 +64,7 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
     const [hasSearched, setHasSearched] = useState(false);
     
     const [creationData, setCreationData] = useState<{ client: Client, challans: DeliveryChallan[], invoiceType: 'process' | 'design', taxType: 'GST' | 'NGST' } | null>(null);
+    const [invoiceToEdit, setInvoiceToEdit] = useState<Invoice | null>(null);
     const [viewingInvoiceId, setViewingInvoiceId] = useState<string | null>(null);
     const [viewingStatementForClient, setViewingStatementForClient] = useState<Client | null>(null);
 
@@ -171,15 +173,39 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
 
     const handleCancelCreation = () => {
         setCreationData(null);
+        setInvoiceToEdit(null);
     };
     
     const handleSaveInvoice = (invoiceData: Omit<Invoice, 'id'>) => {
-        onAddInvoice(invoiceData);
+        if (invoiceToEdit) {
+            onUpdateInvoice(invoiceToEdit.id, invoiceData);
+            alert(`Invoice ${invoiceData.invoiceNumber} updated successfully!`);
+        } else {
+            onAddInvoice(invoiceData);
+            alert(`Invoice ${invoiceData.invoiceNumber} created successfully!`);
+        }
         setCreationData(null);
+        setInvoiceToEdit(null);
         setFilteredChallans([]);
         setSelectedChallanIds(new Set());
         setHasSearched(false);
-        alert(`Invoice ${invoiceData.invoiceNumber} created successfully!`);
+    };
+
+    const handleEditInvoice = (invoice: Invoice) => {
+        const client = clients.find(c => c.name === invoice.clientName);
+        if (!client) {
+            alert("Client details not found for this invoice.");
+            return;
+        }
+        setInvoiceToEdit(invoice);
+        // We set creationData mostly to trigger the InvoiceCreateScreen view, 
+        // but the data inside (challans) is less relevant as invoiceToEdit will take precedence
+        setCreationData({
+            client,
+            challans: [], // Empty because we load from invoice items
+            invoiceType: 'process', // Default or derived if stored
+            taxType: invoice.taxType || 'GST'
+        });
     };
     
     const isAllSelected = filteredChallans.length > 0 && selectedChallanIds.size === filteredChallans.length;
@@ -206,6 +232,7 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
             companyDetails={companyDetails}
             invoiceType={creationData.invoiceType}
             taxType={creationData.taxType}
+            invoiceToEdit={invoiceToEdit}
         />;
     }
 
@@ -471,6 +498,7 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
                                         <th scope="col" className="px-6 py-3">Client</th>
                                         <th scope="col" className="px-6 py-3 text-right">Amount</th>
                                         <th scope="col" className="px-6 py-3 text-center">Type</th>
+                                        <th scope="col" className="px-6 py-3 text-center">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -488,6 +516,15 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
                                                 <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${invoice.taxType === 'GST' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}`}>
                                                     {invoice.taxType || 'GST'}
                                                 </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <button 
+                                                    className="p-1 text-gray-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" 
+                                                    title="Edit Invoice"
+                                                    onClick={() => handleEditInvoice(invoice)}
+                                                >
+                                                    <EditIcon className="w-5 h-5" />
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
