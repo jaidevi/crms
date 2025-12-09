@@ -114,8 +114,8 @@ const PayslipGenerator: React.FC<PayslipGeneratorProps> = ({ employees, attendan
         const isMonthly = (selectedEmployee.monthlyWage || 0) > 0;
         let wageEarnings = 0;
         if (isMonthly) {
-             const daysInMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
-             wageEarnings = (selectedEmployee.monthlyWage! / daysInMonth) * totalPresentDays;
+             // Fixed 30 days divisor as per requirement
+             wageEarnings = (selectedEmployee.monthlyWage! / 30) * totalPresentDays;
         } else {
              wageEarnings = totalPresentDays * selectedEmployee.dailyWage;
         }

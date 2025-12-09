@@ -35,7 +35,6 @@ interface CalculationResult {
         totalOutstandingAdvance: number;
         totalMetersProduced: number;
         isMonthly: boolean;
-        daysInMonth: number;
     };
 }
 
@@ -175,16 +174,14 @@ const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecord
         const baseWage = isMonthly ? (selectedEmployee?.monthlyWage || 0) : (selectedEmployee?.dailyWage || 0);
         const ratePerMeter = selectedEmployee?.ratePerMeter || 0;
         
-        // Days in month logic for pro-rata calculation
-        const daysInMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
-
         setEditableWage(String(baseWage));
         setEditableRatePerMeter(String(ratePerMeter));
         
         // Estimate Earnings for default deduction cap
         let estimatedWageEarnings = 0;
         if (isMonthly) {
-            estimatedWageEarnings = (baseWage / daysInMonth) * totalPresentDays;
+            // FIXED 30 DAYS CALCULATION AS PER REQUEST
+            estimatedWageEarnings = (baseWage / 30) * totalPresentDays;
         } else {
             estimatedWageEarnings = baseWage * totalPresentDays;
         }
@@ -207,7 +204,6 @@ const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecord
                 totalOutstandingAdvance: totalOutstandingAdvanceBefore,
                 totalMetersProduced,
                 isMonthly,
-                daysInMonth
             }
         });
     };
@@ -271,7 +267,8 @@ const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecord
         let wageEarnings = 0;
         
         if (result.summary.isMonthly) {
-            wageEarnings = (wage / result.summary.daysInMonth) * result.summary.totalPresentDays;
+            // FIXED 30 DAYS CALCULATION
+            wageEarnings = (wage / 30) * result.summary.totalPresentDays;
         } else {
             wageEarnings = wage * result.summary.totalPresentDays;
         }
@@ -451,10 +448,17 @@ const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecord
                                                 </div>
                                             </div>
                                             <div className="flex justify-between items-center text-sm font-medium pt-1 border-t border-secondary-200">
-                                                <span>Wage Earnings:</span>
+                                                <div className="flex flex-col">
+                                                    <span>Wage Earnings:</span>
+                                                    {result.summary.isMonthly && (
+                                                        <span className="text-[10px] text-gray-500 font-normal">
+                                                            (Wage / 30 days * Present)
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <span>₹{
                                                     result.summary.isMonthly 
-                                                    ? ((Number(editableWage) || 0) / result.summary.daysInMonth * result.summary.totalPresentDays).toFixed(2)
+                                                    ? ((Number(editableWage) || 0) / 30 * result.summary.totalPresentDays).toFixed(2)
                                                     : ((Number(editableWage) || 0) * result.summary.totalPresentDays).toFixed(2)
                                                 }</span>
                                             </div>
@@ -487,7 +491,7 @@ const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecord
                                                 <span>Gross Salary:</span>
                                                 <span>₹{(
                                                     (result.summary.isMonthly 
-                                                        ? ((Number(editableWage) || 0) / result.summary.daysInMonth * result.summary.totalPresentDays)
+                                                        ? ((Number(editableWage) || 0) / 30 * result.summary.totalPresentDays)
                                                         : ((Number(editableWage) || 0) * result.summary.totalPresentDays)
                                                     ) + 
                                                     ((Number(editableRatePerMeter) || 0) * result.summary.totalMetersProduced)
@@ -521,7 +525,7 @@ const SalaryScreen: React.FC<SalaryScreenProps> = ({ employees, attendanceRecord
                                                 <span>
                                                     ₹{Math.max(0, (
                                                         (result.summary.isMonthly 
-                                                            ? ((Number(editableWage) || 0) / result.summary.daysInMonth * result.summary.totalPresentDays)
+                                                            ? ((Number(editableWage) || 0) / 30 * result.summary.totalPresentDays)
                                                             : ((Number(editableWage) || 0) * result.summary.totalPresentDays)
                                                         ) + 
                                                         ((Number(editableRatePerMeter) || 0) * result.summary.totalMetersProduced) - 
