@@ -55,6 +55,7 @@ const App: React.FC = () => {
   const [payslips, setPayslips] = useState<Payslip[]>([]);
   const [deliveryChallanNumberConfig, setDeliveryChallanNumberConfig] = useState<DeliveryChallanNumberConfig>({ prefix: 'DC', nextNumber: 1 });
   const [invoiceNumberConfig, setInvoiceNumberConfig] = useState<InvoiceNumberConfig>({ mode: 'auto', prefix: 'INV', nextNumber: 1 });
+  const [ngstInvoiceNumberConfig, setNgstInvoiceNumberConfig] = useState<InvoiceNumberConfig>({ mode: 'auto', prefix: 'NGST', nextNumber: 1 });
 
   // Helper to sanitize dates
   const sanitizeDate = (date: string | undefined): string | null => {
@@ -229,6 +230,7 @@ const App: React.FC = () => {
         totalTaxAmount: d.total_tax_amount || 0,
         roundedOff: d.rounded_off || 0,
         totalAmount: d.total_amount || 0,
+        taxType: d.tax_type || 'GST',
         items: Array.isArray(d.invoice_items) ? d.invoice_items.map((i: any) => ({
             id: i.id,
             challanNumber: i.challan_number,
@@ -264,6 +266,7 @@ const App: React.FC = () => {
             if (config.id === 'po') setPoNumberConfig({ prefix: config.prefix ?? '', nextNumber: config.next_number ?? 1 });
             if (config.id === 'dc') setDeliveryChallanNumberConfig({ prefix: config.prefix ?? '', nextNumber: config.next_number ?? 1 });
             if (config.id === 'invoice') setInvoiceNumberConfig({ mode: config.mode ?? 'auto', prefix: config.prefix ?? '', nextNumber: config.next_number ?? 1 });
+            if (config.id === 'invoice_ngst') setNgstInvoiceNumberConfig({ mode: config.mode ?? 'auto', prefix: config.prefix ?? '', nextNumber: config.next_number ?? 1 });
             if (config.id === 'supplier_payment') setSupplierPaymentConfig({ prefix: config.prefix ?? '', nextNumber: config.next_number ?? 1 });
         });
     });
@@ -907,7 +910,8 @@ const App: React.FC = () => {
               total_sgst: newInvoice.totalSgst,
               total_tax_amount: newInvoice.totalTaxAmount,
               rounded_off: newInvoice.roundedOff,
-              total_amount: newInvoice.totalAmount
+              total_amount: newInvoice.totalAmount,
+              tax_type: newInvoice.taxType // Insert taxType
           }]).select().single();
 
           if (invoiceError) {
@@ -944,9 +948,18 @@ const App: React.FC = () => {
           // 3. Update State
           setInvoices(prev => [...prev, { ...newInvoice, id: invoiceId }]);
           
-          if (invoiceNumberConfig.mode === 'auto') {
-              setInvoiceNumberConfig(prev => ({ ...prev, nextNumber: prev.nextNumber + 1 }));
-              await supabase.from('numbering_configs').upsert({ id: 'invoice', mode: 'auto', prefix: invoiceNumberConfig.prefix, next_number: invoiceNumberConfig.nextNumber + 1 });
+          // Increment the correct counter based on taxType
+          if (newInvoice.taxType === 'NGST') {
+              if (ngstInvoiceNumberConfig.mode === 'auto') {
+                  setNgstInvoiceNumberConfig(prev => ({ ...prev, nextNumber: prev.nextNumber + 1 }));
+                  await supabase.from('numbering_configs').upsert({ id: 'invoice_ngst', mode: 'auto', prefix: ngstInvoiceNumberConfig.prefix, next_number: ngstInvoiceNumberConfig.nextNumber + 1 });
+              }
+          } else {
+              // Default to GST logic
+              if (invoiceNumberConfig.mode === 'auto') {
+                  setInvoiceNumberConfig(prev => ({ ...prev, nextNumber: prev.nextNumber + 1 }));
+                  await supabase.from('numbering_configs').upsert({ id: 'invoice', mode: 'auto', prefix: invoiceNumberConfig.prefix, next_number: invoiceNumberConfig.nextNumber + 1 });
+              }
           }
 
       } catch (error: any) {
@@ -1346,9 +1359,14 @@ const App: React.FC = () => {
       await supabase.from('numbering_configs').upsert({ id: 'dc', prefix: newConfig.prefix, next_number: newConfig.nextNumber });
   };
 
-  const handleUpdateInvConfig = async (newConfig: InvoiceNumberConfig) => {
-      setInvoiceNumberConfig(newConfig);
-      await supabase.from('numbering_configs').upsert({ id: 'invoice', mode: newConfig.mode, prefix: newConfig.prefix, next_number: newConfig.nextNumber });
+  const handleUpdateInvConfig = async (type: 'GST' | 'NGST', newConfig: InvoiceNumberConfig) => {
+      if (type === 'GST') {
+          setInvoiceNumberConfig(newConfig);
+          await supabase.from('numbering_configs').upsert({ id: 'invoice', mode: newConfig.mode, prefix: newConfig.prefix, next_number: newConfig.nextNumber });
+      } else {
+          setNgstInvoiceNumberConfig(newConfig);
+          await supabase.from('numbering_configs').upsert({ id: 'invoice_ngst', mode: newConfig.mode, prefix: newConfig.prefix, next_number: newConfig.nextNumber });
+      }
   };
 
   return (
@@ -1361,9 +1379,9 @@ const App: React.FC = () => {
           {activeScreen === 'Expenses' && <PurchaseOrderScreen purchaseOrders={purchaseOrders} onAddOrder={handleAddPurchaseOrder} onUpdateOrder={handleUpdatePurchaseOrder} onDeleteOrder={handleDeletePurchaseOrder} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} bankNames={bankNames} onAddBankName={name => setBankNames(prev => [...prev, name])} poNumberConfig={poNumberConfig} masterItems={masterItems} onAddMasterItem={handleAddMasterItem} advances={advances} employees={employees} onAddAdvance={handleAddAdvance} onUpdateAdvance={handleUpdateAdvance} onDeleteAdvance={handleDeleteAdvance} otherExpenses={otherExpenses} onAddOtherExpense={handleAddOtherExpense} onUpdateOtherExpense={handleUpdateOtherExpense} onDeleteOtherExpense={handleDeleteOtherExpense} expenseCategories={expenseCategories} onAddExpenseCategory={handleAddExpenseCategory} timberExpenses={timberExpenses} onAddTimberExpense={handleAddTimberExpense} onUpdateTimberExpense={handleUpdateTimberExpense} onDeleteTimberExpense={handleDeleteTimberExpense} supplierPayments={supplierPayments} supplierPaymentConfig={supplierPaymentConfig} onAddSupplierPayment={handleAddSupplierPayment} />}
           {activeScreen === 'Delivery Challans' && <DeliveryChallanScreen deliveryChallans={deliveryChallans} onAddChallan={handleAddChallan} onUpdateChallan={handleUpdateChallan} onDeleteChallan={handleDeleteChallan} clients={clients} onAddClient={handleAddClient} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} processTypes={processTypes} onAddProcessType={handleAddProcessType} deliveryChallanNumberConfig={deliveryChallanNumberConfig} invoices={invoices} onDeleteInvoice={handleDeleteInvoice} companyDetails={companyDetails} employees={employees} onAddEmployee={handleAddEmployee} />}
           {activeScreen === 'Outsourcing' && <DeliveryChallanScreen deliveryChallans={deliveryChallans} onAddChallan={handleAddChallan} onUpdateChallan={handleUpdateChallan} onDeleteChallan={handleDeleteChallan} clients={clients} onAddClient={handleAddClient} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} processTypes={processTypes} onAddProcessType={handleAddProcessType} deliveryChallanNumberConfig={deliveryChallanNumberConfig} invoices={invoices} onDeleteInvoice={handleDeleteInvoice} companyDetails={companyDetails} employees={employees} onAddEmployee={handleAddEmployee} isOutsourcingScreen={true} />}
-          {activeScreen === 'Invoices' && <InvoicesScreen clients={clients} deliveryChallans={deliveryChallans} processTypes={processTypes} onAddInvoice={handleAddInvoice} invoiceNumberConfig={invoiceNumberConfig} invoices={invoices} companyDetails={companyDetails} />}
+          {activeScreen === 'Invoices' && <InvoicesScreen clients={clients} deliveryChallans={deliveryChallans} processTypes={processTypes} onAddInvoice={handleAddInvoice} invoiceNumberConfig={invoiceNumberConfig} ngstInvoiceNumberConfig={ngstInvoiceNumberConfig} invoices={invoices} companyDetails={companyDetails} />}
           {activeScreen === 'Payment Received' && <PaymentReceivedScreen payments={paymentsReceived} onAddPayment={handleAddPaymentReceived} onUpdatePayment={handleUpdatePaymentReceived} onDeletePayment={handleDeletePaymentReceived} clients={clients} onAddClient={handleAddClient} />}
-          {activeScreen === 'Settings' && <SettingsScreen poConfig={poNumberConfig} onUpdatePoConfig={handleUpdatePoConfig} dcConfig={deliveryChallanNumberConfig} onUpdateDcConfig={handleUpdateDcConfig} invConfig={invoiceNumberConfig} onUpdateInvConfig={handleUpdateInvConfig} />}
+          {activeScreen === 'Settings' && <SettingsScreen poConfig={poNumberConfig} onUpdatePoConfig={handleUpdatePoConfig} dcConfig={deliveryChallanNumberConfig} onUpdateDcConfig={handleUpdateDcConfig} invConfig={invoiceNumberConfig} ngstInvConfig={ngstInvoiceNumberConfig} onUpdateInvConfig={handleUpdateInvConfig} />}
           {activeScreen === 'Add Client' && <ShopMasterScreen clients={clients} onAddClient={handleAddClient} onUpdateClient={handleUpdateClient} onDeleteClient={handleDeleteClient} processTypes={processTypes} onAddProcessType={handleAddProcessType} />}
           {activeScreen === 'Add Purchase Shop' && <PurchaseShopMasterScreen shops={purchaseShops} onAddShop={handleAddPurchaseShop} onUpdateShop={handleUpdatePurchaseShop} onDeleteShop={handleDeletePurchaseShop} />}
           {activeScreen === 'Add Employee' && <EmployeeMasterScreen employees={employees} onAddEmployee={handleAddEmployee} onUpdateEmployee={handleUpdateEmployee} onDeleteEmployee={handleDeleteEmployee} />}

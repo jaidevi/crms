@@ -226,6 +226,7 @@ export interface Invoice {
   totalTaxAmount: number;
   roundedOff: number;
   totalAmount: number;
+  taxType: 'GST' | 'NGST';
 }
 
 export interface PaymentReceived {

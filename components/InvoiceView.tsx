@@ -112,6 +112,11 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                              <div className="text-sm text-gray-700 mt-1">
                                 <span className="font-semibold">GSTIN:</span> {companyDetails.gstin}
                             </div>
+                            {companyDetails.hsnSac && (
+                                <div className="text-sm text-gray-700">
+                                    <span className="font-semibold">HSN/SAC:</span> {companyDetails.hsnSac}
+                                </div>
+                            )}
                         </div>
                      </div>
                      

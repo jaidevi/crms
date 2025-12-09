@@ -11,15 +11,20 @@ interface SettingsScreenProps {
   dcConfig: DeliveryChallanNumberConfig;
   onUpdateDcConfig: (newConfig: DeliveryChallanNumberConfig) => void;
   invConfig: InvoiceNumberConfig;
-  onUpdateInvConfig: (newConfig: InvoiceNumberConfig) => void;
+  ngstInvConfig: InvoiceNumberConfig;
+  onUpdateInvConfig: (type: 'GST' | 'NGST', newConfig: InvoiceNumberConfig) => void;
 }
 
-const SettingsScreen: React.FC<SettingsScreenProps> = ({ poConfig, onUpdatePoConfig, dcConfig, onUpdateDcConfig, invConfig, onUpdateInvConfig }) => {
+const SettingsScreen: React.FC<SettingsScreenProps> = ({ poConfig, onUpdatePoConfig, dcConfig, onUpdateDcConfig, invConfig, ngstInvConfig, onUpdateInvConfig }) => {
   return (
     <div className="space-y-8">
       <PONumberSettingsScreen config={poConfig} onUpdateConfig={onUpdatePoConfig} />
       <DeliveryChallanNumberSettingsScreen config={dcConfig} onUpdateConfig={onUpdateDcConfig} />
-      <InvoiceNumberSettingsScreen config={invConfig} onUpdateConfig={onUpdateInvConfig} />
+      <InvoiceNumberSettingsScreen 
+        gstConfig={invConfig} 
+        ngstConfig={ngstInvConfig} 
+        onUpdateConfig={onUpdateInvConfig} 
+      />
     </div>
   );
 };

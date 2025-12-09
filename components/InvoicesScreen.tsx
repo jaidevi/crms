@@ -36,11 +36,12 @@ interface InvoicesScreenProps {
     processTypes: ProcessType[];
     onAddInvoice: (newInvoice: Omit<Invoice, 'id'>) => void;
     invoiceNumberConfig: InvoiceNumberConfig;
+    ngstInvoiceNumberConfig: InvoiceNumberConfig;
     invoices: Invoice[];
     companyDetails: CompanyDetails;
 }
 
-const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChallans, processTypes, onAddInvoice, invoiceNumberConfig, invoices, companyDetails }) => {
+const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChallans, processTypes, onAddInvoice, invoiceNumberConfig, ngstInvoiceNumberConfig, invoices, companyDetails }) => {
     const [selectedClient, setSelectedClient] = useState<string>('');
     const [fromDate, setFromDate] = useState<string>('');
     const [toDate, setToDate] = useState<string>('');
@@ -202,7 +203,7 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
             onSave={handleSaveInvoice}
             client={creationData.client}
             challansToInvoice={creationData.challans}
-            invoiceNumberConfig={invoiceNumberConfig}
+            invoiceNumberConfig={creationData.taxType === 'NGST' ? ngstInvoiceNumberConfig : invoiceNumberConfig}
             processTypes={processTypes}
             companyDetails={companyDetails}
             invoiceType={creationData.invoiceType}
@@ -450,6 +451,7 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
                                 <th scope="col" className="px-6 py-3">Date</th>
                                 <th scope="col" className="px-6 py-3">Client</th>
                                 <th scope="col" className="px-6 py-3 text-right">Amount</th>
+                                <th scope="col" className="px-6 py-3 text-center">Type</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -463,6 +465,11 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
                                     <td className="px-6 py-4">{formatDateForDisplay(invoice.invoiceDate)}</td>
                                     <td className="px-6 py-4">{invoice.clientName}</td>
                                     <td className="px-6 py-4 text-right font-medium">₹{invoice.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                    <td className="px-6 py-4 text-center">
+                                        <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${invoice.taxType === 'GST' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}`}>
+                                            {invoice.taxType || 'GST'}
+                                        </span>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>

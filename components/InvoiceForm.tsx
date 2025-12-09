@@ -45,7 +45,8 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onClose, onSave, clientName, 
             totalSgst: 0,
             totalTaxAmount: 0,
             roundedOff: 0,
-            totalAmount: 0
+            totalAmount: 0,
+            taxType: 'GST'
         });
     };
 
