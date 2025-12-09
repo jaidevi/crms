@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import type { Employee, AttendanceRecord, EmployeeAdvance, CompanyDetails, AttendanceStatus } from '../types';
+import type { Employee, AttendanceRecord, EmployeeAdvance, CompanyDetails, Payslip } from '../types';
 import DatePicker from './DatePicker';
 import PayslipView from './PayslipView';
 import { CalendarIcon, SearchIcon } from './Icons';
@@ -9,7 +9,7 @@ interface PayslipGeneratorProps {
     employees: Employee[];
     attendanceRecords: AttendanceRecord[];
     advances: EmployeeAdvance[];
-    onFinalizeSalary: (employeeId: string, deductionAmount: number) => Promise<void>;
+    onSave: (payslip: Omit<Payslip, 'id'>) => Promise<void>;
     companyDetails: CompanyDetails;
 }
 
@@ -19,7 +19,6 @@ export interface PayslipData {
     payPeriodEnd: string;
     totalWorkingDays: number;
     otHours: number;
-    // FIX: Added missing properties to match PayslipView's expected type.
     wageEarnings: number;
     productionEarnings: number;
     grossSalary: number;
@@ -42,7 +41,7 @@ const formatDateForDisplay = (isoDate: string) => {
 };
 
 
-const PayslipGenerator: React.FC<PayslipGeneratorProps> = ({ employees, attendanceRecords, advances, onFinalizeSalary, companyDetails }) => {
+const PayslipGenerator: React.FC<PayslipGeneratorProps> = ({ employees, attendanceRecords, advances, onSave, companyDetails }) => {
     const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -112,7 +111,15 @@ const PayslipGenerator: React.FC<PayslipGeneratorProps> = ({ employees, attendan
         // The outstanding balance shown on the payslip should be the remaining balance *after* this deduction.
         const finalOutstandingBalance = totalOutstandingBefore - advanceDeduction;
 
-        const wageEarnings = totalPresentDays * selectedEmployee.dailyWage;
+        const isMonthly = (selectedEmployee.monthlyWage || 0) > 0;
+        let wageEarnings = 0;
+        if (isMonthly) {
+             const daysInMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
+             wageEarnings = (selectedEmployee.monthlyWage! / daysInMonth) * totalPresentDays;
+        } else {
+             wageEarnings = totalPresentDays * selectedEmployee.dailyWage;
+        }
+
         const productionEarnings = totalMetersProduced * (selectedEmployee.ratePerMeter || 0);
         const grossSalary = wageEarnings + productionEarnings;
         const netSalary = grossSalary - advanceDeduction;
@@ -132,6 +139,18 @@ const PayslipGenerator: React.FC<PayslipGeneratorProps> = ({ employees, attendan
         });
     };
 
+    const handleFinalizeWrapper = async (employeeId: string, deductionAmount: number) => {
+        if (payslipData && selectedEmployee) {
+            const fullPayslip: Omit<Payslip, 'id'> = {
+                ...payslipData,
+                employeeId: selectedEmployee.id,
+                employeeName: selectedEmployee.name,
+            };
+            await onSave(fullPayslip);
+            setPayslipData(null);
+        }
+    };
+
     if (payslipData && selectedEmployee) {
         return (
             <PayslipView
@@ -139,7 +158,7 @@ const PayslipGenerator: React.FC<PayslipGeneratorProps> = ({ employees, attendan
                 payslip={payslipData}
                 companyDetails={companyDetails}
                 onBack={() => setPayslipData(null)}
-                onFinalizeSalary={onFinalizeSalary}
+                onFinalizeSalary={handleFinalizeWrapper}
             />
         );
     }
