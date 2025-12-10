@@ -237,8 +237,8 @@ const App: React.FC = () => {
             challanDate: i.challan_date,
             process: i.process,
             description: i.description,
-            design_no: i.design_no,
-            hsn_sac: i.hsn_sac,
+            designNo: i.design_no,
+            hsnSac: i.hsn_sac,
             pcs: i.pcs || 0,
             mtr: i.mtr || 0,
             rate: i.rate || 0,
@@ -1441,7 +1441,7 @@ const App: React.FC = () => {
           {activeScreen === 'New Screen' && <ProductsScreen clients={clients} onAddClient={handleAddClient} processTypes={processTypes} onAddProcessType={handleAddProcessType} />}
           {activeScreen === 'Salary & Payslips' && <SalaryScreen employees={employees} attendanceRecords={attendanceRecords} onUpdateEmployee={handleUpdateEmployee} advances={advances} onSavePayslip={handleSavePayslip} onDeletePayslip={handleDeletePayslip} companyDetails={companyDetails} payslips={payslips} />}
           {activeScreen === 'Attendance' && <AttendanceScreen employees={employees} attendanceRecords={attendanceRecords} onSave={handleSaveAttendance} />}
-          {activeScreen === 'Reports' && <ReportsScreen employees={employees} attendanceRecords={attendanceRecords} />}
+          {activeScreen === 'Reports' && <ReportsScreen employees={employees} attendanceRecords={attendanceRecords} invoices={invoices} clients={clients} purchaseOrders={purchaseOrders} purchaseShops={purchaseShops} paymentsReceived={paymentsReceived} />}
         </main>
       </div>
     </div>
