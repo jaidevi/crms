@@ -166,6 +166,25 @@ const UserAdminScreen: React.FC<UserAdminScreenProps> = ({ companyDetails, onUpd
         </fieldset>
         
         <fieldset className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 pt-6 border-t">
+            <legend className="text-lg font-medium text-gray-900 col-span-full mb-2">Report Settings</legend>
+            <div className="md:col-span-2">
+                <label htmlFor="reportNotificationEmail" className="block text-sm font-medium text-gray-700 mb-1">Daily Report Notification Email</label>
+                <input 
+                    type="email" 
+                    id="reportNotificationEmail" 
+                    name="reportNotificationEmail" 
+                    value={details.reportNotificationEmail || ''} 
+                    onChange={handleChange} 
+                    className={commonInputClasses}
+                    placeholder="e.g., admin@example.com" 
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                    Daily reports for expenses, payments, and salaries will be sent to this address at 11 PM.
+                </p>
+            </div>
+        </fieldset>
+
+        <fieldset className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 pt-6 border-t">
             <legend className="text-lg font-medium text-gray-900 col-span-full mb-2">Bank Details</legend>
             <div>
                 <label htmlFor="bankName" className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>

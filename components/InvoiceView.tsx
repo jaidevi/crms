@@ -174,7 +174,6 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                                     <td className="py-3 px-2 text-center">{index + 1}</td>
                                     <td className="py-3 px-2 font-semibold">
                                         {item.process}
-                                        {item.designNo && <div className="text-xs font-normal text-gray-500">Design: {item.designNo}</div>}
                                     </td>
                                     <td className="py-3 px-2 text-center">{numberFormat(item.mtr, { minimumFractionDigits: 0, maximumFractionDigits: 3 })}</td>
                                     <td className="py-3 px-2 text-right">{numberFormat(item.rate)}</td>

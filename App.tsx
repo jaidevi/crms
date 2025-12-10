@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import Sidebar from './components/Sidebar';
@@ -30,7 +29,7 @@ import type {
 const App: React.FC = () => {
   const [activeScreen, setActiveScreen] = useState('Dashboard');
   const [companyDetails, setCompanyDetails] = useState<CompanyDetails>({
-    name: '', addressLine1: '', addressLine2: '', phone: '', email: '', gstin: '', hsnSac: '', bankName: '', bankAccountNumber: '', bankIfscCode: '', logoUrl: ''
+    name: '', addressLine1: '', addressLine2: '', phone: '', email: '', gstin: '', hsnSac: '', bankName: '', bankAccountNumber: '', bankIfscCode: '', logoUrl: '', reportNotificationEmail: ''
   });
 
   // State Definitions
@@ -238,7 +237,7 @@ const App: React.FC = () => {
             process: i.process,
             description: i.description,
             designNo: i.design_no,
-            hsnSac: i.hsn_sac,
+            hsn_sac: i.hsn_sac,
             pcs: i.pcs || 0,
             mtr: i.mtr || 0,
             rate: i.rate || 0,
@@ -285,7 +284,7 @@ const App: React.FC = () => {
     fetchTable('other_expenses', setOtherExpenses, (data: any[]) => data.map(d => ({
         id: d.id,
         date: d.date,
-        itemName: d.item_name,
+        item_name: d.item_name,
         amount: d.amount || 0,
         notes: d.notes,
         bankName: d.bank_name,
@@ -375,6 +374,7 @@ const App: React.FC = () => {
                 bankAccountNumber: data.bank_account_number || '334101010201163',
                 bankIfscCode: data.bank_ifsc_code || 'UBIN0533416',
                 logoUrl: data.logo_url || '',
+                reportNotificationEmail: data.report_notification_email || 'jyadevi14@gmail.com',
             });
         }
     });
@@ -398,6 +398,7 @@ const App: React.FC = () => {
               bank_account_number: details.bankAccountNumber,
               bank_ifsc_code: details.bankIfscCode,
               logo_url: details.logoUrl,
+              report_notification_email: details.reportNotificationEmail
           });
 
           if (error) throw error;

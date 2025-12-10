@@ -15,6 +15,7 @@ export interface CompanyDetails {
   bankAccountNumber: string;
   bankIfscCode: string;
   logoUrl: string;
+  reportNotificationEmail?: string;
 }
 
 export interface ProcessType {
