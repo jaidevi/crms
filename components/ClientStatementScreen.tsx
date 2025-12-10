@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import type { Client, Invoice, DeliveryChallan, ProcessType, CompanyDetails } from '../types';
 import { PrintIcon } from './Icons';
 
@@ -58,6 +58,10 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
 
         return totalRate;
     };
+
+    const sortedChallans = useMemo(() => {
+        return [...challans].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [challans]);
     
     return (
         <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
@@ -106,7 +110,7 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
                 {/* Delivery Challans Section */}
                 <div>
                     <h2 className="text-lg font-semibold text-gray-800 mb-3 border-b pb-1">Delivery Challans</h2>
-                     {challans.length > 0 ? (
+                     {sortedChallans.length > 0 ? (
                         <div className="overflow-hidden border rounded-lg">
                             <table className="w-full text-sm text-left text-gray-500">
                                 <thead className="text-xs text-gray-700 uppercase bg-gray-100">
@@ -123,7 +127,7 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {challans.map(challan => {
+                                    {sortedChallans.map(challan => {
                                         const rate = getRateForChallan(challan);
                                         const totalAmount = challan.mtr * rate;
                                         return (
