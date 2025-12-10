@@ -173,7 +173,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                                 <tr key={item.id} className="border-b border-gray-200">
                                     <td className="py-3 px-2 text-center">{index + 1}</td>
                                     <td className="py-3 px-2 font-semibold">{item.process}</td>
-                                    <td className="py-3 px-2 text-center">{numberFormat(item.mtr, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                    <td className="py-3 px-2 text-center">{numberFormat(item.mtr, { minimumFractionDigits: 0, maximumFractionDigits: 3 })}</td>
                                     <td className="py-3 px-2 text-right">{numberFormat(item.rate)}</td>
                                     {showTax && <td className="py-3 px-2 text-right">{numberFormat(item.subtotal)}</td>}
                                     {showTax && <td className="py-3 px-2 text-right">{numberFormat(item.cgst)}</td>}
@@ -185,7 +185,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                          <tfoot>
                              <tr className="border-t-2 border-gray-300 font-bold text-sm">
                                  <td colSpan={2} className="py-2 px-2 text-right">Total</td>
-                                 <td className="py-2 px-2 text-center">{numberFormat(totalQty, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                 <td className="py-2 px-2 text-center">{numberFormat(totalQty, { minimumFractionDigits: 0, maximumFractionDigits: 3 })}</td>
                                  <td className="py-2 px-2"></td>
                                  {showTax && <td className="py-2 px-2 text-right">{numberFormat(invoice.subTotal)}</td>}
                                  {showTax && <td className="py-2 px-2 text-right">{numberFormat(invoice.totalCgst)}</td>}

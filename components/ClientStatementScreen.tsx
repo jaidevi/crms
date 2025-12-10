@@ -60,7 +60,13 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
     };
 
     const sortedChallans = useMemo(() => {
-        return [...challans].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return [...challans].sort((a, b) => {
+            if (a.date !== b.date) {
+                return a.date.localeCompare(b.date); // Ascending date
+            }
+            // Secondary sort by challan number ascending for stability
+            return a.challanNumber.localeCompare(b.challanNumber, undefined, { numeric: true });
+        });
     }, [challans]);
     
     return (

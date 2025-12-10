@@ -159,8 +159,12 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({
             });
 
             const initialLineItems: InvoiceItem[] = Array.from(groupedItemsMap.entries()).map(([groupKey, group]) => {
-                const roundedMtr = Math.round(group.mtr);
-                const subtotal = roundedMtr * group.rate;
+                const roundedMtr = Math.round(group.mtr); // Initial round for grouping, user can edit
+                // Since user asked not to round off, maybe we should NOT round initial mtr either?
+                // But generally initial values from challans might be summed. Challan MTRs are usually decimals.
+                // Let's use exact sum for better accuracy if user requested "no roundoff"
+                const exactMtr = group.mtr; 
+                const subtotal = exactMtr * group.rate;
                 const cgst = taxType === 'GST' ? subtotal * 0.025 : 0;
                 const sgst = taxType === 'GST' ? subtotal * 0.025 : 0;
                 const amount = subtotal + cgst + sgst;
@@ -174,7 +178,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({
                     designNo: Array.from(group._designNos).sort().join(', '),
                     hsnSac: group.hsnSac,
                     pcs: group.pcs,
-                    mtr: roundedMtr,
+                    mtr: exactMtr, // Use exact meter sum
                     rate: group.rate,
                     subtotal,
                     cgst,
@@ -440,7 +444,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({
                          <tfoot>
                              <tr className="border-t-2 border-gray-300 font-bold text-sm">
                                  <td colSpan={2} className="py-2 px-2 text-right">Total</td>
-                                 <td className="py-2 px-2 text-center">{numberFormat(totalQty, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                 <td className="py-2 px-2 text-center">{numberFormat(totalQty, { minimumFractionDigits: 0, maximumFractionDigits: 3 })}</td>
                                  <td className="py-2 px-2"></td>
                                  {showTax && <td className="py-2 px-2 text-right">{numberFormat(subTotal)}</td>}
                                  {showTax && <td className="py-2 px-2 text-right">{numberFormat(totalCgst)}</td>}
