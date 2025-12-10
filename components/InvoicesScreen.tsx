@@ -92,6 +92,13 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
         return sorted.filter(c => c.name.toLowerCase().includes(clientSearchTerm.toLowerCase()));
     }, [clients, clientSearchTerm]);
 
+    // Sort invoices in ascending order by invoice number
+    const sortedInvoices = useMemo(() => {
+        return [...invoices].sort((a, b) => {
+            return a.invoiceNumber.localeCompare(b.invoiceNumber, undefined, { numeric: true, sensitivity: 'base' });
+        });
+    }, [invoices]);
+
     const handleSearch = () => {
         if (!selectedClient || !fromDate || !toDate) {
             alert("Please select a client and a date range.");
@@ -262,6 +269,7 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
 
                 {activeTab === 'create' && (
                     <div className="p-6">
+                        {/* ... (previous search form content remains same) ... */}
                         <div className="mb-4 flex flex-col md:flex-row justify-between md:items-center gap-4">
                             <h1 className="text-xl font-semibold text-gray-800">Select Challans for Invoice</h1>
                             
@@ -502,7 +510,7 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {invoices.map(invoice => (
+                                    {sortedInvoices.map(invoice => (
                                         <tr key={invoice.id} className="bg-white border-b hover:bg-gray-50">
                                             <td className="px-6 py-4">
                                                 <button onClick={() => setViewingInvoiceId(invoice.id)} className="font-medium text-blue-600 hover:underline">
