@@ -1,11 +1,12 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import DeliveryChallanForm from './DeliveryChallanForm';
-import { PlusIcon, SearchIcon, EditIcon, TrashIcon, CameraIcon, PrintIcon } from './Icons';
+import { PlusIcon, SearchIcon, EditIcon, TrashIcon, CameraIcon, PrintIcon, DownloadIcon } from './Icons';
 import type { DeliveryChallan, Client, ProcessType, DeliveryChallanNumberConfig, Invoice, CompanyDetails, Employee, PurchaseShop } from '../types';
 import ConfirmationModal from './ConfirmationModal';
 import InvoiceView from './InvoiceView';
 import ChallanView from './ChallanView';
+import * as XLSX from 'xlsx';
 
 interface DeliveryChallanScreenProps {
   deliveryChallans: DeliveryChallan[];
@@ -286,6 +287,52 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
     setIsChallanFormOpen(true);
   };
 
+  const handleDownloadExcel = () => {
+    if (activeTab === 'invoices') {
+         if (filteredInvoices.length === 0) {
+             alert("No invoices to export.");
+             return;
+         }
+         const data = filteredInvoices.map(inv => ({
+             'Invoice #': inv.invoiceNumber,
+             'Date': formatDateForDisplay(inv.invoiceDate),
+             'Client': inv.clientName,
+             'Amount': inv.totalAmount,
+             'Tax Type': inv.taxType || 'GST'
+         }));
+         const ws = XLSX.utils.json_to_sheet(data);
+         const wb = XLSX.utils.book_new();
+         XLSX.utils.book_append_sheet(wb, ws, "Invoices");
+         XLSX.writeFile(wb, `Invoices_${new Date().toISOString().split('T')[0]}.xlsx`);
+    } else {
+        if (filteredChallans.length === 0) {
+            alert("No challans to export.");
+            return;
+        }
+        const data = filteredChallans.map(challan => ({
+            'Challan No': challan.challanNumber,
+            'Date': formatDateForDisplay(challan.date),
+            'Party Name': formatPartyNameForDisplay(challan.partyName),
+            'Status': challan.status,
+            'Party DC No': challan.partyDCNo || '',
+            'Process': challan.process.join(', '),
+            'Design No': challan.designNo || '',
+            'Pcs': challan.pcs,
+            'Meters': challan.mtr,
+            'Width': challan.width || '',
+            'Shrinkage': challan.shrinkage || '',
+            'Pin': challan.pin || '',
+            'Pick': challan.pick || '',
+            'Worker': challan.workerName || '',
+            'Unit': challan.workingUnit || ''
+        }));
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Challans");
+        XLSX.writeFile(wb, `Challans_${activeTab}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    }
+  };
+
   if (challanToPrint) {
     return <ChallanView challan={challanToPrint} companyDetails={companyDetails} onBack={() => setChallanToPrint(null)} />;
   }
@@ -350,6 +397,10 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
                         className="w-full md:w-64 pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                 </div>
+                <button onClick={handleDownloadExcel} className="flex items-center justify-center bg-green-600 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-green-700 whitespace-nowrap">
+                  <DownloadIcon className="w-5 h-5 mr-2" />
+                  Excel
+                </button>
                 <button onClick={handleOpenFormForNewChallan} className="flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-blue-700 whitespace-nowrap">
                   <PlusIcon className="w-5 h-5 mr-2" />
                   {isOutsourcingScreen ? 'New Outsourcing' : 'New Challan'}

@@ -1,7 +1,8 @@
 
 import React, { useMemo } from 'react';
 import type { Client, Invoice, DeliveryChallan, ProcessType, CompanyDetails } from '../types';
-import { PrintIcon } from './Icons';
+import { PrintIcon, DownloadIcon } from './Icons';
+import * as XLSX from 'xlsx';
 
 interface ClientStatementScreenProps {
     client: Client;
@@ -68,6 +69,85 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
             return a.challanNumber.localeCompare(b.challanNumber, undefined, { numeric: true });
         });
     }, [challans]);
+
+    const handleDownloadExcel = () => {
+        const wb = XLSX.utils.book_new();
+        
+        // Prepare data for Excel
+        const wsData: any[][] = [
+            [companyDetails.name],
+            [companyDetails.addressLine1],
+            [companyDetails.addressLine2],
+            [`Phone: ${companyDetails.phone}`],
+            [],
+            ["STATEMENT OF ACCOUNT"],
+            [],
+            [`Client: ${client.name}`],
+            [`Address: ${client.address}`],
+            [`${client.city} - ${client.pincode}`],
+            [`GSTIN: ${client.gstNo || ''}`],
+            [],
+            ["Challan #", "Date", "Party DC No", "Process", "Design No", "Pcs", "Meters", "Unit Price", "Total Amount"]
+        ];
+
+        let totalPcs = 0;
+        let totalMtr = 0;
+        let totalVal = 0;
+
+        sortedChallans.forEach(challan => {
+            const rate = getRateForChallan(challan);
+            const totalAmount = challan.mtr * rate;
+            
+            totalPcs += challan.pcs;
+            totalMtr += challan.mtr;
+            totalVal += totalAmount;
+
+            wsData.push([
+                challan.challanNumber,
+                formatDate(challan.date),
+                challan.partyDCNo || '-',
+                challan.process.join(', '),
+                challan.designNo,
+                challan.pcs,
+                parseFloat(challan.mtr.toFixed(2)),
+                parseFloat(rate.toFixed(2)),
+                parseFloat(totalAmount.toFixed(2))
+            ]);
+        });
+
+        // Add Totals Row
+        wsData.push([
+            "TOTAL", "", "", "", "", 
+            totalPcs, 
+            parseFloat(totalMtr.toFixed(2)), 
+            "", 
+            parseFloat(totalVal.toFixed(2))
+        ]);
+
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        
+        // Basic Merging for Header
+        ws['!merges'] = [
+            { s: { r: 0, c: 0 }, e: { r: 0, c: 8 } }, // Company Name
+            { s: { r: 5, c: 0 }, e: { r: 5, c: 8 } }, // Statement Title
+        ];
+
+        // Column widths
+        ws['!cols'] = [
+            { wch: 15 }, // Challan #
+            { wch: 12 }, // Date
+            { wch: 15 }, // Party DC
+            { wch: 30 }, // Process
+            { wch: 15 }, // Design
+            { wch: 10 }, // Pcs
+            { wch: 12 }, // Meters
+            { wch: 10 }, // Rate
+            { wch: 15 }  // Amount
+        ];
+
+        XLSX.utils.book_append_sheet(wb, ws, "Statement");
+        XLSX.writeFile(wb, `Statement_${client.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    };
     
     return (
         <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
@@ -77,8 +157,11 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
                     <button onClick={onBack} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-semibold hover:bg-gray-300">
                         Back
                     </button>
+                    <button onClick={handleDownloadExcel} className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md text-sm font-semibold hover:bg-green-700">
+                        <DownloadIcon className="w-4 h-4 mr-2" /> Download Excel
+                    </button>
                     <button onClick={handlePrint} className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md text-sm font-semibold hover:bg-primary-700">
-                        <PrintIcon className="w-4 h-4 mr-2" /> Print Statement
+                        <PrintIcon className="w-4 h-4 mr-2" /> Print / PDF
                     </button>
                 </div>
             </div>
