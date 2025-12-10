@@ -54,8 +54,8 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
             const isEmployeeMatch = selectedEntityId === 'all' || record.employee_id === selectedEntityId;
             return isDateInRange && isEmployeeMatch;
         }).sort((a, b) => {
-            // Sort by Date, then by Employee Name
-            if (a.date !== b.date) return a.date.localeCompare(b.date);
+            // Sort by Date Descending
+            if (a.date !== b.date) return b.date.localeCompare(a.date);
             const empA = employees.find(e => e.id === a.employee_id)?.name || '';
             const empB = employees.find(e => e.id === b.employee_id)?.name || '';
             return empA.localeCompare(empB);
