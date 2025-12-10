@@ -159,7 +159,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                             <tr className="border-b-2 border-blue-600 text-blue-600 text-sm uppercase">
                                <th className="py-2 px-2 text-center w-12 font-bold">S.NO</th>
                                <th className="py-2 px-2 text-left font-bold">PRODUCT/SERVICE NAME</th>
-                               <th className="py-2 px-2 text-center w-20 font-bold">QTY</th>
+                               <th className="py-2 px-2 text-center w-24 font-bold">QTY</th>
                                <th className="py-2 px-2 text-right w-24 font-bold">UNIT PRICE</th>
                                {/* Conditionally Render Tax Headers */}
                                {showTax && <th className="py-2 px-2 text-right w-28 font-bold">TAXABLE VALUE</th>}
@@ -172,7 +172,10 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                             {invoice.items.map((item, index) => (
                                 <tr key={item.id} className="border-b border-gray-200">
                                     <td className="py-3 px-2 text-center">{index + 1}</td>
-                                    <td className="py-3 px-2 font-semibold">{item.process}</td>
+                                    <td className="py-3 px-2 font-semibold">
+                                        {item.process}
+                                        {item.designNo && <div className="text-xs font-normal text-gray-500">Design: {item.designNo}</div>}
+                                    </td>
                                     <td className="py-3 px-2 text-center">{numberFormat(item.mtr, { minimumFractionDigits: 0, maximumFractionDigits: 3 })}</td>
                                     <td className="py-3 px-2 text-right">{numberFormat(item.rate)}</td>
                                     {showTax && <td className="py-3 px-2 text-right">{numberFormat(item.subtotal)}</td>}

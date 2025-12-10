@@ -400,7 +400,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({
                             <tr className="border-b-2 border-blue-600 text-blue-600 text-sm uppercase">
                                <th className="py-2 px-2 text-center w-10 font-bold">S.NO</th>
                                <th className="py-2 px-2 text-left font-bold">PRODUCT/SERVICE NAME</th>
-                               <th className="py-2 px-2 text-center w-16 font-bold">QTY</th>
+                               <th className="py-2 px-2 text-center w-24 font-bold">QTY</th>
                                <th className="py-2 px-2 text-right w-20 font-bold">UNIT PRICE</th>
                                {showTax && <th className="py-2 px-2 text-right w-24 font-bold">TAXABLE VALUE</th>}
                                {showTax && <th className="py-2 px-2 text-right w-20 font-bold">CGST (2.5%)</th>}
@@ -444,7 +444,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({
                          <tfoot>
                              <tr className="border-t-2 border-gray-300 font-bold text-sm">
                                  <td colSpan={2} className="py-2 px-2 text-right">Total</td>
-                                 <td className="py-2 px-2 text-center">{numberFormat(totalQty, { minimumFractionDigits: 0, maximumFractionDigits: 3 })}</td>
+                                 <td className="py-2 px-2 text-center">{numberFormat(totalQty, { minimumFractionDigits: 0, maximumFractionDigits: 10})}</td>
                                  <td className="py-2 px-2"></td>
                                  {showTax && <td className="py-2 px-2 text-right">{numberFormat(subTotal)}</td>}
                                  {showTax && <td className="py-2 px-2 text-right">{numberFormat(totalCgst)}</td>}
