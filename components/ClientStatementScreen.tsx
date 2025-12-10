@@ -28,38 +28,6 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
         window.print();
     };
 
-    const getRateForChallan = (challan: DeliveryChallan): number => {
-        if (!challan.process || challan.process.length === 0) {
-            return 0;
-        }
-        
-        let totalRate = 0;
-        const normalize = (s: string) => s.trim().toLowerCase().replace(/^"/, '').replace(/"$/, '');
-
-        // Robustly split processes by comma, even if they are inside array elements
-        const individualProcesses = challan.process
-            .flatMap(p => p.split(','))
-            .map(p => p.trim())
-            .filter(p => p !== '');
-
-        individualProcesses.forEach(procName => {
-            const normalizedProcName = normalize(procName);
-
-            // 1. Check for client-specific rate
-            const clientProcess = client.processes?.find(p => normalize(p.processName) === normalizedProcName);
-            
-            if (clientProcess) {
-                totalRate += clientProcess.rate;
-            } else {
-                // 2. Fallback to master process rate
-                const masterProcess = processTypes.find(p => normalize(p.name) === normalizedProcName);
-                totalRate += (masterProcess?.rate || 0);
-            }
-        });
-
-        return totalRate;
-    };
-
     const sortedChallans = useMemo(() => {
         return [...challans].sort((a, b) => {
             if (a.date !== b.date) {
@@ -87,20 +55,15 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
             [`${client.city} - ${client.pincode}`],
             [`GSTIN: ${client.gstNo || ''}`],
             [],
-            ["Challan #", "Date", "Party DC No", "Process", "Design No", "Pcs", "Meters", "Unit Price", "Total Amount"]
+            ["Challan #", "Date", "Party DC No", "Process", "Design No", "Pcs", "Meters"]
         ];
 
         let totalPcs = 0;
         let totalMtr = 0;
-        let totalVal = 0;
 
         sortedChallans.forEach(challan => {
-            const rate = getRateForChallan(challan);
-            const totalAmount = challan.mtr * rate;
-            
             totalPcs += challan.pcs;
             totalMtr += challan.mtr;
-            totalVal += totalAmount;
 
             wsData.push([
                 challan.challanNumber,
@@ -109,9 +72,7 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
                 challan.process.join(', '),
                 challan.designNo,
                 challan.pcs,
-                parseFloat(challan.mtr.toFixed(2)),
-                parseFloat(rate.toFixed(2)),
-                parseFloat(totalAmount.toFixed(2))
+                parseFloat(challan.mtr.toFixed(2))
             ]);
         });
 
@@ -119,17 +80,15 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
         wsData.push([
             "TOTAL", "", "", "", "", 
             totalPcs, 
-            parseFloat(totalMtr.toFixed(2)), 
-            "", 
-            parseFloat(totalVal.toFixed(2))
+            parseFloat(totalMtr.toFixed(2))
         ]);
 
         const ws = XLSX.utils.aoa_to_sheet(wsData);
         
         // Basic Merging for Header
         ws['!merges'] = [
-            { s: { r: 0, c: 0 }, e: { r: 0, c: 8 } }, // Company Name
-            { s: { r: 5, c: 0 }, e: { r: 5, c: 8 } }, // Statement Title
+            { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }, // Company Name
+            { s: { r: 5, c: 0 }, e: { r: 5, c: 6 } }, // Statement Title
         ];
 
         // Column widths
@@ -141,8 +100,6 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
             { wch: 15 }, // Design
             { wch: 10 }, // Pcs
             { wch: 12 }, // Meters
-            { wch: 10 }, // Rate
-            { wch: 15 }  // Amount
         ];
 
         XLSX.utils.book_append_sheet(wb, ws, "Statement");
@@ -211,14 +168,10 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
                                         <th className="px-4 py-3 border-b">Design No</th>
                                         <th className="px-4 py-3 border-b text-right">Pcs</th>
                                         <th className="px-4 py-3 border-b text-right">Meters</th>
-                                        <th className="px-4 py-3 border-b text-right">Unit Price</th>
-                                        <th className="px-4 py-3 border-b text-right">Total Amount</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {sortedChallans.map(challan => {
-                                        const rate = getRateForChallan(challan);
-                                        const totalAmount = challan.mtr * rate;
                                         return (
                                             <tr key={challan.id} className="bg-white border-b hover:bg-gray-50">
                                                 <td className="px-4 py-3 font-medium text-gray-900">{challan.challanNumber}</td>
@@ -228,8 +181,6 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
                                                 <td className="px-4 py-3">{challan.designNo}</td>
                                                 <td className="px-4 py-3 text-right">{challan.pcs}</td>
                                                 <td className="px-4 py-3 text-right">{challan.mtr.toFixed(2)}</td>
-                                                <td className="px-4 py-3 text-right">₹{rate.toFixed(2)}</td>
-                                                <td className="px-4 py-3 text-right font-medium text-gray-900">₹{totalAmount.toFixed(2)}</td>
                                             </tr>
                                         );
                                     })}
