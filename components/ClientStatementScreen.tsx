@@ -25,7 +25,12 @@ const VEL_LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53
 const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, invoices, challans, processTypes, onBack, companyDetails }) => {
     
     const handlePrint = () => {
+        const originalTitle = document.title;
+        document.title = `Statement_${client.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}`;
         window.print();
+        setTimeout(() => {
+            document.title = originalTitle;
+        }, 500);
     };
 
     const sortedChallans = useMemo(() => {
