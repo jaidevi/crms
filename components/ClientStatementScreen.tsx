@@ -53,7 +53,7 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
             [companyDetails.addressLine2],
             [`Phone: ${companyDetails.phone}`],
             [],
-            ["ACCOUNT SUMMARY"],
+            ["BILL SUMMARY"],
             [],
             [`Client: ${client.name}`],
             [`Address: ${client.address}`],
@@ -145,7 +145,7 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
                         </div>
                      </div>
                      <div className="text-right">
-                        <h1 className="text-2xl font-bold text-gray-800 uppercase">Account SUMMARY</h1>
+                        <h1 className="text-2xl font-bold text-gray-800 uppercase">BILL SUMMARY</h1>
                      </div>
                 </div>
 
