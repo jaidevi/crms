@@ -159,7 +159,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                             <tr className="border-b-2 border-blue-600 text-blue-600 text-sm uppercase">
                                <th className="py-2 px-2 text-center w-12 font-bold">S.NO</th>
                                <th className="py-2 px-2 text-left font-bold">PRODUCT/SERVICE NAME</th>
-                               <th className="py-2 px-2 text-center w-24 font-bold">QTY</th>
+                               <th className="py-2 px-2 text-center w-24 font-bold">QTY(IN MTRs)</th>
                                <th className="py-2 px-2 text-right w-24 font-bold">UNIT PRICE</th>
                                {/* Conditionally Render Tax Headers */}
                                {showTax && <th className="py-2 px-2 text-right w-28 font-bold">TAXABLE VALUE</th>}
