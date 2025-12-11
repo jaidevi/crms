@@ -1,7 +1,7 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { Client, Invoice, DeliveryChallan, ProcessType, CompanyDetails } from '../types';
-import { PrintIcon, DownloadIcon } from './Icons';
+import { PrintIcon, DownloadIcon, CheckIcon } from './Icons';
 import * as XLSX from 'xlsx';
 
 interface ClientStatementScreenProps {
@@ -23,6 +23,7 @@ const formatDate = (dateStr: string) => {
 const VEL_LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTUwIj48cmVjdCB4PSI0NiIgeT0iMTAwIiB3aWR0aD0iOCIgaGVpZ2h0PSI1MCIgZmlsbD0iI2I0NTMwOSIgLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjE0OCIgcj0iNCIgZmlsbD0iI2I0NTMwOSIgLz48cGF0aCBkPSJNNDAgMTAwIFE1MCAxMTAgNjAgMTAwIiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNDIgMTA1IFE1MCAxMTUgNTggMTA1IiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNDQgMTEwIFE1MCAxMTggNTYgMTEwIiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNTAgNSBDIDg1IDQwIDg1IDgwIDUwIDEwMCBDIDE1IDgwIDE1IDQwIDUwIDUgWiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZjk3MzE2IiBzdHJva2Utd2lkdGg9IjQiIC8+PHBhdGggZD0iTTUwIDQ1IEMgNjUgNjAgNjUgODAgNTAgOTAgQyAzNSA4MCAzNSA2MCA1MCA0NSBaIiBmaWxsPSIjMWQ0ZWQ4IiAvPjxsaW5lIHgxPSIzNSIgeTE9IjI1IiB4Mj0iNjUiIHkyPSIyNSIgc3Ryb2tlPSIjOWNhM2FmIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgLz48bGluZSB4MT0iMzIiIHkxPSIzMiIgeDI9IjY4IiB5Mj0iMzIiIHN0cm9rZT0iIzljYTNhZiIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiIC8+PGxpbmUgeDE9IjM1IiB5MT0iMzkiIHgyPSI2NSIgeTI9IjM5IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiAvPjxjaXJjbGUgY3g9IjUwIiBjeT0iMzIiIHI9IjQiIGZpbGw9IiNkYzI2MjYiIC8+PC9zdmc+";
 
 const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, invoices, challans, processTypes, onBack, companyDetails }) => {
+    const [showDesignNo, setShowDesignNo] = useState(false);
     
     const handlePrint = () => {
         const originalTitle = document.title;
@@ -60,8 +61,13 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
             [`${client.city} - ${client.pincode}`],
             [`GSTIN: ${client.gstNo || ''}`],
             [],
-            ["Challan #", "Date", "Party DC No", "Process", "Design No", "Pcs", "Meters"]
         ];
+
+        const headerRow = ["Challan #", "Date", "Party DC No", "Process"];
+        if (showDesignNo) headerRow.push("Design No");
+        headerRow.push("Pcs", "Meters");
+        
+        wsData.push(headerRow);
 
         let totalPcs = 0;
         let totalMtr = 0;
@@ -70,42 +76,51 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
             totalPcs += challan.pcs;
             totalMtr += challan.mtr;
 
-            wsData.push([
+            const row: (string | number)[] = [
                 challan.challanNumber,
                 formatDate(challan.date),
                 challan.partyDCNo || '-',
-                challan.process.join(', '),
-                challan.designNo,
-                challan.pcs,
-                parseFloat(challan.mtr.toFixed(2))
-            ]);
+                challan.process.join(', ')
+            ];
+            
+            if (showDesignNo) {
+                row.push(challan.designNo);
+            }
+            
+            row.push(challan.pcs, parseFloat(challan.mtr.toFixed(2)));
+            
+            wsData.push(row);
         });
 
         // Add Totals Row
-        wsData.push([
-            "TOTAL", "", "", "", "", 
-            totalPcs, 
-            parseFloat(totalMtr.toFixed(2))
-        ]);
+        const totalRow: (string | number)[] = ["TOTAL", "", "", ""];
+        if (showDesignNo) totalRow.push("");
+        totalRow.push(totalPcs, parseFloat(totalMtr.toFixed(2)));
+        
+        wsData.push(totalRow);
 
         const ws = XLSX.utils.aoa_to_sheet(wsData);
         
+        const totalCols = showDesignNo ? 6 : 5; // 0-indexed count is actually 7 or 6 columns total
+
         // Basic Merging for Header
         ws['!merges'] = [
-            { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }, // Company Name
-            { s: { r: 5, c: 0 }, e: { r: 5, c: 6 } }, // Statement Title
+            { s: { r: 0, c: 0 }, e: { r: 0, c: totalCols } }, // Company Name
+            { s: { r: 5, c: 0 }, e: { r: 5, c: totalCols } }, // Statement Title
         ];
 
         // Column widths
-        ws['!cols'] = [
+        const colWidths = [
             { wch: 15 }, // Challan #
             { wch: 12 }, // Date
             { wch: 15 }, // Party DC
             { wch: 30 }, // Process
-            { wch: 15 }, // Design
-            { wch: 10 }, // Pcs
-            { wch: 12 }, // Meters
         ];
+        if (showDesignNo) colWidths.push({ wch: 15 }); // Design
+        colWidths.push({ wch: 10 }); // Pcs
+        colWidths.push({ wch: 12 }); // Meters
+        
+        ws['!cols'] = colWidths;
 
         XLSX.utils.book_append_sheet(wb, ws, "Statement");
         XLSX.writeFile(wb, `Statement_${client.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`);
@@ -118,6 +133,12 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
                 <div className="flex gap-3">
                     <button onClick={onBack} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-semibold hover:bg-gray-300">
                         Back
+                    </button>
+                    <button 
+                        onClick={() => setShowDesignNo(!showDesignNo)} 
+                        className="px-4 py-2 bg-blue-100 text-blue-700 rounded-md text-sm font-semibold hover:bg-blue-200 border border-blue-200"
+                    >
+                        {showDesignNo ? 'Hide Design No' : 'Show Design No'}
                     </button>
                     <button onClick={handleDownloadExcel} className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md text-sm font-semibold hover:bg-green-700">
                         <DownloadIcon className="w-4 h-4 mr-2" /> Download Excel
@@ -170,7 +191,7 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
                                         <th className="px-4 py-3 border-b">Date</th>
                                         <th className="px-4 py-3 border-b">Party DC No</th>
                                         <th className="px-4 py-3 border-b">Process</th>
-                                        <th className="px-4 py-3 border-b">Design No</th>
+                                        {showDesignNo && <th className="px-4 py-3 border-b">Design No</th>}
                                         <th className="px-4 py-3 border-b text-right">Pcs</th>
                                         <th className="px-4 py-3 border-b text-right">Meters</th>
                                     </tr>
@@ -183,7 +204,7 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
                                                 <td className="px-4 py-3">{formatDate(challan.date)}</td>
                                                 <td className="px-4 py-3">{challan.partyDCNo || '-'}</td>
                                                 <td className="px-4 py-3">{challan.process.join(', ')}</td>
-                                                <td className="px-4 py-3">{challan.designNo}</td>
+                                                {showDesignNo && <td className="px-4 py-3">{challan.designNo}</td>}
                                                 <td className="px-4 py-3 text-right">{challan.pcs}</td>
                                                 <td className="px-4 py-3 text-right">{challan.mtr.toFixed(2)}</td>
                                             </tr>
