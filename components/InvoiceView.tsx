@@ -109,7 +109,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                                 <span className="mr-1">☎</span> {companyDetails.phone}
                             </div>
                             <div className="flex items-center text-sm text-gray-700">
-                                <span className="mr-1">@</span> {companyDetails.email}
+                                <span className="mr-1"></span> {companyDetails.email}
                             </div>
                              <div className="text-sm text-gray-700 mt-1">
                                 <span className="font-semibold">GSTIN:</span> {companyDetails.gstin}
