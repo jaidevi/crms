@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import Sidebar from './components/Sidebar';
@@ -26,7 +27,7 @@ import type {
   PaymentReceived, AttendanceRecord, Payslip
 } from './types';
 
-const App: React.FC = () => {
+export const App: React.FC = () => {
   const [activeScreen, setActiveScreen] = useState('Dashboard');
   const [companyDetails, setCompanyDetails] = useState<CompanyDetails>({
     name: '', addressLine1: '', addressLine2: '', phone: '', email: '', gstin: '', hsnSac: '', bankName: '', bankAccountNumber: '', bankIfscCode: '', logoUrl: '', reportNotificationEmail: ''
@@ -190,8 +191,6 @@ const App: React.FC = () => {
                     // Fallback string parsing for legacy data
                     return d.process.split(',').map((s: string) => {
                         let str = s.trim().replace(/^\[/, '').replace(/\]$/, '').trim();
-                        // Only remove quotes if they are wrapping quotes (start AND end)
-                        // This preserves inch marks like '58"'
                         if (str.startsWith('"') && str.endsWith('"') && str.length >= 2) {
                             str = str.substring(1, str.length - 1);
                         }
@@ -204,6 +203,7 @@ const App: React.FC = () => {
             pcs: d.pcs || 0,
             mtr: d.mtr || 0,
             width: d.width || 0,
+            percentage: d.percentage || '',
             shrinkage: d.shrinkage,
             pin: d.pin,
             pick: d.pick,
@@ -801,6 +801,7 @@ const App: React.FC = () => {
               pcs: newChallan.pcs,
               mtr: newChallan.mtr,
               width: newChallan.width,
+              percentage: newChallan.percentage,
               shrinkage: newChallan.shrinkage,
               pin: newChallan.pin,
               pick: newChallan.pick,
@@ -843,6 +844,7 @@ const App: React.FC = () => {
               pcs: updatedChallan.pcs,
               mtr: updatedChallan.mtr,
               width: updatedChallan.width,
+              percentage: updatedChallan.percentage,
               shrinkage: updatedChallan.shrinkage,
               pin: updatedChallan.pin,
               pick: updatedChallan.pick,
@@ -1448,5 +1450,3 @@ const App: React.FC = () => {
     </div>
   );
 };
-
-export default App;

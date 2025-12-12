@@ -1,56 +1,19 @@
 
--- ... (rest of the file remains same) ...
+-- ... (existing schema) ...
 
--- 12. Company Details Table
--- Stores a single row of company information.
-CREATE TABLE IF NOT EXISTS company_details (
-    id INT PRIMARY KEY CHECK (id = 1), -- Ensures only one row can exist
-    name TEXT,
-    address_line_1 TEXT,
-    address_line_2 TEXT,
-    phone TEXT,
-    email TEXT,
-    gstin TEXT,
-    bank_name TEXT,
-    bank_account_number TEXT,
-    bank_ifsc_code TEXT
+-- 13. Audit Logs Table
+-- Tracks all changes made to key tables for history and restore functionality.
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    table_name TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    action TEXT NOT NULL, -- 'CREATE', 'UPDATE', 'DELETE'
+    old_data JSONB, -- Snapshot before change
+    new_data JSONB, -- Snapshot after change
+    changed_by TEXT DEFAULT 'Admin', -- Placeholder for user system
+    timestamp TIMESTAMPTZ DEFAULT NOW()
 );
-ALTER TABLE company_details ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Public company_details are viewable by everyone." ON company_details FOR SELECT USING (true);
-CREATE POLICY "Users can insert their own company_details." ON company_details FOR INSERT WITH CHECK (true);
-CREATE POLICY "Users can update their own company_details." ON company_details FOR UPDATE USING (true);
 
--- Safely add logo_url column if it doesn't exist
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = 'company_details' AND column_name = 'logo_url'
-    ) THEN
-        ALTER TABLE company_details ADD COLUMN logo_url TEXT;
-    END IF;
-END $$;
-
--- Safely add hsn_sac column if it doesn't exist
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = 'company_details' AND column_name = 'hsn_sac'
-    ) THEN
-        ALTER TABLE company_details ADD COLUMN hsn_sac TEXT;
-    END IF;
-END $$;
-
--- Safely add report_notification_email column if it doesn't exist
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = 'company_details' AND column_name = 'report_notification_email'
-    ) THEN
-        ALTER TABLE company_details ADD COLUMN report_notification_email TEXT;
-    END IF;
-END $$;
-
--- ... (rest of the file) ...
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Audit logs are viewable by everyone." ON audit_logs FOR SELECT USING (true);
+CREATE POLICY "Users can insert audit logs." ON audit_logs FOR INSERT WITH CHECK (true);

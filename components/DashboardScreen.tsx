@@ -75,7 +75,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     const productionKpis = useMemo(() => {
         const invoicedChallanNumbers = new Set(
             invoices.flatMap(invoice => 
-                invoice.items.flatMap(item => item.challanNumber.split(',').map(s => s.trim()))
+                (invoice.items || []).flatMap(item => (item.challanNumber || '').split(',').map(s => s.trim()))
             )
         );
         const readyToInvoice = deliveryChallans.filter(c => (c.status === 'Ready to Invoice' || c.status === 'Delivered') && !invoicedChallanNumbers.has(c.challanNumber));

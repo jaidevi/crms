@@ -84,6 +84,12 @@ const ChallanView: React.FC<ChallanViewProps> = ({ challan, companyDetails, onBa
                                     )}
                                     <span className="font-semibold">Design No:</span> {challan.designNo} <br/>
                                     <span className="font-semibold">Party DC No:</span> {challan.partyDCNo}
+                                    {challan.percentage && (
+                                        <>
+                                            <br/>
+                                            <span className="font-semibold">Percentage:</span> {challan.percentage}
+                                        </>
+                                    )}
                                 </td>
                                 <td className="p-2 text-right border align-top">{challan.pcs}</td>
                                 <td className="p-2 text-right border align-top">{challan.mtr.toFixed(2)}</td>
