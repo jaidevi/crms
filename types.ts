@@ -186,7 +186,6 @@ export interface DeliveryChallan {
   pcs: number;
   mtr: number;
   width: number;
-  percentage?: string;
   shrinkage: string;
   pin: string;
   pick: string;

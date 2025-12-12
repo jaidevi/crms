@@ -6,9 +6,10 @@ import { InfoIcon } from './Icons';
 interface DeliveryChallanNumberSettingsScreenProps {
   config: DeliveryChallanNumberConfig;
   onUpdateConfig: (newConfig: DeliveryChallanNumberConfig) => void;
+  title?: string;
 }
 
-const DeliveryChallanNumberSettingsScreen: React.FC<DeliveryChallanNumberSettingsScreenProps> = ({ config, onUpdateConfig }) => {
+const DeliveryChallanNumberSettingsScreen: React.FC<DeliveryChallanNumberSettingsScreenProps> = ({ config, onUpdateConfig, title = "Delivery Challan Numbering" }) => {
   const [prefix, setPrefix] = useState(config.prefix);
   const [nextNumber, setNextNumber] = useState(config.nextNumber);
   const [isSaved, setIsSaved] = useState(false);
@@ -29,21 +30,21 @@ const DeliveryChallanNumberSettingsScreen: React.FC<DeliveryChallanNumberSetting
   return (
     <div className="bg-white rounded-lg shadow-sm max-w-2xl">
       <div className="p-5 border-b border-gray-200">
-        <h1 className="text-xl font-semibold text-gray-800">Delivery Challan Numbering</h1>
+        <h1 className="text-xl font-semibold text-gray-800">{title}</h1>
       </div>
       <div className="p-8 space-y-6">
         <div>
           <label className="flex items-center">
             <input
               type="radio"
-              name="numbering-type-dc"
+              name={`numbering-type-${title.replace(/\s+/g, '-').toLowerCase()}`}
               value="auto"
               checked={true}
               readOnly
               className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
             />
             <span className="ml-3 text-sm font-medium text-gray-800">
-              Continue auto-generating delivery challan numbers
+              Continue auto-generating numbers
             </span>
             <InfoIcon className="w-4 h-4 text-gray-400 ml-1" />
           </label>
@@ -51,12 +52,12 @@ const DeliveryChallanNumberSettingsScreen: React.FC<DeliveryChallanNumberSetting
 
         <div className="flex items-end space-x-4">
           <div className="flex-1">
-            <label htmlFor="dc-prefix" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor={`prefix-${title}`} className="block text-sm font-medium text-gray-700 mb-1">
               Prefix
             </label>
             <input
               type="text"
-              id="dc-prefix"
+              id={`prefix-${title}`}
               value={prefix || ''}
               onChange={(e) => setPrefix(e.target.value)}
               className={commonInputClasses}
@@ -64,12 +65,12 @@ const DeliveryChallanNumberSettingsScreen: React.FC<DeliveryChallanNumberSetting
             />
           </div>
           <div className="w-32">
-            <label htmlFor="dc-nextNumber" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor={`nextNumber-${title}`} className="block text-sm font-medium text-gray-700 mb-1">
               Next Number
             </label>
             <input
               type="number"
-              id="dc-nextNumber"
+              id={`nextNumber-${title}`}
               value={nextNumber}
               onChange={(e) => setNextNumber(Number(e.target.value))}
               className={commonInputClasses}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import Sidebar from './components/Sidebar';
@@ -54,6 +53,7 @@ export const App: React.FC = () => {
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [payslips, setPayslips] = useState<Payslip[]>([]);
   const [deliveryChallanNumberConfig, setDeliveryChallanNumberConfig] = useState<DeliveryChallanNumberConfig>({ prefix: 'DC', nextNumber: 1 });
+  const [outsourcingChallanNumberConfig, setOutsourcingChallanNumberConfig] = useState<DeliveryChallanNumberConfig>({ prefix: 'OUT', nextNumber: 1 });
   const [invoiceNumberConfig, setInvoiceNumberConfig] = useState<InvoiceNumberConfig>({ mode: 'auto', prefix: 'INV', nextNumber: 1 });
   const [ngstInvoiceNumberConfig, setNgstInvoiceNumberConfig] = useState<InvoiceNumberConfig>({ mode: 'auto', prefix: 'NGST', nextNumber: 1 });
 
@@ -203,7 +203,6 @@ export const App: React.FC = () => {
             pcs: d.pcs || 0,
             mtr: d.mtr || 0,
             width: d.width || 0,
-            percentage: d.percentage || '',
             shrinkage: d.shrinkage,
             pin: d.pin,
             pick: d.pick,
@@ -237,7 +236,7 @@ export const App: React.FC = () => {
             process: i.process,
             description: i.description,
             designNo: i.design_no,
-            hsn_sac: i.hsn_sac,
+            hsnSac: i.hsn_sac,
             pcs: i.pcs || 0,
             mtr: i.mtr || 0,
             rate: i.rate || 0,
@@ -264,12 +263,14 @@ export const App: React.FC = () => {
         data.forEach(config => {
             if (config.id === 'po') setPoNumberConfig({ prefix: config.prefix ?? '', nextNumber: config.next_number ?? 1 });
             if (config.id === 'dc') setDeliveryChallanNumberConfig({ prefix: config.prefix ?? '', nextNumber: config.next_number ?? 1 });
+            if (config.id === 'dc_outsourcing') setOutsourcingChallanNumberConfig({ prefix: config.prefix ?? 'OUT', nextNumber: config.next_number ?? 1 });
             if (config.id === 'invoice') setInvoiceNumberConfig({ mode: config.mode ?? 'auto', prefix: config.prefix ?? '', nextNumber: config.next_number ?? 1 });
             if (config.id === 'invoice_ngst') setNgstInvoiceNumberConfig({ mode: config.mode ?? 'auto', prefix: config.prefix ?? '', nextNumber: config.next_number ?? 1 });
             if (config.id === 'supplier_payment') setSupplierPaymentConfig({ prefix: config.prefix ?? '', nextNumber: config.next_number ?? 1 });
         });
     });
 
+    // ... (Other tables: employee_advances, other_expenses, expense_categories, timber_expenses, supplier_payments, attendance, payslips, company_details) ...
     // 11. Employee Advances
     fetchTable('employee_advances', setAdvances, (data: any[]) => data.map(d => ({
         id: d.id,
@@ -382,7 +383,7 @@ export const App: React.FC = () => {
   }, []);
 
   // --- Handlers ---
-
+  // ... (Other handlers like handleUpdateCompanyDetails, handleAddClient, etc. remain the same) ...
   const handleUpdateCompanyDetails = async (details: CompanyDetails) => {
       try {
           const { error } = await supabase.from('company_details').upsert({
@@ -481,6 +482,7 @@ export const App: React.FC = () => {
       }
   };
 
+  // ... (Other handlers) ...
   const handleAddPurchaseShop = async (newShop: Omit<PurchaseShop, 'id'>) => {
       try {
           const { data, error } = await supabase.from('purchase_shops').insert([{
@@ -801,7 +803,6 @@ export const App: React.FC = () => {
               pcs: newChallan.pcs,
               mtr: newChallan.mtr,
               width: newChallan.width,
-              percentage: newChallan.percentage,
               shrinkage: newChallan.shrinkage,
               pin: newChallan.pin,
               pick: newChallan.pick,
@@ -824,8 +825,15 @@ export const App: React.FC = () => {
 
           if (data) {
               setDeliveryChallans(prev => [...prev, { ...newChallan, id: data.id }]);
-              setDeliveryChallanNumberConfig(prev => ({ ...prev, nextNumber: prev.nextNumber + 1 }));
-              await supabase.from('numbering_configs').upsert({ id: 'dc', prefix: deliveryChallanNumberConfig.prefix, next_number: deliveryChallanNumberConfig.nextNumber + 1 });
+              
+              // Increment appropriate counter
+              if (newChallan.isOutsourcing) {
+                  setOutsourcingChallanNumberConfig(prev => ({ ...prev, nextNumber: prev.nextNumber + 1 }));
+                  await supabase.from('numbering_configs').upsert({ id: 'dc_outsourcing', prefix: outsourcingChallanNumberConfig.prefix, next_number: outsourcingChallanNumberConfig.nextNumber + 1 });
+              } else {
+                  setDeliveryChallanNumberConfig(prev => ({ ...prev, nextNumber: prev.nextNumber + 1 }));
+                  await supabase.from('numbering_configs').upsert({ id: 'dc', prefix: deliveryChallanNumberConfig.prefix, next_number: deliveryChallanNumberConfig.nextNumber + 1 });
+              }
           }
       } catch (error: any) {
           alert(`Error adding challan: ${error.message || error}`);
@@ -844,7 +852,6 @@ export const App: React.FC = () => {
               pcs: updatedChallan.pcs,
               mtr: updatedChallan.mtr,
               width: updatedChallan.width,
-              percentage: updatedChallan.percentage,
               shrinkage: updatedChallan.shrinkage,
               pin: updatedChallan.pin,
               pick: updatedChallan.pick,
@@ -866,6 +873,7 @@ export const App: React.FC = () => {
 
   const handleDeleteChallan = async (id: string) => {
       try {
+          const challanToDelete = deliveryChallans.find(c => c.id === id);
           const { error } = await supabase.from('delivery_challans').delete().eq('id', id);
           if (error) throw error;
           
@@ -873,34 +881,45 @@ export const App: React.FC = () => {
           setDeliveryChallans(updatedChallans);
 
           // Recalculate next number based on remaining challans matching current prefix
-          const currentPrefix = deliveryChallanNumberConfig.prefix;
-          
-          // Helper to extract number
-          const extractNumber = (str: string) => {
-              // Matches number at the end of the string
-              const match = str.match(/(\d+)$/);
-              return match ? parseInt(match[1], 10) : 0;
-          };
+          if (challanToDelete) {
+              const isOutsourcing = challanToDelete.isOutsourcing;
+              const configToUpdate = isOutsourcing ? outsourcingChallanNumberConfig : deliveryChallanNumberConfig;
+              const configId = isOutsourcing ? 'dc_outsourcing' : 'dc';
+              const currentPrefix = configToUpdate.prefix;
+              
+              // Helper to extract number
+              const extractNumber = (str: string) => {
+                  // Matches number at the end of the string
+                  const match = str.match(/(\d+)$/);
+                  return match ? parseInt(match[1], 10) : 0;
+              };
 
-          const relevantNumbers = updatedChallans
-              .filter(c => c.challanNumber.startsWith(currentPrefix))
-              .map(c => extractNumber(c.challanNumber));
-          
-          const maxNumber = relevantNumbers.length > 0 ? Math.max(...relevantNumbers) : 0;
-          const newNextNumber = maxNumber + 1;
+              const relevantNumbers = updatedChallans
+                  .filter(c => c.isOutsourcing === isOutsourcing && c.challanNumber.startsWith(currentPrefix))
+                  .map(c => extractNumber(c.challanNumber));
+              
+              const maxNumber = relevantNumbers.length > 0 ? Math.max(...relevantNumbers) : 0;
+              const newNextNumber = maxNumber + 1;
 
-          setDeliveryChallanNumberConfig(prev => ({ ...prev, nextNumber: newNextNumber }));
-          await supabase.from('numbering_configs').upsert({ 
-              id: 'dc', 
-              prefix: currentPrefix, 
-              next_number: newNextNumber 
-          });
+              if (isOutsourcing) {
+                  setOutsourcingChallanNumberConfig(prev => ({ ...prev, nextNumber: newNextNumber }));
+              } else {
+                  setDeliveryChallanNumberConfig(prev => ({ ...prev, nextNumber: newNextNumber }));
+              }
+              
+              await supabase.from('numbering_configs').upsert({ 
+                  id: configId, 
+                  prefix: currentPrefix, 
+                  next_number: newNextNumber 
+              });
+          }
 
       } catch (error: any) {
           alert(`Error deleting challan: ${error.message || error}`);
       }
   };
 
+  // ... (Other handlers like handleAddInvoice, etc. remain the same) ...
   const handleAddInvoice = async (newInvoice: Omit<Invoice, 'id'>) => {
       try {
           // 1. Insert Invoice
@@ -1413,6 +1432,11 @@ export const App: React.FC = () => {
       await supabase.from('numbering_configs').upsert({ id: 'dc', prefix: newConfig.prefix, next_number: newConfig.nextNumber });
   };
 
+  const handleUpdateOutsourcingDcConfig = async (newConfig: DeliveryChallanNumberConfig) => {
+      setOutsourcingChallanNumberConfig(newConfig);
+      await supabase.from('numbering_configs').upsert({ id: 'dc_outsourcing', prefix: newConfig.prefix, next_number: newConfig.nextNumber });
+  };
+
   const handleUpdateInvConfig = async (type: 'GST' | 'NGST', newConfig: InvoiceNumberConfig) => {
       if (type === 'GST') {
           setInvoiceNumberConfig(newConfig);
@@ -1432,10 +1456,10 @@ export const App: React.FC = () => {
           {activeScreen === 'Dashboard' && <DashboardScreen invoices={invoices} paymentsReceived={paymentsReceived} deliveryChallans={deliveryChallans} purchaseOrders={purchaseOrders} otherExpenses={otherExpenses} advances={advances} />}
           {activeScreen === 'Expenses' && <PurchaseOrderScreen purchaseOrders={purchaseOrders} onAddOrder={handleAddPurchaseOrder} onUpdateOrder={handleUpdatePurchaseOrder} onDeleteOrder={handleDeletePurchaseOrder} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} bankNames={bankNames} onAddBankName={name => setBankNames(prev => [...prev, name])} poNumberConfig={poNumberConfig} masterItems={masterItems} onAddMasterItem={handleAddMasterItem} advances={advances} employees={employees} onAddAdvance={handleAddAdvance} onUpdateAdvance={handleUpdateAdvance} onDeleteAdvance={handleDeleteAdvance} otherExpenses={otherExpenses} onAddOtherExpense={handleAddOtherExpense} onUpdateOtherExpense={handleUpdateOtherExpense} onDeleteOtherExpense={handleDeleteOtherExpense} expenseCategories={expenseCategories} onAddExpenseCategory={handleAddExpenseCategory} timberExpenses={timberExpenses} onAddTimberExpense={handleAddTimberExpense} onUpdateTimberExpense={handleUpdateTimberExpense} onDeleteTimberExpense={handleDeleteTimberExpense} supplierPayments={supplierPayments} supplierPaymentConfig={supplierPaymentConfig} onAddSupplierPayment={handleAddSupplierPayment} />}
           {activeScreen === 'Delivery Challans' && <DeliveryChallanScreen deliveryChallans={deliveryChallans} onAddChallan={handleAddChallan} onUpdateChallan={handleUpdateChallan} onDeleteChallan={handleDeleteChallan} clients={clients} onAddClient={handleAddClient} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} processTypes={processTypes} onAddProcessType={handleAddProcessType} deliveryChallanNumberConfig={deliveryChallanNumberConfig} invoices={invoices} onDeleteInvoice={handleDeleteInvoice} companyDetails={companyDetails} employees={employees} onAddEmployee={handleAddEmployee} />}
-          {activeScreen === 'Outsourcing' && <DeliveryChallanScreen deliveryChallans={deliveryChallans} onAddChallan={handleAddChallan} onUpdateChallan={handleUpdateChallan} onDeleteChallan={handleDeleteChallan} clients={clients} onAddClient={handleAddClient} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} processTypes={processTypes} onAddProcessType={handleAddProcessType} deliveryChallanNumberConfig={deliveryChallanNumberConfig} invoices={invoices} onDeleteInvoice={handleDeleteInvoice} companyDetails={companyDetails} employees={employees} onAddEmployee={handleAddEmployee} isOutsourcingScreen={true} />}
+          {activeScreen === 'Outsourcing' && <DeliveryChallanScreen deliveryChallans={deliveryChallans} onAddChallan={handleAddChallan} onUpdateChallan={handleUpdateChallan} onDeleteChallan={handleDeleteChallan} clients={clients} onAddClient={handleAddClient} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} processTypes={processTypes} onAddProcessType={handleAddProcessType} deliveryChallanNumberConfig={outsourcingChallanNumberConfig} invoices={invoices} onDeleteInvoice={handleDeleteInvoice} companyDetails={companyDetails} employees={employees} onAddEmployee={handleAddEmployee} isOutsourcingScreen={true} />}
           {activeScreen === 'Invoices' && <InvoicesScreen clients={clients} deliveryChallans={deliveryChallans} processTypes={processTypes} onAddInvoice={handleAddInvoice} onUpdateInvoice={handleUpdateInvoice} invoiceNumberConfig={invoiceNumberConfig} ngstInvoiceNumberConfig={ngstInvoiceNumberConfig} invoices={invoices} companyDetails={companyDetails} />}
           {activeScreen === 'Payment Received' && <PaymentReceivedScreen payments={paymentsReceived} onAddPayment={handleAddPaymentReceived} onUpdatePayment={handleUpdatePaymentReceived} onDeletePayment={handleDeletePaymentReceived} clients={clients} onAddClient={handleAddClient} />}
-          {activeScreen === 'Settings' && <SettingsScreen poConfig={poNumberConfig} onUpdatePoConfig={handleUpdatePoConfig} dcConfig={deliveryChallanNumberConfig} onUpdateDcConfig={handleUpdateDcConfig} invConfig={invoiceNumberConfig} ngstInvConfig={ngstInvoiceNumberConfig} onUpdateInvConfig={handleUpdateInvConfig} />}
+          {activeScreen === 'Settings' && <SettingsScreen poConfig={poNumberConfig} onUpdatePoConfig={handleUpdatePoConfig} dcConfig={deliveryChallanNumberConfig} onUpdateDcConfig={handleUpdateDcConfig} outsourcingDcConfig={outsourcingChallanNumberConfig} onUpdateOutsourcingDcConfig={handleUpdateOutsourcingDcConfig} invConfig={invoiceNumberConfig} ngstInvConfig={ngstInvoiceNumberConfig} onUpdateInvConfig={handleUpdateInvConfig} />}
           {activeScreen === 'Add Client' && <ShopMasterScreen clients={clients} onAddClient={handleAddClient} onUpdateClient={handleUpdateClient} onDeleteClient={handleDeleteClient} processTypes={processTypes} onAddProcessType={handleAddProcessType} />}
           {activeScreen === 'Add Purchase Shop' && <PurchaseShopMasterScreen shops={purchaseShops} onAddShop={handleAddPurchaseShop} onUpdateShop={handleUpdatePurchaseShop} onDeleteShop={handleDeletePurchaseShop} />}
           {activeScreen === 'Add Employee' && <EmployeeMasterScreen employees={employees} onAddEmployee={handleAddEmployee} onUpdateEmployee={handleUpdateEmployee} onDeleteEmployee={handleDeleteEmployee} />}

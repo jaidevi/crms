@@ -84,10 +84,10 @@ const ChallanView: React.FC<ChallanViewProps> = ({ challan, companyDetails, onBa
                                     )}
                                     <span className="font-semibold">Design No:</span> {challan.designNo} <br/>
                                     <span className="font-semibold">Party DC No:</span> {challan.partyDCNo}
-                                    {challan.percentage && (
+                                    {challan.shrinkage && (
                                         <>
                                             <br/>
-                                            <span className="font-semibold">Percentage:</span> {challan.percentage}
+                                            <span className="font-semibold">Shrinkage:</span> {challan.shrinkage}
                                         </>
                                     )}
                                 </td>

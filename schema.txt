@@ -1,6 +1,7 @@
 
 -- ... (existing schema) ...
 
+
 -- 13. Audit Logs Table
 -- Tracks all changes made to key tables for history and restore functionality.
 CREATE TABLE IF NOT EXISTS audit_logs (
