@@ -138,7 +138,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                  }
             }
             return isDateInRange && isClientMatch;
-        }).sort((a, b) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime());
+        }).sort((a, b) => new Date(a.invoiceDate).getTime() - new Date(b.invoiceDate).getTime());
     }, [invoices, startDate, endDate, selectedEntityId, clients, reportType]);
 
     const invoiceSummary = useMemo(() => {
@@ -168,7 +168,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                  }
             }
             return isDateInRange && isShopMatch;
-        }).sort((a, b) => new Date(b.poDate).getTime() - new Date(a.poDate).getTime());
+        }).sort((a, b) => new Date(a.poDate).getTime() - new Date(b.poDate).getTime());
     }, [purchaseOrders, startDate, endDate, selectedEntityId, purchaseShops, reportType]);
 
     const purchaseSummary = useMemo(() => {
@@ -198,7 +198,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                  }
             }
             return isDateInRange && isClientMatch;
-        }).sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
+        }).sort((a, b) => new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime());
     }, [paymentsReceived, startDate, endDate, selectedEntityId, clients, reportType]);
 
     const paymentReceivedSummary = useMemo(() => {
@@ -234,7 +234,8 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
             
             if (selectedEntityId === 'all') {
                 // Summary Data
-                data = employeeSummaries.map(s => ({
+                data = employeeSummaries.map((s, idx) => ({
+                    'Sl#': idx + 1,
                     'Employee Name': s.name,
                     'Working Days': s.workingDays,
                     'Meters Produced': s.meters,
@@ -242,7 +243,8 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                 }));
             } else {
                 // Detailed Data
-                data = attendanceReportData.map(rec => ({
+                data = attendanceReportData.map((rec, idx) => ({
+                    'Sl#': idx + 1,
                     'Date': rec.date,
                     'Employee': getEmployeeName(rec.employee_id),
                     'Morning Status': rec.morningStatus,
@@ -254,7 +256,8 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
         } else if (reportType === 'invoice') {
             sheetName = "Invoices";
             fileName = `Invoice_Report_${startDate}_${endDate}.xlsx`;
-            data = invoiceReportData.map(inv => ({
+            data = invoiceReportData.map((inv, idx) => ({
+                'Sl#': idx + 1,
                 'Date': inv.invoiceDate,
                 'Invoice Number': inv.invoiceNumber,
                 'Client Name': inv.clientName,
@@ -266,7 +269,8 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
         } else if (reportType === 'purchase') {
             sheetName = "Purchase";
             fileName = `Purchase_Report_${startDate}_${endDate}.xlsx`;
-            data = purchaseReportData.map(po => ({
+            data = purchaseReportData.map((po, idx) => ({
+                'Sl#': idx + 1,
                 'Date': po.poDate,
                 'PO Number': po.poNumber,
                 'Shop Name': po.shopName,
@@ -276,7 +280,8 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
         } else if (reportType === 'payment_received') {
             sheetName = "Payments";
             fileName = `Payment_Received_Report_${startDate}_${endDate}.xlsx`;
-            data = paymentReceivedReportData.map(p => ({
+            data = paymentReceivedReportData.map((p, idx) => ({
+                'Sl#': idx + 1,
                 'Date': p.paymentDate,
                 'Client Name': p.clientName,
                 'Payment Mode': p.paymentMode,
@@ -460,6 +465,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                                 <table className="w-full text-sm text-left border-collapse">
                                     <thead className="text-xs text-secondary-700 uppercase bg-secondary-100">
                                         <tr>
+                                            <th className="px-4 py-3 border border-secondary-200 w-12 text-center">Sl#</th>
                                             <th className="px-4 py-3 border border-secondary-200">Employee Name</th>
                                             <th className="px-4 py-3 border border-secondary-200 text-right">Total Working Days</th>
                                             <th className="px-4 py-3 border border-secondary-200 text-right">Total Meters Produced</th>
@@ -469,6 +475,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                                     <tbody>
                                         {employeeSummaries.map((summary, index) => (
                                             <tr key={index} className="border-b border-secondary-200 hover:bg-secondary-50">
+                                                <td className="px-4 py-2 border border-secondary-200 text-center">{index + 1}</td>
                                                 <td className="px-4 py-2 border border-secondary-200 font-medium text-secondary-900">{summary.name}</td>
                                                 <td className="px-4 py-2 border border-secondary-200 text-right">{summary.workingDays}</td>
                                                 <td className="px-4 py-2 border border-secondary-200 text-right">{summary.meters.toFixed(2)}</td>
@@ -476,13 +483,13 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                                             </tr>
                                         ))}
                                         {employeeSummaries.length === 0 && (
-                                            <tr><td colSpan={4} className="px-4 py-8 text-center text-secondary-500 border border-secondary-200">No records found.</td></tr>
+                                            <tr><td colSpan={5} className="px-4 py-8 text-center text-secondary-500 border border-secondary-200">No records found.</td></tr>
                                         )}
                                     </tbody>
                                     {employeeSummaries.length > 0 && (
                                         <tfoot className="bg-secondary-50 font-bold">
                                             <tr>
-                                                <td className="px-4 py-3 border border-secondary-200 text-right">Total:</td>
+                                                <td colSpan={2} className="px-4 py-3 border border-secondary-200 text-right">Total:</td>
                                                 <td className="px-4 py-3 border border-secondary-200 text-right">{attendanceSummary.totalDaysWorked}</td>
                                                 <td className="px-4 py-3 border border-secondary-200 text-right">{attendanceSummary.totalMeters.toFixed(2)}</td>
                                                 <td className="px-4 py-3 border border-secondary-200 text-right">{attendanceSummary.totalOvertime}</td>
@@ -495,6 +502,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                                 <table className="w-full text-sm text-left border-collapse">
                                     <thead className="text-xs text-secondary-700 uppercase bg-secondary-100">
                                         <tr>
+                                            <th className="px-4 py-3 border border-secondary-200 w-12 text-center">Sl#</th>
                                             <th className="px-4 py-3 border border-secondary-200">Date</th>
                                             <th className="px-4 py-3 border border-secondary-200">Employee</th>
                                             <th className="px-4 py-3 border border-secondary-200 text-center">Morning</th>
@@ -508,6 +516,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                                             const isSunday = new Date(record.date).getDay() === 0;
                                             return (
                                                 <tr key={index} className={`border-b border-secondary-200 hover:bg-secondary-50 ${isSunday ? 'bg-secondary-50' : ''}`}>
+                                                    <td className="px-4 py-2 border border-secondary-200 text-center">{index + 1}</td>
                                                     <td className="px-4 py-2 border border-secondary-200 whitespace-nowrap">{formatDateForDisplay(record.date)}</td>
                                                     <td className="px-4 py-2 border border-secondary-200 font-medium text-secondary-900">{getEmployeeName(record.employee_id)}</td>
                                                     <td className={`px-4 py-2 border border-secondary-200 text-center ${record.morningStatus === 'Absent' ? 'text-red-600 font-medium' : ''}`}>{record.morningStatus}</td>
@@ -519,7 +528,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                                         })}
                                         {attendanceReportData.length === 0 && (
                                             <tr>
-                                                <td colSpan={6} className="px-4 py-8 text-center text-secondary-500 border border-secondary-200">
+                                                <td colSpan={7} className="px-4 py-8 text-center text-secondary-500 border border-secondary-200">
                                                     No records found for the selected criteria.
                                                 </td>
                                             </tr>
@@ -528,7 +537,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                                     {attendanceReportData.length > 0 && (
                                         <tfoot className="bg-secondary-50 font-bold">
                                             <tr>
-                                                <td colSpan={2} className="px-4 py-3 border border-secondary-200 text-right">Total:</td>
+                                                <td colSpan={3} className="px-4 py-3 border border-secondary-200 text-right">Total:</td>
                                                 <td colSpan={2} className="px-4 py-3 border border-secondary-200 text-center">{attendanceSummary.totalDaysWorked} Days</td>
                                                 <td className="px-4 py-3 border border-secondary-200 text-right">{attendanceSummary.totalOvertime}</td>
                                                 <td className="px-4 py-3 border border-secondary-200 text-right">{attendanceSummary.totalMeters.toFixed(2)}</td>
@@ -568,6 +577,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                             <table className="w-full text-sm text-left border-collapse">
                                 <thead className="text-xs text-secondary-700 uppercase bg-secondary-100">
                                     <tr>
+                                        <th className="px-4 py-3 border border-secondary-200 w-12 text-center">Sl#</th>
                                         <th className="px-4 py-3 border border-secondary-200">Date</th>
                                         <th className="px-4 py-3 border border-secondary-200">Invoice #</th>
                                         <th className="px-4 py-3 border border-secondary-200">Client Name</th>
@@ -580,6 +590,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                                 <tbody>
                                     {invoiceReportData.map((inv, index) => (
                                         <tr key={inv.id} className="border-b border-secondary-200 hover:bg-secondary-50">
+                                            <td className="px-4 py-2 border border-secondary-200 text-center">{index + 1}</td>
                                             <td className="px-4 py-2 border border-secondary-200 whitespace-nowrap">{formatDateForDisplay(inv.invoiceDate)}</td>
                                             <td className="px-4 py-2 border border-secondary-200 font-medium text-secondary-900">{inv.invoiceNumber}</td>
                                             <td className="px-4 py-2 border border-secondary-200">{inv.clientName}</td>
@@ -590,13 +601,13 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                                         </tr>
                                     ))}
                                     {invoiceReportData.length === 0 && (
-                                        <tr><td colSpan={7} className="px-4 py-8 text-center text-secondary-500 border border-secondary-200">No invoices found for the selected criteria.</td></tr>
+                                        <tr><td colSpan={8} className="px-4 py-8 text-center text-secondary-500 border border-secondary-200">No invoices found for the selected criteria.</td></tr>
                                     )}
                                 </tbody>
                                 {invoiceReportData.length > 0 && (
                                     <tfoot className="bg-secondary-50 font-bold">
                                         <tr>
-                                            <td colSpan={4} className="px-4 py-3 border border-secondary-200 text-right">Total:</td>
+                                            <td colSpan={5} className="px-4 py-3 border border-secondary-200 text-right">Total:</td>
                                             <td className="px-4 py-3 border border-secondary-200 text-right">{numberFormat(invoiceSummary.totalTaxable)}</td>
                                             <td className="px-4 py-3 border border-secondary-200 text-right">{numberFormat(invoiceSummary.totalTax)}</td>
                                             <td className="px-4 py-3 border border-secondary-200 text-right">₹{numberFormat(invoiceSummary.totalAmount)}</td>
@@ -635,6 +646,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                             <table className="w-full text-sm text-left border-collapse">
                                 <thead className="text-xs text-secondary-700 uppercase bg-secondary-100">
                                     <tr>
+                                        <th className="px-4 py-3 border border-secondary-200 w-12 text-center">Sl#</th>
                                         <th className="px-4 py-3 border border-secondary-200">Date</th>
                                         <th className="px-4 py-3 border border-secondary-200">PO Number</th>
                                         <th className="px-4 py-3 border border-secondary-200">Shop Name</th>
@@ -645,6 +657,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                                 <tbody>
                                     {purchaseReportData.map((po, index) => (
                                         <tr key={po.id} className="border-b border-secondary-200 hover:bg-secondary-50">
+                                            <td className="px-4 py-2 border border-secondary-200 text-center">{index + 1}</td>
                                             <td className="px-4 py-2 border border-secondary-200 whitespace-nowrap">{formatDateForDisplay(po.poDate)}</td>
                                             <td className="px-4 py-2 border border-secondary-200 font-medium text-secondary-900">{po.poNumber}</td>
                                             <td className="px-4 py-2 border border-secondary-200">{po.shopName}</td>
@@ -657,13 +670,13 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                                         </tr>
                                     ))}
                                     {purchaseReportData.length === 0 && (
-                                        <tr><td colSpan={5} className="px-4 py-8 text-center text-secondary-500 border border-secondary-200">No purchase orders found for the selected criteria.</td></tr>
+                                        <tr><td colSpan={6} className="px-4 py-8 text-center text-secondary-500 border border-secondary-200">No purchase orders found for the selected criteria.</td></tr>
                                     )}
                                 </tbody>
                                 {purchaseReportData.length > 0 && (
                                     <tfoot className="bg-secondary-50 font-bold">
                                         <tr>
-                                            <td colSpan={4} className="px-4 py-3 border border-secondary-200 text-right">Total:</td>
+                                            <td colSpan={5} className="px-4 py-3 border border-secondary-200 text-right">Total:</td>
                                             <td className="px-4 py-3 border border-secondary-200 text-right">₹{numberFormat(purchaseSummary.totalAmount)}</td>
                                         </tr>
                                     </tfoot>
@@ -692,6 +705,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                             <table className="w-full text-sm text-left border-collapse">
                                 <thead className="text-xs text-secondary-700 uppercase bg-secondary-100">
                                     <tr>
+                                        <th className="px-4 py-3 border border-secondary-200 w-12 text-center">Sl#</th>
                                         <th className="px-4 py-3 border border-secondary-200">Date</th>
                                         <th className="px-4 py-3 border border-secondary-200">Client Name</th>
                                         <th className="px-4 py-3 border border-secondary-200 text-center">Payment Mode</th>
@@ -702,6 +716,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                                 <tbody>
                                     {paymentReceivedReportData.map((p, index) => (
                                         <tr key={index} className="border-b border-secondary-200 hover:bg-secondary-50">
+                                            <td className="px-4 py-2 border border-secondary-200 text-center">{index + 1}</td>
                                             <td className="px-4 py-2 border border-secondary-200 whitespace-nowrap">{formatDateForDisplay(p.paymentDate)}</td>
                                             <td className="px-4 py-2 border border-secondary-200 font-medium text-secondary-900">{p.clientName}</td>
                                             <td className="px-4 py-2 border border-secondary-200 text-center">{p.paymentMode}</td>
@@ -710,13 +725,13 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                                         </tr>
                                     ))}
                                     {paymentReceivedReportData.length === 0 && (
-                                        <tr><td colSpan={5} className="px-4 py-8 text-center text-secondary-500 border border-secondary-200">No payment records found for the selected criteria.</td></tr>
+                                        <tr><td colSpan={6} className="px-4 py-8 text-center text-secondary-500 border border-secondary-200">No payment records found for the selected criteria.</td></tr>
                                     )}
                                 </tbody>
                                 {paymentReceivedReportData.length > 0 && (
                                     <tfoot className="bg-secondary-50 font-bold">
                                         <tr>
-                                            <td colSpan={4} className="px-4 py-3 border border-secondary-200 text-right">Total:</td>
+                                            <td colSpan={5} className="px-4 py-3 border border-secondary-200 text-right">Total:</td>
                                             <td className="px-4 py-3 border border-secondary-200 text-right">₹{numberFormat(paymentReceivedSummary.totalAmount)}</td>
                                         </tr>
                                     </tfoot>

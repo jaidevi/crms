@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { CloseIcon, CalendarIcon, CameraIcon, PlusIcon, TrashIcon } from './Icons';
 import DatePicker from './DatePicker';
@@ -158,8 +157,9 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'dcImage' | 'sampleImage') => {
         if (e.target.files && e.target.files.length > 0) {
-            const files = Array.from(e.target.files);
-            const readers = files.map(file => {
+            // FIX: Explicitly cast Array.from result to File[] to ensure mapping correctly identifies items as Blobs for readAsDataURL.
+            const files = Array.from(e.target.files) as File[];
+            const readers = files.map((file: File) => {
                 return new Promise<string>((resolve) => {
                     const reader = new FileReader();
                     reader.onloadend = () => resolve(reader.result as string);
