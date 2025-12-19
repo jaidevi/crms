@@ -41,7 +41,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
     const [isEndDateOpen, setIsEndDateOpen] = useState(false);
 
     const sortedEmployees = useMemo(() => [...employees].sort((a, b) => a.name.localeCompare(b.name)), [employees]);
-    const sortedClients = useMemo(() => [...clients].sort((a, b) => a.name.localeCompare(b.name)), [clients]);
+    const sorted clients = useMemo(() => [...clients].sort((a, b) => a.name.localeCompare(b.name)), [clients]);
     const sortedShops = useMemo(() => [...purchaseShops].sort((a, b) => a.name.localeCompare(b.name)), [purchaseShops]);
 
     // --- ATTENDANCE REPORT LOGIC ---
