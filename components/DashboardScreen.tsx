@@ -1,6 +1,6 @@
 
 import React, { useMemo } from 'react';
-import { DollarSignIcon, PackageIcon, ShoppingCartIcon, CustomersIcon, InvoiceIcon, PaymentsIcon } from './Icons';
+import { RupeeIcon, PackageIcon, ShoppingCartIcon, CustomersIcon, InvoiceIcon, PaymentsIcon } from './Icons';
 import type { Invoice, PaymentReceived, DeliveryChallan, PurchaseOrder, OtherExpense, EmployeeAdvance } from '../types';
 
 interface DashboardScreenProps {
@@ -110,9 +110,9 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
             <div>
                 <h2 className="text-xl font-semibold text-secondary-700 mb-4">Sales Overview</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <KPICard title="Total Revenue" value={formatCurrency(salesKpis.totalRevenue)} icon={<DollarSignIcon className="w-6 h-6" />} color="green" />
+                    <KPICard title="Total Revenue" value={formatCurrency(salesKpis.totalRevenue)} icon={<RupeeIcon className="w-6 h-6" />} color="green" />
                     <KPICard title="Payments Received" value={formatCurrency(salesKpis.totalPayments)} icon={<PaymentsIcon className="w-6 h-6" />} color="blue" />
-                    <KPICard title="Amount Due" value={formatCurrency(salesKpis.amountDue)} icon={<DollarSignIcon className="w-6 h-6" />} color="red" />
+                    <KPICard title="Amount Due" value={formatCurrency(salesKpis.amountDue)} icon={<RupeeIcon className="w-6 h-6" />} color="red" />
                     <KPICard title="Total Invoices" value={salesKpis.invoiceCount} icon={<InvoiceIcon className="w-6 h-6" />} color="purple" />
                 </div>
             </div>
@@ -131,7 +131,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <KPICard title="Total Purchase Value" value={formatCurrency(expenseKpis.totalPurchaseValue)} icon={<ShoppingCartIcon className="w-6 h-6" />} color="purple" />
                     <KPICard title="Unpaid Purchases" value={expenseKpis.unpaidPurchases} icon={<ShoppingCartIcon className="w-6 h-6" />} color="red" />
-                    <KPICard title="Other Expenses" value={formatCurrency(expenseKpis.totalOtherExpenses)} icon={<DollarSignIcon className="w-6 h-6" />} color="orange" />
+                    <KPICard title="Other Expenses" value={formatCurrency(expenseKpis.totalOtherExpenses)} icon={<RupeeIcon className="w-6 h-6" />} color="orange" />
                     <KPICard title="Outstanding Employee Advances" value={formatCurrency(expenseKpis.outstandingAdvances)} icon={<CustomersIcon className="w-6 h-6" />} color="yellow" />
                 </div>
             </div>
