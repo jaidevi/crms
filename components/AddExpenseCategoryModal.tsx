@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { CloseIcon } from './Icons';
 import type { ExpenseCategory } from '../types';
@@ -38,7 +39,7 @@ const AddExpenseCategoryModal: React.FC<AddExpenseCategoryModalProps> = ({ onClo
         onSave(trimmedName);
     };
 
-    const commonInputClasses = "block w-full px-4 py-3 text-sm rounded-lg border-2 border-secondary-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 transition-all";
+    const commonInputClasses = "block w-full px-4 py-3 text-sm rounded-lg border border-secondary-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 transition-all placeholder-secondary-400";
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-70 z-[100] flex justify-center items-center" role="dialog" aria-modal="true" aria-labelledby="add-category-modal-title">
@@ -53,7 +54,7 @@ const AddExpenseCategoryModal: React.FC<AddExpenseCategoryModalProps> = ({ onClo
                 </div>
                 <div className="p-8">
                     <div>
-                        <label htmlFor="category-name" className="block text-sm font-bold text-secondary-700 mb-2 ml-1">
+                        <label htmlFor="category-name" className="block text-sm font-semibold text-secondary-700 mb-2 ml-1">
                             Category Name <span className="text-danger-500">*</span>
                         </label>
                         <input
@@ -64,7 +65,7 @@ const AddExpenseCategoryModal: React.FC<AddExpenseCategoryModalProps> = ({ onClo
                                 setName(e.target.value);
                                 if (error) setError('');
                             }}
-                            className={`${commonInputClasses} ${error ? 'border-danger-500' : 'border-secondary-900'}`}
+                            className={`${commonInputClasses} ${error ? 'border-danger-500 ring-1 ring-danger-100' : ''}`}
                             placeholder="e.g., Travel, Food, Utilities"
                             autoFocus
                         />
@@ -75,7 +76,7 @@ const AddExpenseCategoryModal: React.FC<AddExpenseCategoryModalProps> = ({ onClo
                     <button 
                         onClick={onClose} 
                         type="button" 
-                        className="px-6 py-2.5 bg-secondary-200 text-secondary-800 rounded-xl text-sm font-bold hover:bg-secondary-300 transition-colors"
+                        className="px-6 py-2.5 bg-white border border-secondary-200 text-secondary-700 rounded-xl text-sm font-bold hover:bg-secondary-50 transition-colors"
                     >
                         Cancel
                     </button>
