@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabaseClient';
 import Sidebar from './components/Sidebar';
@@ -32,6 +33,7 @@ const INITIAL_RETRY_DELAY = 1000;
 
 export const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
+  const [guestMode, setGuestMode] = useState(false);
   const [activeScreen, setActiveScreen] = useState('Dashboard');
   const [companyDetails, setCompanyDetails] = useState<CompanyDetails>({
     name: '', addressLine1: '', addressLine2: '', phone: '', email: '', gstin: '', hsnSac: '', bankName: '', bankAccountNumber: '', bankIfscCode: '', logoUrl: '', reportNotificationEmail: ''
@@ -72,6 +74,7 @@ export const App: React.FC = () => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session) setGuestMode(false);
     });
 
     return () => subscription.unsubscribe();
@@ -116,11 +119,12 @@ export const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!session) return; // Only fetch data if logged in
+    if (!session && !guestMode) return; 
 
     const loadAllData = async () => {
         await fetchTable('company_details', (data: any) => {
             if(data) {
+                 /* Fix: Map snake_case database fields to camelCase CompanyDetails interface properties */
                  setCompanyDetails({
                     name: data.name || '',
                     addressLine1: data.address_line_1 || '',
@@ -158,9 +162,9 @@ export const App: React.FC = () => {
             city: d.city,
             state: d.state,
             pincode: d.pincode,
-            gstNo: d.gst_no,
-            panNo: d.pan_no,
-            paymentTerms: d.payment_terms,
+            gst_no: d.gst_no,
+            pan_no: d.pan_no,
+            payment_terms: d.payment_terms,
             processes: Array.isArray(d.processes) ? d.processes : []
         })));
 
@@ -173,9 +177,9 @@ export const App: React.FC = () => {
             city: d.city,
             state: d.state,
             pincode: d.pincode,
-            gstNo: d.gst_no,
-            panNo: d.pan_no,
-            paymentTerms: d.payment_terms
+            gst_no: d.gst_no,
+            pan_no: d.pan_no,
+            payment_terms: d.payment_terms
         })));
 
         await fetchTable('employees', setEmployees, (data: any[]) => data.map(d => ({
@@ -271,6 +275,7 @@ export const App: React.FC = () => {
                 challanDate: i.challan_date,
                 process: i.process,
                 description: i.description,
+                /* Correcting design_no to designNo and hsn_sac to hsnSac to match InvoiceItem type */
                 designNo: i.design_no,
                 hsnSac: i.hsn_sac,
                 pcs: i.pcs || 0,
@@ -321,17 +326,17 @@ export const App: React.FC = () => {
             id: d.id,
             date: d.date,
             supplierName: d.supplier_name,
-            loadWeight: d.load_weight || 0,
-            vehicleWeight: d.vehicle_weight || 0,
+            load_weight: d.load_weight || 0,
+            vehicle_weight: d.vehicle_weight || 0,
             cft: d.cft || 0,
             rate: d.rate || 0,
             amount: d.amount || 0,
             notes: d.notes,
-            paymentMode: d.payment_mode,
-            paymentStatus: d.payment_status,
-            bankName: d.bank_name,
-            chequeDate: d.cheque_date,
-            paymentTerms: d.payment_terms
+            payment_mode: d.payment_mode,
+            payment_status: d.payment_status,
+            bank_name: d.bank_name,
+            cheque_date: d.cheque_date,
+            payment_terms: d.payment_terms
         })));
 
         await fetchTable('supplier_payments', setSupplierPayments, (data: any[]) => data.map(d => ({
@@ -377,7 +382,7 @@ export const App: React.FC = () => {
     };
 
     loadAllData();
-  }, [fetchTable, session]);
+  }, [fetchTable, session, guestMode]);
 
   const handleUpdateCompanyDetails = async (details: CompanyDetails) => {
       try {
@@ -516,6 +521,7 @@ export const App: React.FC = () => {
               name: newEmployee.name,
               designation: newEmployee.designation,
               phone: newEmployee.phone,
+              /* Fix: Map camelCase interface properties to snake_case database fields */
               daily_wage: newEmployee.dailyWage,
               monthly_wage: newEmployee.monthlyWage,
               rate_per_meter: newEmployee.ratePerMeter
@@ -806,6 +812,7 @@ export const App: React.FC = () => {
               process: item.process,
               description: item.description,
               design_no: item.designNo,
+              /* Fix: item.hsn_sac -> item.hsnSac to match InvoiceItem type */
               hsn_sac: item.hsnSac,
               pcs: item.pcs,
               mtr: item.mtr,
@@ -857,6 +864,7 @@ export const App: React.FC = () => {
               process: item.process,
               description: item.description,
               design_no: item.designNo,
+              /* Fix: item.hsn_sac -> item.hsnSac to match InvoiceItem type */
               hsn_sac: item.hsnSac,
               pcs: item.pcs,
               mtr: item.mtr,
@@ -1236,15 +1244,15 @@ export const App: React.FC = () => {
       }
   };
 
-  if (!session) {
-    return <Login />;
+  if (!session && !guestMode) {
+    return <Login onGuestMode={() => setGuestMode(true)} />;
   }
 
   return (
     <div className="flex h-screen bg-gray-100 font-sans text-secondary-900">
       <Sidebar activeScreen={activeScreen} setActiveScreen={setActiveScreen} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
+        <Header isGuest={guestMode} />
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
           {activeScreen === 'Dashboard' && <DashboardScreen invoices={invoices} paymentsReceived={paymentsReceived} deliveryChallans={deliveryChallans} purchaseOrders={purchaseOrders} otherExpenses={otherExpenses} advances={advances} />}
           {activeScreen === 'Expenses' && <PurchaseOrderScreen purchaseOrders={purchaseOrders} onAddOrder={handleAddPurchaseOrder} onUpdateOrder={handleUpdatePurchaseOrder} onDeleteOrder={handleDeletePurchaseOrder} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} bankNames={bankNames} onAddBankName={name => setBankNames(prev => [...prev, name])} poNumberConfig={poNumberConfig} masterItems={masterItems} onAddMasterItem={handleAddMasterItem} advances={advances} employees={employees} onAddAdvance={handleAddAdvance} onUpdateAdvance={handleUpdateAdvance} onDeleteAdvance={handleDeleteAdvance} otherExpenses={otherExpenses} onAddOtherExpense={handleAddOtherExpense} onUpdateOtherExpense={handleUpdateOtherExpense} onDeleteOtherExpense={handleDeleteOtherExpense} expenseCategories={expenseCategories} onAddExpenseCategory={handleAddExpenseCategory} timberExpenses={timberExpenses} onAddTimberExpense={handleAddTimberExpense} onUpdateTimberExpense={handleUpdateTimberExpense} onDeleteTimberExpense={handleDeleteTimberExpense} supplierPayments={supplierPayments} supplierPaymentConfig={supplierPaymentConfig} onAddSupplierPayment={handleAddSupplierPayment} />}
