@@ -1,20 +1,288 @@
+-- ERP SYSTEM DATABASE SCHEMA
+-- RUN THIS IN SUPABASE SQL EDITOR TO INITIALIZE TABLES
 
--- ... (existing schema) ...
-
-
--- 13. Audit Logs Table
--- Tracks all changes made to key tables for history and restore functionality.
-CREATE TABLE IF NOT EXISTS audit_logs (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    table_name TEXT NOT NULL,
-    record_id TEXT NOT NULL,
-    action TEXT NOT NULL, -- 'CREATE', 'UPDATE', 'DELETE'
-    old_data JSONB, -- Snapshot before change
-    new_data JSONB, -- Snapshot after change
-    changed_by TEXT DEFAULT 'Admin', -- Placeholder for user system
-    timestamp TIMESTAMPTZ DEFAULT NOW()
+-- 1. Company Details
+CREATE TABLE IF NOT EXISTS company_details (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    address_line_1 TEXT,
+    address_line_2 TEXT,
+    phone TEXT,
+    email TEXT,
+    gstin TEXT,
+    hsn_sac TEXT,
+    bank_name TEXT,
+    bank_account_number TEXT,
+    bank_ifsc_code TEXT,
+    logo_url TEXT,
+    report_notification_email TEXT
 );
 
-ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Audit logs are viewable by everyone." ON audit_logs FOR SELECT USING (true);
-CREATE POLICY "Users can insert audit logs." ON audit_logs FOR INSERT WITH CHECK (true);
+-- 2. Process Types
+CREATE TABLE IF NOT EXISTS process_types (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    rate NUMERIC(15, 2) DEFAULT 0
+);
+
+-- 3. Clients
+CREATE TABLE IF NOT EXISTS clients (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    phone TEXT,
+    email TEXT,
+    address TEXT,
+    city TEXT,
+    state TEXT,
+    pincode TEXT,
+    gst_no TEXT,
+    pan_no TEXT,
+    payment_terms TEXT,
+    processes JSONB DEFAULT '[]'::jsonb
+);
+
+-- 4. Purchase Shops
+CREATE TABLE IF NOT EXISTS purchase_shops (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    phone TEXT,
+    email TEXT,
+    address TEXT,
+    city TEXT,
+    state TEXT,
+    pincode TEXT,
+    gst_no TEXT,
+    pan_no TEXT,
+    payment_terms TEXT
+);
+
+-- 5. Employees
+CREATE TABLE IF NOT EXISTS employees (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    designation TEXT,
+    phone TEXT,
+    daily_wage NUMERIC(15, 2) DEFAULT 0,
+    monthly_wage NUMERIC(15, 2) DEFAULT 0,
+    rate_per_meter NUMERIC(15, 2) DEFAULT 0
+);
+
+-- 6. Master Items
+CREATE TABLE IF NOT EXISTS master_items (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    rate NUMERIC(15, 2) DEFAULT 0
+);
+
+-- 7. Purchase Orders
+CREATE TABLE IF NOT EXISTS purchase_orders (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    po_number TEXT NOT NULL UNIQUE,
+    po_date DATE NOT NULL,
+    shop_name TEXT NOT NULL,
+    total_amount NUMERIC(15, 2) DEFAULT 0,
+    gst_no TEXT,
+    payment_mode TEXT,
+    status TEXT,
+    payment_terms TEXT,
+    reference_id TEXT,
+    bank_name TEXT,
+    cheque_date DATE
+);
+
+CREATE TABLE IF NOT EXISTS purchase_order_items (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    po_id UUID REFERENCES purchase_orders(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    quantity NUMERIC(15, 3) NOT NULL,
+    rate NUMERIC(15, 2) NOT NULL,
+    amount NUMERIC(15, 2) NOT NULL
+);
+
+-- 8. Delivery Challans
+CREATE TABLE IF NOT EXISTS delivery_challans (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    challan_number TEXT NOT NULL UNIQUE,
+    date DATE NOT NULL,
+    party_name TEXT NOT NULL,
+    party_dc_no TEXT,
+    process TEXT,
+    split_process JSONB DEFAULT '[]'::jsonb,
+    design_no TEXT,
+    pcs INTEGER DEFAULT 0,
+    mtr NUMERIC(15, 3) DEFAULT 0,
+    width NUMERIC(15, 2) DEFAULT 0,
+    shrinkage TEXT,
+    pin TEXT,
+    pick TEXT,
+    extra_work TEXT,
+    status TEXT,
+    worker_name TEXT,
+    working_unit TEXT,
+    is_outsourcing BOOLEAN DEFAULT FALSE,
+    dc_image JSONB DEFAULT '[]'::jsonb,
+    sample_image JSONB DEFAULT '[]'::jsonb
+);
+
+-- 9. Invoices
+CREATE TABLE IF NOT EXISTS invoices (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    invoice_number TEXT NOT NULL UNIQUE,
+    invoice_date DATE NOT NULL,
+    client_name TEXT NOT NULL,
+    sub_total NUMERIC(15, 2) DEFAULT 0,
+    total_cgst NUMERIC(15, 2) DEFAULT 0,
+    total_sgst NUMERIC(15, 2) DEFAULT 0,
+    total_tax_amount NUMERIC(15, 2) DEFAULT 0,
+    rounded_off NUMERIC(15, 2) DEFAULT 0,
+    total_amount NUMERIC(15, 2) DEFAULT 0,
+    tax_type TEXT DEFAULT 'GST'
+);
+
+CREATE TABLE IF NOT EXISTS invoice_items (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    invoice_id UUID REFERENCES invoices(id) ON DELETE CASCADE,
+    challan_number TEXT,
+    challan_date DATE,
+    process TEXT,
+    description TEXT,
+    design_no TEXT,
+    hsn_sac TEXT,
+    pcs INTEGER,
+    mtr NUMERIC(15, 3),
+    rate NUMERIC(15, 2),
+    subtotal NUMERIC(15, 2),
+    cgst NUMERIC(15, 2),
+    sgst NUMERIC(15, 2),
+    amount NUMERIC(15, 2)
+);
+
+-- 10. Payments Received
+CREATE TABLE IF NOT EXISTS payments_received (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    client_name TEXT NOT NULL,
+    payment_date DATE NOT NULL,
+    amount NUMERIC(15, 2) NOT NULL DEFAULT 0,
+    opening_balance NUMERIC(15, 2) DEFAULT 0,
+    payment_mode TEXT NOT NULL,
+    reference_number TEXT,
+    notes TEXT,
+    image TEXT
+);
+
+-- 11. Numbering Configs
+CREATE TABLE IF NOT EXISTS numbering_configs (
+    id TEXT PRIMARY KEY,
+    prefix TEXT,
+    next_number INTEGER,
+    mode TEXT DEFAULT 'auto'
+);
+
+-- 12. Employee Advances
+CREATE TABLE IF NOT EXISTS employee_advances (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    employee_id UUID REFERENCES employees(id),
+    date DATE NOT NULL,
+    amount NUMERIC(15, 2) NOT NULL,
+    paid_amount NUMERIC(15, 2) DEFAULT 0,
+    notes TEXT
+);
+
+-- 13. Other Expenses
+CREATE TABLE IF NOT EXISTS other_expenses (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    date DATE NOT NULL,
+    item_name TEXT NOT NULL,
+    amount NUMERIC(15, 2) NOT NULL,
+    notes TEXT,
+    bank_name TEXT,
+    cheque_date DATE,
+    payment_mode TEXT,
+    payment_status TEXT,
+    payment_terms TEXT
+);
+
+-- 14. Expense Categories
+CREATE TABLE IF NOT EXISTS expense_categories (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE
+);
+
+-- 15. Timber Expenses
+CREATE TABLE IF NOT EXISTS timber_expenses (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    date DATE NOT NULL,
+    supplier_name TEXT NOT NULL,
+    load_weight NUMERIC(15, 2),
+    vehicle_weight NUMERIC(15, 2),
+    cft NUMERIC(15, 2),
+    rate NUMERIC(15, 2),
+    amount NUMERIC(15, 2),
+    notes TEXT,
+    bank_name TEXT,
+    cheque_date DATE,
+    payment_mode TEXT,
+    payment_status TEXT,
+    payment_terms TEXT
+);
+
+-- 16. Supplier Payments
+CREATE TABLE IF NOT EXISTS supplier_payments (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    payment_number TEXT NOT NULL UNIQUE,
+    date DATE NOT NULL,
+    supplier_name TEXT NOT NULL,
+    amount NUMERIC(15, 2) NOT NULL,
+    payment_mode TEXT,
+    reference_id TEXT,
+    image TEXT
+);
+
+-- 17. Attendance
+CREATE TABLE IF NOT EXISTS attendance (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    morning_status TEXT,
+    evening_status TEXT,
+    morning_overtime_hours NUMERIC(5, 2) DEFAULT 0,
+    evening_overtime_hours NUMERIC(5, 2) DEFAULT 0,
+    meters_produced NUMERIC(15, 2) DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(employee_id, date)
+);
+
+-- 18. Payslips
+CREATE TABLE IF NOT EXISTS payslips (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    employee_id UUID REFERENCES employees(id),
+    employee_name TEXT,
+    payslip_date DATE NOT NULL,
+    pay_period_start DATE,
+    pay_period_end DATE,
+    total_working_days NUMERIC(5, 2),
+    ot_hours NUMERIC(10, 2),
+    wage_earnings NUMERIC(15, 2),
+    production_earnings NUMERIC(15, 2),
+    gross_salary NUMERIC(15, 2),
+    advance_deduction NUMERIC(15, 2),
+    net_salary NUMERIC(15, 2),
+    total_outstanding_advance NUMERIC(15, 2)
+);
+
+-- RLS POLICIES (Simplified for testing)
+ALTER TABLE company_details ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all access" ON company_details FOR ALL USING (true) WITH CHECK (true);
+-- ... repeat for other tables if RLS is strictly needed. 
+-- For a private ERP, you'd usually have user authentication and user_id columns.
+
+-- INITIAL CONFIGS
+INSERT INTO numbering_configs (id, prefix, next_number) VALUES 
+('po', 'PO', 1),
+('dc', 'DC', 1),
+('dc_outsourcing', 'OUT', 1),
+('invoice', 'INV', 1),
+('invoice_ngst', 'NGST', 1),
+('supplier_payment', 'PAY', 1)
+ON CONFLICT (id) DO NOTHING;

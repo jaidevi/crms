@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { CalendarIcon, SearchIcon, PrintIcon, ChevronDownIcon, DownloadIcon } from './Icons';
 import DatePicker from './DatePicker';
@@ -284,9 +283,10 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                 'Sl#': idx + 1,
                 'Date': p.paymentDate,
                 'Client Name': p.clientName,
+                'Opening Balance': p.openingBalance,
+                'Amount Received': p.amount,
                 'Payment Mode': p.paymentMode,
-                'Reference Number': p.referenceNumber,
-                'Amount': p.amount
+                'Reference Number': p.referenceNumber
             }));
         }
 
@@ -391,7 +391,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                     <div>
                         <label className="block text-sm font-medium text-secondary-700 mb-1">
                             {reportType === 'attendance' ? 'Employee' : (reportType === 'purchase' ? 'Shop' : 'Client')}
-                        </label>
+                        </label Terminology
                         <select 
                             value={selectedEntityId}
                             onChange={(e) => setSelectedEntityId(e.target.value)}
@@ -708,9 +708,10 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                                         <th className="px-4 py-3 border border-secondary-200 w-12 text-center">Sl#</th>
                                         <th className="px-4 py-3 border border-secondary-200">Date</th>
                                         <th className="px-4 py-3 border border-secondary-200">Client Name</th>
+                                        <th className="px-4 py-3 border border-secondary-200 text-right">Opening Bal</th>
                                         <th className="px-4 py-3 border border-secondary-200 text-center">Payment Mode</th>
                                         <th className="px-4 py-3 border border-secondary-200">Reference #</th>
-                                        <th className="px-4 py-3 border border-secondary-200 text-right">Amount</th>
+                                        <th className="px-4 py-3 border border-secondary-200 text-right">Amount Received</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -719,19 +720,20 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                                             <td className="px-4 py-2 border border-secondary-200 text-center">{index + 1}</td>
                                             <td className="px-4 py-2 border border-secondary-200 whitespace-nowrap">{formatDateForDisplay(p.paymentDate)}</td>
                                             <td className="px-4 py-2 border border-secondary-200 font-medium text-secondary-900">{p.clientName}</td>
+                                            <td className="px-4 py-2 border border-secondary-200 text-right text-secondary-500">₹{numberFormat(p.openingBalance)}</td>
                                             <td className="px-4 py-2 border border-secondary-200 text-center">{p.paymentMode}</td>
                                             <td className="px-4 py-2 border border-secondary-200">{p.referenceNumber || '-'}</td>
                                             <td className="px-4 py-2 border border-secondary-200 text-right font-bold">₹{numberFormat(p.amount)}</td>
                                         </tr>
                                     ))}
                                     {paymentReceivedReportData.length === 0 && (
-                                        <tr><td colSpan={6} className="px-4 py-8 text-center text-secondary-500 border border-secondary-200">No payment records found for the selected criteria.</td></tr>
+                                        <tr><td colSpan={7} className="px-4 py-8 text-center text-secondary-500 border border-secondary-200">No payment records found for the selected criteria.</td></tr>
                                     )}
                                 </tbody>
                                 {paymentReceivedReportData.length > 0 && (
                                     <tfoot className="bg-secondary-50 font-bold">
                                         <tr>
-                                            <td colSpan={5} className="px-4 py-3 border border-secondary-200 text-right">Total:</td>
+                                            <td colSpan={6} className="px-4 py-3 border border-secondary-200 text-right">Total:</td>
                                             <td className="px-4 py-3 border border-secondary-200 text-right">₹{numberFormat(paymentReceivedSummary.totalAmount)}</td>
                                         </tr>
                                     </tfoot>

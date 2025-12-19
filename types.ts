@@ -1,4 +1,3 @@
-
 export type PaymentMode = 'Cash' | 'Cheque' | 'NEFT' | 'GPay' | 'Credit Card' | 'Bank Transfer' | 'Other';
 export type OrderStatus = 'Paid' | 'Unpaid' | 'Partially Paid';
 export type AttendanceStatus = 'Present' | 'Absent' | 'Leave' | 'Holiday';
@@ -235,9 +234,11 @@ export interface PaymentReceived {
   clientName: string;
   paymentDate: string;
   amount: number;
+  openingBalance: number;
   paymentMode: PaymentMode;
   referenceNumber: string;
   notes: string;
+  image?: string;
 }
 
 export interface AttendanceRecord {

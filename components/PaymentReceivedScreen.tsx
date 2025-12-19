@@ -1,8 +1,7 @@
-
 import React, { useState, useMemo } from 'react';
 import PaymentReceivedForm from './PaymentReceivedForm';
 import ConfirmationModal from './ConfirmationModal';
-import { PlusIcon, SearchIcon, EditIcon, TrashIcon } from './Icons';
+import { PlusIcon, SearchIcon, EditIcon, TrashIcon, CameraIcon } from './Icons';
 import type { PaymentReceived, Client } from '../types';
 
 interface PaymentReceivedScreenProps {
@@ -126,7 +125,9 @@ const PaymentReceivedScreen: React.FC<PaymentReceivedScreenProps> = ({ payments,
                             <tr>
                                 <th scope="col" className="px-6 py-3">Date</th>
                                 <th scope="col" className="px-6 py-3">Client Name</th>
-                                <th scope="col" className="px-6 py-3 text-right">Amount</th>
+                                <th scope="col" className="px-6 py-3 text-right">Opening Bal</th>
+                                <th scope="col" className="px-6 py-3 text-right">Amount Received</th>
+                                <th scope="col" className="px-6 py-3 text-center">Proof</th>
                                 <th scope="col" className="px-6 py-3">Mode</th>
                                 <th scope="col" className="px-6 py-3">Reference #</th>
                                 <th scope="col" className="px-6 py-3 text-center">Actions</th>
@@ -137,7 +138,20 @@ const PaymentReceivedScreen: React.FC<PaymentReceivedScreenProps> = ({ payments,
                                 <tr key={payment.id} className="bg-white border-b hover:bg-gray-50">
                                     <td className="px-6 py-4">{formatDateForDisplay(payment.paymentDate)}</td>
                                     <td className="px-6 py-4 font-medium text-gray-900">{payment.clientName}</td>
-                                    <td className="px-6 py-4 text-right font-medium">₹{payment.amount.toFixed(2)}</td>
+                                    <td className="px-6 py-4 text-right font-medium text-secondary-500">₹{payment.openingBalance.toFixed(2)}</td>
+                                    <td className="px-6 py-4 text-right font-medium text-primary-600">₹{payment.amount.toFixed(2)}</td>
+                                    <td className="px-6 py-4 text-center">
+                                        {payment.image ? (
+                                            <div className="relative group inline-block">
+                                                <CameraIcon className="w-5 h-5 text-blue-500 mx-auto cursor-help" />
+                                                <div className="absolute z-20 hidden group-hover:block bg-white border rounded shadow-lg p-2 mt-2 right-0">
+                                                    <img src={payment.image} alt="Proof" className="max-w-xs max-h-48 object-contain" />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <span className="text-gray-300">-</span>
+                                        )}
+                                    </td>
                                     <td className="px-6 py-4">{payment.paymentMode}</td>
                                     <td className="px-6 py-4">{payment.referenceNumber || '-'}</td>
                                     <td className="px-6 py-4 text-center">
