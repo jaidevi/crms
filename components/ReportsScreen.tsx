@@ -391,7 +391,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                     <div>
                         <label className="block text-sm font-medium text-secondary-700 mb-1">
                             {reportType === 'attendance' ? 'Employee' : (reportType === 'purchase' ? 'Shop' : 'Client')}
-                        </label Terminology
+                        </label>
                         <select 
                             value={selectedEntityId}
                             onChange={(e) => setSelectedEntityId(e.target.value)}
