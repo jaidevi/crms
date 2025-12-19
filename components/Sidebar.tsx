@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   InvoiceIcon, HomeIcon, CustomersIcon, ItemsIcon, QuotesIcon,
@@ -42,7 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeScreen, setActiveScreen }) => {
   const [transactionsOpen, setTransactionsOpen] = useState(true);
   const [masterSearch, setMasterSearch] = useState('');
 
-  const masterScreens = ['Add Client', 'Add Purchase Shop', 'Add Employee', 'Add Process'];
+  const masterScreens = ['Add Client', 'Add Purchase Shop', 'Add Employee', 'Add Process', 'Expense Categories'];
   const transactionScreens = ['Expenses', 'Delivery Challans', 'Outsourcing', 'Invoices', 'Payment Received', 'Salary & Payslips', 'Attendance'];
   
   const isMastersActive = masterScreens.includes(activeScreen);
@@ -67,6 +66,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeScreen, setActiveScreen }) => {
       { icon: <CustomersIcon />, label: "Add Purchase Shop" },
       { icon: <CustomersIcon />, label: "Add Employee" },
       { icon: <InvoicesIcon />, label: "Add Process" },
+      { icon: <ExpensesIcon />, label: "Expense Categories" },
   ];
   
   const filteredMasterNavItems = masterNavItems.filter(item => 

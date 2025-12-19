@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabaseClient';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import Login from './components/Login';
+import { Login } from './components/Login';
 import DashboardScreen from './components/DashboardScreen';
 import PurchaseOrderScreen from './components/PurchaseOrderScreen';
 import DeliveryChallanScreen from './components/DeliveryChallanScreen';
@@ -14,6 +13,7 @@ import ShopMasterScreen from './components/ShopMasterScreen';
 import PurchaseShopMasterScreen from './components/PurchaseShopMasterScreen';
 import EmployeeMasterScreen from './components/EmployeeMasterScreen';
 import PartyDCProcessMasterScreen from './components/PartyDCProcessMasterScreen';
+import ExpenseCategoryMasterScreen from './components/ExpenseCategoryMasterScreen';
 import UserAdminScreen from './components/UserAdminScreen';
 import ProductsScreen from './components/NewItemForm';
 import SalaryScreen from './components/SalaryScreen';
@@ -124,7 +124,6 @@ export const App: React.FC = () => {
     const loadAllData = async () => {
         await fetchTable('company_details', (data: any) => {
             if(data) {
-                 /* Fix: Map snake_case database fields to camelCase CompanyDetails interface properties */
                  setCompanyDetails({
                     name: data.name || '',
                     addressLine1: data.address_line_1 || '',
@@ -162,9 +161,9 @@ export const App: React.FC = () => {
             city: d.city,
             state: d.state,
             pincode: d.pincode,
-            gst_no: d.gst_no,
-            pan_no: d.pan_no,
-            payment_terms: d.payment_terms,
+            gstNo: d.gst_no,
+            panNo: d.pan_no,
+            paymentTerms: d.payment_terms,
             processes: Array.isArray(d.processes) ? d.processes : []
         })));
 
@@ -177,9 +176,9 @@ export const App: React.FC = () => {
             city: d.city,
             state: d.state,
             pincode: d.pincode,
-            gst_no: d.gst_no,
-            pan_no: d.pan_no,
-            payment_terms: d.payment_terms
+            gstNo: d.gst_no,
+            panNo: d.pan_no,
+            paymentTerms: d.payment_terms
         })));
 
         await fetchTable('employees', setEmployees, (data: any[]) => data.map(d => ({
@@ -275,7 +274,6 @@ export const App: React.FC = () => {
                 challanDate: i.challan_date,
                 process: i.process,
                 description: i.description,
-                /* Correcting design_no to designNo and hsn_sac to hsnSac to match InvoiceItem type */
                 designNo: i.design_no,
                 hsnSac: i.hsn_sac,
                 pcs: i.pcs || 0,
@@ -326,17 +324,17 @@ export const App: React.FC = () => {
             id: d.id,
             date: d.date,
             supplierName: d.supplier_name,
-            load_weight: d.load_weight || 0,
-            vehicle_weight: d.vehicle_weight || 0,
+            loadWeight: d.load_weight || 0,
+            vehicleWeight: d.vehicle_weight || 0,
             cft: d.cft || 0,
             rate: d.rate || 0,
             amount: d.amount || 0,
             notes: d.notes,
-            payment_mode: d.payment_mode,
-            payment_status: d.payment_status,
-            bank_name: d.bank_name,
-            cheque_date: d.cheque_date,
-            payment_terms: d.payment_terms
+            paymentMode: d.payment_mode,
+            paymentStatus: d.payment_status,
+            bankName: d.bank_name,
+            chequeDate: d.cheque_date,
+            paymentTerms: d.payment_terms
         })));
 
         await fetchTable('supplier_payments', setSupplierPayments, (data: any[]) => data.map(d => ({
@@ -521,7 +519,6 @@ export const App: React.FC = () => {
               name: newEmployee.name,
               designation: newEmployee.designation,
               phone: newEmployee.phone,
-              /* Fix: Map camelCase interface properties to snake_case database fields */
               daily_wage: newEmployee.dailyWage,
               monthly_wage: newEmployee.monthlyWage,
               rate_per_meter: newEmployee.ratePerMeter
@@ -593,6 +590,41 @@ export const App: React.FC = () => {
           setProcessTypes(prev => prev.filter(p => p.id !== id));
       } catch (error: any) {
           alert(`Error deleting process type: ${error.message || error}`);
+      }
+  };
+
+  const handleAddExpenseCategory = async (name: string) => {
+      try {
+          const { data, error } = await supabase.from('expense_categories').insert([{ name }]).select().single();
+          if (error) throw error;
+          if (data) {
+              const newCat = { id: data.id, name };
+              setExpenseCategories(prev => [...prev, newCat]);
+              return newCat;
+          }
+      } catch (error: any) {
+          alert(`Error adding category: ${error.message || error}`);
+      }
+      return null;
+  };
+
+  const handleUpdateExpenseCategory = async (id: string, name: string) => {
+      try {
+          const { error } = await supabase.from('expense_categories').update({ name }).eq('id', id);
+          if (error) throw error;
+          setExpenseCategories(prev => prev.map(p => p.id === id ? { ...p, name } : p));
+      } catch (error: any) {
+          alert(`Error updating expense category: ${error.message || error}`);
+      }
+  };
+
+  const handleDeleteExpenseCategory = async (id: string) => {
+      try {
+          const { error } = await supabase.from('expense_categories').delete().eq('id', id);
+          if (error) throw error;
+          setExpenseCategories(prev => prev.filter(p => p.id !== id));
+      } catch (error: any) {
+          alert(`Error deleting expense category: ${error.message || error}`);
       }
   };
 
@@ -812,7 +844,6 @@ export const App: React.FC = () => {
               process: item.process,
               description: item.description,
               design_no: item.designNo,
-              /* Fix: item.hsn_sac -> item.hsnSac to match InvoiceItem type */
               hsn_sac: item.hsnSac,
               pcs: item.pcs,
               mtr: item.mtr,
@@ -864,7 +895,6 @@ export const App: React.FC = () => {
               process: item.process,
               description: item.description,
               design_no: item.designNo,
-              /* Fix: item.hsn_sac -> item.hsnSac to match InvoiceItem type */
               hsn_sac: item.hsnSac,
               pcs: item.pcs,
               mtr: item.mtr,
@@ -1029,21 +1059,6 @@ export const App: React.FC = () => {
       } catch (error: any) {
           alert(`Error deleting expense: ${error.message || error}`);
       }
-  };
-
-  const handleAddExpenseCategory = async (name: string) => {
-      try {
-          const { data, error } = await supabase.from('expense_categories').insert([{ name }]).select().single();
-          if (error) throw error;
-          if (data) {
-              const newCat = { id: data.id, name };
-              setExpenseCategories(prev => [...prev, newCat]);
-              return newCat;
-          }
-      } catch (error: any) {
-          alert(`Error adding category: ${error.message || error}`);
-      }
-      return null;
   };
 
   const handleAddTimberExpense = async (expense: Omit<TimberExpense, 'id'>) => {
@@ -1265,6 +1280,7 @@ export const App: React.FC = () => {
           {activeScreen === 'Add Purchase Shop' && <PurchaseShopMasterScreen shops={purchaseShops} onAddShop={handleAddPurchaseShop} onUpdateShop={handleUpdatePurchaseShop} onDeleteShop={handleDeletePurchaseShop} />}
           {activeScreen === 'Add Employee' && <EmployeeMasterScreen employees={employees} onAddEmployee={handleAddEmployee} onUpdateEmployee={handleUpdateEmployee} onDeleteEmployee={handleDeleteEmployee} />}
           {activeScreen === 'Add Process' && <PartyDCProcessMasterScreen processTypes={processTypes} onAddProcessType={handleAddProcessType} onUpdateProcessType={handleUpdateProcessType} onDeleteProcessType={handleDeleteProcessType} />}
+          {activeScreen === 'Expense Categories' && <ExpenseCategoryMasterScreen categories={expenseCategories} onAdd={handleAddExpenseCategory} onUpdate={handleUpdateExpenseCategory} onDelete={handleDeleteExpenseCategory} />}
           {activeScreen === 'User Admin' && <UserAdminScreen companyDetails={companyDetails} onUpdate={handleUpdateCompanyDetails} />}
           {activeScreen === 'New Screen' && <ProductsScreen clients={clients} onAddClient={handleAddClient} processTypes={processTypes} onAddProcessType={handleAddProcessType} />}
           {activeScreen === 'Salary & Payslips' && <SalaryScreen employees={employees} attendanceRecords={attendanceRecords} onUpdateEmployee={handleUpdateEmployee} advances={advances} onSavePayslip={handleSavePayslip} onDeletePayslip={handleDeletePayslip} companyDetails={companyDetails} payslips={payslips} />}
