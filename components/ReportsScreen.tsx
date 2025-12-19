@@ -41,7 +41,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
     const [isEndDateOpen, setIsEndDateOpen] = useState(false);
 
     const sortedEmployees = useMemo(() => [...employees].sort((a, b) => a.name.localeCompare(b.name)), [employees]);
-    const sorted clients = useMemo(() => [...clients].sort((a, b) => a.name.localeCompare(b.name)), [clients]);
+    const sortedClients = useMemo(() => [...clients].sort((a, b) => a.name.localeCompare(b.name)), [clients]);
     const sortedShops = useMemo(() => [...purchaseShops].sort((a, b) => a.name.localeCompare(b.name)), [purchaseShops]);
 
     // --- ATTENDANCE REPORT LOGIC ---
@@ -564,7 +564,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                             </div>
                             <div className="bg-orange-50 p-4 rounded-lg border border-orange-100">
                                 <p className="text-sm text-orange-600 font-medium">Total Tax Amount</p>
-                                <p className="text-2xl font-bold text-orange-800">₹{numberFormat(invoiceSummary.totalTax)}</p>
+                                <p className="text-2xl font-bold text-purple-800">₹{numberFormat(invoiceSummary.totalTax)}</p>
                             </div>
                             <div className="bg-success-50 p-4 rounded-lg border border-success-100">
                                 <p className="text-sm text-success-600 font-medium">Total Invoice Amount</p>
@@ -676,7 +676,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                                 {purchaseReportData.length > 0 && (
                                     <tfoot className="bg-secondary-50 font-bold">
                                         <tr>
-                                            <td colSpan={5} className="px-4 py-3 border border-secondary-200 text-right">Total:</td>
+                                            <td colSpan={6} className="px-4 py-3 border border-secondary-200 text-right">Total:</td>
                                             <td className="px-4 py-3 border border-secondary-200 text-right">₹{numberFormat(purchaseSummary.totalAmount)}</td>
                                         </tr>
                                     </tfoot>
