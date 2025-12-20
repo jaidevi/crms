@@ -50,7 +50,7 @@ const toYMDString = (date: Date): string => {
 
 // Type for sortable column keys for Purchase Orders
 type SortableKeys = 'poNumber' | 'poDate' | 'shopName' | 'dueDate' | 'totalAmount';
-type TimberSortableKeys = 'date' | 'supplierName' | 'amount' | 'dueDate' | 'paidAmount' | 'balanceAmount';
+type TimberSortableKeys = 'date' | 'supplierName' | 'openingBalance' | 'amount' | 'dueDate' | 'paidAmount' | 'balanceAmount';
 
 // Type for sort configuration for Purchase Orders
 interface SortConfig {
@@ -296,13 +296,15 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
             let totalPaid = paymentsBySupplier[supplier] || 0;
 
             supplierExpenses.forEach(exp => {
-                const paidForThis = Math.min(exp.amount, totalPaid);
+                // LIABILITY includes standard amount + opening balance
+                const totalRowLiability = (exp.amount || 0) + (exp.openingBalance || 0);
+                const paidForThis = Math.min(totalRowLiability, totalPaid);
                 totalPaid = Math.max(0, totalPaid - paidForThis);
                 
                 enriched.push({
                     ...exp,
                     paidAmount: paidForThis,
-                    balanceAmount: exp.amount - paidForThis
+                    balanceAmount: totalRowLiability - paidForThis
                 });
             });
         });
@@ -310,7 +312,7 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
         // Handle any expenses that might have no supplier name (should be rare due to validation)
         timberExpenses.forEach(e => {
             if (!e.supplierName) {
-                enriched.push({ ...e, paidAmount: 0, balanceAmount: e.amount });
+                enriched.push({ ...e, paidAmount: 0, balanceAmount: (e.amount || 0) + (e.openingBalance || 0) });
             }
         });
 
@@ -631,6 +633,9 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
                                 <th scope="col" className="px-6 py-3 cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('supplierName')}>
                                     <div className="flex items-center">Supplier {getTimberSortIndicator('supplierName')}</div>
                                 </th>
+                                <th scope="col" className="px-6 py-3 cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('openingBalance')}>
+                                    <div className="flex items-center">Opening Bal {getTimberSortIndicator('openingBalance')}</div>
+                                </th>
                                 <th scope="col" className="px-6 py-3 cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('dueDate')}>
                                     <div className="flex items-center">Due Date {getTimberSortIndicator('dueDate')}</div>
                                 </th>
@@ -659,6 +664,7 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
                                     <tr key={expense.id} className="bg-white border-b hover:bg-secondary-50">
                                         <td className="px-6 py-4 whitespace-nowrap">{formatDateForDisplay(expense.date)}</td>
                                         <td className="px-6 py-4 font-medium text-secondary-900">{expense.supplierName}</td>
+                                        <td className="px-6 py-4 text-right">₹{expense.openingBalance.toFixed(2)}</td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div>{dueDate ? formatDateForDisplay(toYMDString(dueDate)) : '-'}</div>
                                             {daysUntilDue !== null && !isPaid && (

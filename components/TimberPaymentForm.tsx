@@ -33,19 +33,19 @@ const TimberPaymentForm: React.FC<TimberPaymentFormProps> = ({ onClose, onSave, 
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
     
-    // Calculate Outstanding and Balance
+    // Calculate Outstanding and Balance including Opening Balance
     const outstandingAmount = useMemo(() => {
         if (!payment.supplierName) return 0;
         
-        const totalExpenses = timberExpenses
+        const totalLiability = timberExpenses
             .filter(e => e.supplierName === payment.supplierName)
-            .reduce((sum, e) => sum + e.amount, 0);
+            .reduce((sum, e) => sum + (e.amount || 0) + (e.openingBalance || 0), 0);
             
         const totalPaid = supplierPayments
             .filter(p => p.supplierName === payment.supplierName)
-            .reduce((sum, p) => sum + p.amount, 0);
+            .reduce((sum, p) => sum + (p.amount || 0), 0);
             
-        return Math.max(0, totalExpenses - totalPaid);
+        return Math.max(0, totalLiability - totalPaid);
     }, [payment.supplierName, timberExpenses, supplierPayments]);
 
     const balanceAmount = useMemo(() => {
