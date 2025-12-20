@@ -1,3 +1,4 @@
+
 -- ERP SYSTEM DATABASE SCHEMA
 -- RUN THIS IN SUPABASE SQL EDITOR TO INITIALIZE TABLES
 
@@ -213,6 +214,7 @@ CREATE TABLE IF NOT EXISTS timber_expenses (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     date DATE NOT NULL,
     supplier_name TEXT NOT NULL,
+    opening_balance NUMERIC(15, 2) DEFAULT 0,
     load_weight NUMERIC(15, 2),
     vehicle_weight NUMERIC(15, 2),
     cft NUMERIC(15, 2),

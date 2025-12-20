@@ -1,3 +1,4 @@
+
 export type PaymentMode = 'Cash' | 'Cheque' | 'NEFT' | 'GPay' | 'Credit Card' | 'Bank Transfer' | 'Other';
 export type OrderStatus = 'Paid' | 'Unpaid' | 'Partially Paid';
 export type AttendanceStatus = 'Present' | 'Absent' | 'Leave' | 'Holiday';
@@ -149,6 +150,7 @@ export interface TimberExpense {
   id: string;
   date: string;
   supplierName: string;
+  openingBalance: number;
   loadWeight: number;
   vehicleWeight: number;
   cft: number;

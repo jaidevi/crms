@@ -676,7 +676,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                                 {purchaseReportData.length > 0 && (
                                     <tfoot className="bg-secondary-50 font-bold">
                                         <tr>
-                                            <td colSpan={6} className="px-4 py-3 border border-secondary-200 text-right">Total:</td>
+                                            <td colSpan={5} className="px-4 py-3 border border-secondary-200 text-right">Total:</td>
                                             <td className="px-4 py-3 border border-secondary-200 text-right">₹{numberFormat(purchaseSummary.totalAmount)}</td>
                                         </tr>
                                     </tfoot>

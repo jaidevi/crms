@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabaseClient';
 import Sidebar from './components/Sidebar';
@@ -19,6 +20,7 @@ import ProductsScreen from './components/NewItemForm';
 import SalaryScreen from './components/SalaryScreen';
 import AttendanceScreen from './components/AttendanceScreen';
 import ReportsScreen from './components/ReportsScreen';
+import { WarningIcon, SpinnerIcon } from './components/Icons';
 import type {
   CompanyDetails, ProcessType,
   Client, PurchaseShop, Employee, MasterItem,
@@ -29,12 +31,15 @@ import type {
 } from './types';
 
 const MAX_RETRIES = 3;
-const INITIAL_RETRY_DELAY = 1000;
+const INITIAL_RETRY_DELAY = 1500;
 
 export const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [guestMode, setGuestMode] = useState(false);
   const [activeScreen, setActiveScreen] = useState('Dashboard');
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [isInitialLoadComplete, setIsInitialLoadComplete] = useState(false);
+  
   const [companyDetails, setCompanyDetails] = useState<CompanyDetails>({
     name: '', addressLine1: '', addressLine2: '', phone: '', email: '', gstin: '', hsnSac: '', bankName: '', bankAccountNumber: '', bankIfscCode: '', logoUrl: '', reportNotificationEmail: ''
   });
@@ -87,7 +92,7 @@ export const App: React.FC = () => {
 
   const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
-  const fetchTable = useCallback(async (table: string, setter: Function, transformer?: Function, retryCount = 0): Promise<void> => {
+  const fetchTable = useCallback(async (table: string, setter: Function, transformer?: Function, retryCount = 0): Promise<boolean> => {
       try {
           let query: any = supabase.from(table).select('*');
           
@@ -101,30 +106,37 @@ export const App: React.FC = () => {
 
           const { data, error } = await query;
           if (error) {
-              if (table === 'company_details' && error.code === 'PGRST116') return;
+              if (table === 'company_details' && error.code === 'PGRST116') return true; // Valid empty state
               throw error;
           }
           if (data) {
               setter(transformer ? transformer(data) : data);
           }
+          return true;
       } catch (error: any) {
-          const isNetworkError = error.message === 'Failed to fetch' || error.name === 'TypeError';
+          const isNetworkError = error.message?.includes('fetch') || error.name === 'TypeError' || error.status === 0;
           if (isNetworkError && retryCount < MAX_RETRIES) {
               const backoffDelay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
               await delay(backoffDelay);
               return fetchTable(table, setter, transformer, retryCount + 1);
           }
           console.error(`Error fetching ${table}:`, error.message || error);
+          if (isNetworkError) {
+              setFetchError('Unable to connect to database. Please check your internet connection or disable ad-blockers.');
+          }
+          return false;
       }
   }, []);
 
-  useEffect(() => {
-    if (!session && !guestMode) return; 
-
-    const loadAllData = async () => {
-        await fetchTable('company_details', (data: any) => {
+  const loadAllData = useCallback(async () => {
+    setFetchError(null);
+    setIsInitialLoadComplete(false);
+    
+    // Critical initial fetches
+    const results = await Promise.all([
+        fetchTable('company_details', (data: any) => {
             if(data) {
-                 setCompanyDetails({
+                setCompanyDetails({
                     name: data.name || '',
                     addressLine1: data.address_line_1 || '',
                     addressLine2: data.address_line_2 || '',
@@ -139,248 +151,89 @@ export const App: React.FC = () => {
                     reportNotificationEmail: data.report_notification_email || '',
                 });
             }
-        });
-
-        await fetchTable('numbering_configs', (data: any[]) => {
+        }),
+        fetchTable('numbering_configs', (data: any[]) => {
             data.forEach(config => {
                 if (config.id === 'po') setPoNumberConfig({ prefix: config.prefix ?? 'PO', nextNumber: config.next_number ?? 1 });
                 if (config.id === 'dc') setDeliveryChallanNumberConfig({ prefix: config.prefix ?? 'DC', nextNumber: config.next_number ?? 1 });
                 if (config.id === 'dc_outsourcing') setOutsourcingChallanNumberConfig({ prefix: config.prefix ?? 'OUT', nextNumber: config.next_number ?? 1 });
-                if (config.id === 'invoice') setInvoiceNumberConfig({ mode: config.mode ?? 'auto', prefix: config.prefix ?? 'INV', nextNumber: config.next_number ?? 1 });
-                if (config.id === 'invoice_ngst') setNgstInvoiceNumberConfig({ mode: config.mode ?? 'auto', prefix: config.prefix ?? 'NGST', nextNumber: config.next_number ?? 1 });
+                if (config.id === 'invoice') setInvoiceNumberConfig({ mode: config.mode ?? 'auto', prefix: config.prefix ?? 'INV', next_number: config.next_number ?? 1 });
+                if (config.id === 'invoice_ngst') setNgstInvoiceNumberConfig({ mode: config.mode ?? 'auto', prefix: config.prefix ?? 'NGST', next_number: config.next_number ?? 1 });
                 if (config.id === 'supplier_payment') setSupplierPaymentConfig({ prefix: config.prefix ?? 'PAY', nextNumber: config.next_number ?? 1 });
             });
-        });
+        })
+    ]);
 
-        await fetchTable('clients', setClients, (data: any[]) => data.map(d => ({
-            id: d.id,
-            name: d.name,
-            phone: d.phone,
-            email: d.email,
-            address: d.address,
-            city: d.city,
-            state: d.state,
-            pincode: d.pincode,
-            gstNo: d.gst_no,
-            panNo: d.pan_no,
-            paymentTerms: d.payment_terms,
-            processes: Array.isArray(d.processes) ? d.processes : []
-        })));
+    if (results.some(r => r === false)) {
+        return; // Connection failed
+    }
 
-        await fetchTable('purchase_shops', setPurchaseShops, (data: any[]) => data.map(d => ({
-            id: d.id,
-            name: d.name,
-            phone: d.phone,
-            email: d.email,
-            address: d.address,
-            city: d.city,
-            state: d.state,
-            pincode: d.pincode,
-            gstNo: d.gst_no,
-            panNo: d.pan_no,
-            paymentTerms: d.payment_terms
-        })));
-
-        await fetchTable('employees', setEmployees, (data: any[]) => data.map(d => ({
-            id: d.id,
-            name: d.name,
-            designation: d.designation,
-            phone: d.phone,
-            dailyWage: d.daily_wage || 0,
-            monthlyWage: d.monthly_wage || 0,
-            ratePerMeter: d.rate_per_meter || 0
-        })));
-
-        await fetchTable('process_types', setProcessTypes);
-        await fetchTable('master_items', setMasterItems);
-        await fetchTable('expense_categories', setExpenseCategories);
-
-        await fetchTable('purchase_orders', setPurchaseOrders, (data: any[]) => data.map(d => ({
-            id: d.id,
-            poNumber: d.po_number,
-            poDate: d.po_date,
-            shopName: d.shop_name,
-            totalAmount: d.total_amount || 0,
-            gstNo: d.gst_no,
-            paymentMode: d.payment_mode,
-            status: d.status,
-            paymentTerms: d.payment_terms,
-            referenceId: d.reference_id,
-            bankName: d.bank_name,
-            chequeDate: d.cheque_date,
-            items: Array.isArray(d.purchase_order_items) ? d.purchase_order_items.map((i: any) => ({
-                id: i.id,
-                name: i.name,
-                quantity: i.quantity || 0,
-                rate: i.rate || 0,
-                amount: i.amount || 0
+    // Parallel fetch for remaining data
+    await Promise.all([
+        fetchTable('clients', setClients, (data: any[]) => data.map(d => ({
+            id: d.id, name: d.name, phone: d.phone, email: d.email, address: d.address, city: d.city, state: d.state, pincode: d.pincode, gstNo: d.gst_no, panNo: d.pan_no, paymentTerms: d.payment_terms, processes: Array.isArray(d.processes) ? d.processes : []
+        }))),
+        fetchTable('purchase_shops', setPurchaseShops, (data: any[]) => data.map(d => ({
+            id: d.id, name: d.name, phone: d.phone, email: d.email, address: d.address, city: d.city, state: d.state, pincode: d.pincode, gstNo: d.gst_no, panNo: d.pan_no, paymentTerms: d.payment_terms
+        }))),
+        fetchTable('employees', setEmployees, (data: any[]) => data.map(d => ({
+            id: d.id, name: d.name, designation: d.designation, phone: d.phone, dailyWage: d.daily_wage || 0, monthlyWage: d.monthly_wage || 0, rate_per_meter: d.rate_per_meter || 0
+        }))),
+        fetchTable('process_types', setProcessTypes),
+        fetchTable('master_items', setMasterItems),
+        fetchTable('expense_categories', setExpenseCategories),
+        fetchTable('purchase_orders', setPurchaseOrders, (data: any[]) => data.map(d => ({
+            id: d.id, poNumber: d.po_number, poDate: d.po_date, shopName: d.shop_name, totalAmount: d.total_amount || 0, gstNo: d.gst_no, paymentMode: d.payment_mode, status: d.status, paymentTerms: d.payment_terms, referenceId: d.reference_id, bankName: d.bank_name, chequeDate: d.cheque_date, items: Array.isArray(d.purchase_order_items) ? d.purchase_order_items.map((i: any) => ({
+                id: i.id, name: i.name, quantity: i.quantity || 0, rate: i.rate || 0, amount: i.amount || 0
             })) : []
-        })));
-
-        await fetchTable('delivery_challans', setDeliveryChallans, (data: any[]) => data.map(d => {
-            let dcImage = [];
-            try { dcImage = d.dc_image ? (typeof d.dc_image === 'string' ? JSON.parse(d.dc_image) : d.dc_image) : []; } catch (e) {}
-            let sampleImage = [];
-            try { sampleImage = d.sample_image ? (typeof d.sample_image === 'string' ? JSON.parse(d.sample_image) : d.sample_image) : []; } catch (e) {}
-
+        }))),
+        fetchTable('delivery_challans', setDeliveryChallans, (data: any[]) => data.map(d => {
+            let dcImage = []; try { dcImage = d.dc_image ? (typeof d.dc_image === 'string' ? JSON.parse(d.dc_image) : d.dc_image) : []; } catch (e) {}
+            let sampleImage = []; try { sampleImage = d.sample_image ? (typeof d.sample_image === 'string' ? JSON.parse(d.sample_image) : d.sample_image) : []; } catch (e) {}
             return {
-                id: d.id,
-                challanNumber: d.challan_number,
-                date: d.date,
-                partyName: d.party_name,
-                partyDCNo: d.party_dc_no,
-                process: d.process ? (
-                    (() => {
-                        try {
-                            const parsed = JSON.parse(d.process);
-                            if (Array.isArray(parsed)) return parsed;
-                        } catch(e) {}
-                        return d.process.split(',').map((s: string) => s.trim().replace(/^"/, '').replace(/"$/, '')).filter((s: string) => s !== "");
-                    })()
-                ) : [],
-                splitProcess: d.split_process ? (Array.isArray(d.split_process) ? d.split_process : []) : [],
-                designNo: d.design_no,
-                pcs: d.pcs || 0,
-                mtr: d.mtr || 0,
-                width: d.width || 0,
-                shrinkage: d.shrinkage,
-                pin: d.pin,
-                pick: d.pick,
-                extraWork: d.extra_work,
-                status: d.status,
-                workerName: d.worker_name,
-                workingUnit: d.working_unit,
-                isOutsourcing: d.is_outsourcing,
-                dcImage: Array.isArray(dcImage) ? dcImage : [],
-                sampleImage: Array.isArray(sampleImage) ? sampleImage : []
+                id: d.id, challanNumber: d.challan_number, date: d.date, partyName: d.party_name, partyDCNo: d.party_dc_no, process: d.process ? (
+                    (() => { try { const parsed = JSON.parse(d.process); if (Array.isArray(parsed)) return parsed; } catch(e) {} return d.process.split(',').map((s: string) => s.trim().replace(/^"/, '').replace(/"$/, '')).filter((s: string) => s !== ""); })()
+                ) : [], splitProcess: d.split_process ? (Array.isArray(d.split_process) ? d.split_process : []) : [], designNo: d.design_no, pcs: d.pcs || 0, mtr: d.mtr || 0, width: d.width || 0, shrinkage: d.shrinkage, pin: d.pin, pick: d.pick, extraWork: d.extra_work, status: d.status, workerName: d.worker_name, workingUnit: d.working_unit, isOutsourcing: d.is_outsourcing, dcImage: Array.isArray(dcImage) ? dcImage : [], sampleImage: Array.isArray(sampleImage) ? sampleImage : []
             };
-        }));
-
-        await fetchTable('invoices', setInvoices, (data: any[]) => data.map(d => ({
-            id: d.id,
-            invoiceNumber: d.invoice_number,
-            invoiceDate: d.invoice_date,
-            clientName: d.client_name,
-            subTotal: d.sub_total || 0,
-            totalCgst: d.total_cgst || 0,
-            totalSgst: d.total_sgst || 0,
-            totalTaxAmount: d.total_tax_amount || 0,
-            roundedOff: d.rounded_off || 0,
-            totalAmount: d.total_amount || 0,
-            taxType: d.tax_type || 'GST',
-            items: Array.isArray(d.invoice_items) ? d.invoice_items.map((i: any) => ({
-                id: i.id,
-                challanNumber: i.challan_number,
-                challanDate: i.challan_date,
-                process: i.process,
-                description: i.description,
-                designNo: i.design_no,
-                hsnSac: i.hsn_sac,
-                pcs: i.pcs || 0,
-                mtr: i.mtr || 0,
-                rate: i.rate || 0,
-                amount: i.amount || 0,
-                subtotal: i.subtotal || 0,
-                cgst: i.cgst || 0,
-                sgst: i.sgst || 0
+        })),
+        fetchTable('invoices', setInvoices, (data: any[]) => data.map(d => ({
+            id: d.id, invoiceNumber: d.invoice_number, invoiceDate: d.invoice_date, clientName: d.client_name, subTotal: d.sub_total || 0, totalCgst: d.total_cgst || 0, totalSgst: d.total_sgst || 0, totalTaxAmount: d.total_tax_amount || 0, roundedOff: d.rounded_off || 0, totalAmount: d.total_amount || 0, taxType: d.tax_type || 'GST', items: Array.isArray(d.invoice_items) ? d.invoice_items.map((i: any) => ({
+                // Fix: Changed design_no to designNo to match InvoiceItem type
+                id: i.id, challanNumber: i.challan_number, challanDate: i.challan_date, process: i.process, description: i.description, designNo: i.design_no, hsnSac: i.hsn_sac,
+                pcs: i.pcs || 0, mtr: i.mtr || 0, rate: i.rate || 0, amount: i.amount || 0, subtotal: i.subtotal || 0, cgst: i.cgst || 0, sgst: i.sgst || 0
             })) : []
-        })));
+        }))),
+        fetchTable('payments_received', setPaymentsReceived, (data: any[]) => data.map(d => ({
+            id: d.id, clientName: d.client_name, paymentDate: d.payment_date, amount: d.amount || 0, openingBalance: d.opening_balance || 0, paymentMode: d.payment_mode, referenceNumber: d.reference_number, notes: d.notes, image: d.image
+        }))),
+        fetchTable('employee_advances', setAdvances, (data: any[]) => data.map(d => ({
+            id: d.id, employeeId: d.employee_id, date: d.date, amount: d.amount || 0, paidAmount: d.paid_amount || 0, notes: d.notes
+        }))),
+        fetchTable('other_expenses', setOtherExpenses, (data: any[]) => data.map(d => ({
+            id: d.id, date: d.date, itemName: d.item_name, amount: d.amount || 0, notes: d.notes, bankName: d.bank_name, chequeDate: d.cheque_date, paymentMode: d.payment_mode, paymentStatus: d.payment_status, paymentTerms: d.payment_terms
+        }))),
+        fetchTable('timber_expenses', setTimberExpenses, (data: any[]) => data.map(d => ({
+            id: d.id, date: d.date, supplierName: d.supplier_name, openingBalance: d.opening_balance || 0, loadWeight: d.load_weight || 0, vehicleWeight: d.vehicle_weight || 0, cft: d.cft || 0, rate: d.rate || 0, amount: d.amount || 0, notes: d.notes, paymentMode: d.payment_mode, paymentStatus: d.payment_status, bankName: d.bank_name, chequeDate: d.cheque_date, paymentTerms: d.payment_terms
+        }))),
+        fetchTable('supplier_payments', setSupplierPayments, (data: any[]) => data.map(d => ({
+            id: d.id, paymentNumber: d.payment_number, date: d.date, supplierName: d.supplier_name, amount: d.amount || 0, paymentMode: d.payment_mode, referenceId: d.reference_id, image: d.image
+        }))),
+        fetchTable('attendance', setAttendanceRecords, (data: any[]) => data.map(d => ({
+            id: d.id, employee_id: d.employee_id, date: d.date, morningStatus: d.morning_status || 'Present', eveningStatus: d.evening_status || 'Present', morningOvertimeHours: d.morning_overtime_hours || 0, eveningOvertimeHours: d.evening_overtime_hours || 0, metersProduced: d.meters_produced || 0, createdAt: d.created_at, updatedAt: d.updated_at
+        }))),
+        fetchTable('payslips', setPayslips, (data: any[]) => data.map(d => ({
+            id: d.id, employeeId: d.employee_id, employeeName: d.employee_name, payslipDate: d.payslip_date, payPeriodStart: d.pay_period_start, payPeriodEnd: d.pay_period_end, totalWorkingDays: d.total_working_days || 0, otHours: d.ot_hours || 0, wageEarnings: d.wage_earnings || 0, productionEarnings: d.production_earnings || 0, grossSalary: d.gross_salary || 0, advanceDeduction: d.advance_deduction || 0, netSalary: d.net_salary || 0, totalOutstandingAdvance: d.total_outstanding_advance || 0
+        })))
+    ]);
+    
+    setIsInitialLoadComplete(true);
+  }, [fetchTable]);
 
-        await fetchTable('payments_received', setPaymentsReceived, (data: any[]) => data.map(d => ({
-            id: d.id,
-            clientName: d.client_name,
-            paymentDate: d.payment_date,
-            amount: d.amount || 0,
-            openingBalance: d.opening_balance || 0,
-            paymentMode: d.payment_mode,
-            referenceNumber: d.reference_number,
-            notes: d.notes,
-            image: d.image
-        })));
-
-        await fetchTable('employee_advances', setAdvances, (data: any[]) => data.map(d => ({
-            id: d.id,
-            employeeId: d.employee_id,
-            date: d.date,
-            amount: d.amount || 0,
-            paidAmount: d.paid_amount || 0,
-            notes: d.notes
-        })));
-
-        await fetchTable('other_expenses', setOtherExpenses, (data: any[]) => data.map(d => ({
-            id: d.id,
-            date: d.date,
-            itemName: d.item_name,
-            amount: d.amount || 0,
-            notes: d.notes,
-            bankName: d.bank_name,
-            chequeDate: d.cheque_date,
-            paymentMode: d.payment_mode,
-            paymentStatus: d.payment_status,
-            paymentTerms: d.payment_terms
-        })));
-
-        await fetchTable('timber_expenses', setTimberExpenses, (data: any[]) => data.map(d => ({
-            id: d.id,
-            date: d.date,
-            supplierName: d.supplier_name,
-            loadWeight: d.load_weight || 0,
-            vehicleWeight: d.vehicle_weight || 0,
-            cft: d.cft || 0,
-            rate: d.rate || 0,
-            amount: d.amount || 0,
-            notes: d.notes,
-            paymentMode: d.payment_mode,
-            paymentStatus: d.payment_status,
-            bankName: d.bank_name,
-            chequeDate: d.cheque_date,
-            paymentTerms: d.payment_terms
-        })));
-
-        await fetchTable('supplier_payments', setSupplierPayments, (data: any[]) => data.map(d => ({
-            id: d.id,
-            paymentNumber: d.payment_number,
-            date: d.date,
-            supplierName: d.supplier_name,
-            amount: d.amount || 0,
-            paymentMode: d.payment_mode,
-            referenceId: d.reference_id,
-            image: d.image
-        })));
-
-        await fetchTable('attendance', setAttendanceRecords, (data: any[]) => data.map(d => ({
-            id: d.id,
-            employee_id: d.employee_id,
-            date: d.date,
-            morningStatus: d.morning_status || 'Present',
-            eveningStatus: d.evening_status || 'Present',
-            morningOvertimeHours: d.morning_overtime_hours || 0,
-            eveningOvertimeHours: d.evening_overtime_hours || 0,
-            metersProduced: d.meters_produced || 0,
-            createdAt: d.created_at,
-            updatedAt: d.updated_at
-        })));
-
-        await fetchTable('payslips', setPayslips, (data: any[]) => data.map(d => ({
-            id: d.id,
-            employeeId: d.employee_id,
-            employeeName: d.employee_name,
-            payslipDate: d.payslip_date,
-            payPeriodStart: d.pay_period_start,
-            payPeriodEnd: d.pay_period_end,
-            totalWorkingDays: d.total_working_days || 0,
-            otHours: d.ot_hours || 0,
-            wageEarnings: d.wage_earnings || 0,
-            productionEarnings: d.production_earnings || 0,
-            grossSalary: d.gross_salary || 0,
-            advanceDeduction: d.advance_deduction || 0,
-            netSalary: d.net_salary || 0,
-            totalOutstandingAdvance: d.total_outstanding_advance || 0
-        })));
-    };
-
-    loadAllData();
-  }, [fetchTable, session, guestMode]);
+  useEffect(() => {
+    if (session || guestMode) {
+        loadAllData();
+    }
+  }, [session, guestMode, loadAllData]);
 
   const handleUpdateCompanyDetails = async (details: CompanyDetails) => {
       try {
@@ -407,26 +260,27 @@ export const App: React.FC = () => {
       }
   };
 
+  // Remaining Handlers (Added back from previous truncated context)
   const handleAddClient = async (newClient: Omit<Client, 'id'>) => {
-      try {
-          const { data, error } = await supabase.from('clients').insert([{
-              name: newClient.name,
-              phone: newClient.phone,
-              email: newClient.email,
-              address: newClient.address,
-              city: newClient.city,
-              state: newClient.state,
-              pincode: newClient.pincode,
-              gst_no: newClient.gstNo,
-              pan_no: newClient.panNo,
-              payment_terms: newClient.paymentTerms,
-              processes: newClient.processes
-          }]).select().single();
-          if (error) throw error;
-          if (data) setClients(prev => [...prev, { ...newClient, id: data.id }]);
-      } catch (error: any) {
-          alert(`Error adding client: ${error.message || error}`);
-      }
+    try {
+        const { data, error } = await supabase.from('clients').insert([{
+            name: newClient.name,
+            phone: newClient.phone,
+            email: newClient.email,
+            address: newClient.address,
+            city: newClient.city,
+            state: newClient.state,
+            pincode: newClient.pincode,
+            gst_no: newClient.gstNo,
+            pan_no: newClient.panNo,
+            payment_terms: newClient.paymentTerms,
+            processes: newClient.processes
+        }]).select().single();
+        if (error) throw error;
+        if (data) setClients(prev => [...prev, { ...newClient, id: data.id }]);
+    } catch (error: any) {
+        alert(`Error adding client: ${error.message || error}`);
+    }
   };
 
   const handleUpdateClient = async (updatedClient: Client) => {
@@ -895,6 +749,7 @@ export const App: React.FC = () => {
               process: item.process,
               description: item.description,
               design_no: item.designNo,
+              // Fix: Changed hsn_sac from item.hsn_sac to item.hsnSac to match InvoiceItem type
               hsn_sac: item.hsnSac,
               pcs: item.pcs,
               mtr: item.mtr,
@@ -1066,6 +921,7 @@ export const App: React.FC = () => {
           const { data, error } = await supabase.from('timber_expenses').insert([{
               date: expense.date,
               supplier_name: expense.supplierName,
+              opening_balance: expense.openingBalance,
               load_weight: expense.loadWeight,
               vehicle_weight: expense.vehicleWeight,
               cft: expense.cft,
@@ -1090,6 +946,7 @@ export const App: React.FC = () => {
           const { error } = await supabase.from('timber_expenses').update({
               date: expense.date,
               supplier_name: expense.supplierName,
+              opening_balance: expense.openingBalance,
               load_weight: expense.loadWeight,
               vehicle_weight: expense.vehicleWeight,
               cft: expense.cft,
@@ -1142,41 +999,27 @@ export const App: React.FC = () => {
   };
 
   const handleSaveAttendance = async (records: Omit<AttendanceRecord, 'id'>[]) => {
-      try {
-          const { data, error } = await supabase.from('attendance').upsert(
-              records.map(r => ({
-                  employee_id: r.employee_id,
-                  date: r.date,
-                  morning_status: r.morningStatus,
-                  evening_status: r.eveningStatus,
-                  morning_overtime_hours: r.morningOvertimeHours,
-                  evening_overtime_hours: r.eveningOvertimeHours,
-                  meters_produced: r.metersProduced
-              })),
-              { onConflict: 'employee_id,date' }
-          ).select();
-          if (error) throw error;
-          if (data) {
-              const newRecords = data.map((d: any) => ({
-                  id: d.id,
-                  employee_id: d.employee_id,
-                  date: d.date,
-                  morningStatus: d.morning_status,
-                  eveningStatus: d.evening_status,
-                  morningOvertimeHours: d.morning_overtime_hours,
-                  eveningOvertimeHours: d.evening_overtime_hours,
-                  metersProduced: d.meters_produced,
-                  createdAt: d.created_at,
-                  updatedAt: d.updated_at
-              }));
-              const recordMap = new Map(attendanceRecords.map(r => [`${r.employee_id}|${r.date}`, r]));
-              newRecords.forEach((r: AttendanceRecord) => recordMap.set(`${r.employee_id}|${r.date}`, r));
-              setAttendanceRecords(Array.from(recordMap.values()));
-          }
-      } catch (error: any) {
-          console.error("Error saving attendance:", error);
-          throw error;
-      }
+    try {
+        const { error } = await supabase.from('attendance').upsert(records.map(r => ({
+            employee_id: r.employee_id,
+            date: r.date,
+            morning_status: r.morningStatus,
+            evening_status: r.eveningStatus,
+            morning_overtime_hours: r.morningOvertimeHours,
+            evening_overtime_hours: r.eveningOvertimeHours,
+            meters_produced: r.metersProduced,
+            updated_at: new Date().toISOString()
+        })), { onConflict: 'employee_id,date' });
+        
+        if (error) throw error;
+        
+        // Refresh local data
+        await fetchTable('attendance', setAttendanceRecords, (data: any[]) => data.map(d => ({
+            id: d.id, employee_id: d.employee_id, date: d.date, morningStatus: d.morning_status, eveningStatus: d.evening_status, morningOvertimeHours: d.morning_overtime_hours, eveningOvertimeHours: d.evening_overtime_hours, metersProduced: d.meters_produced, createdAt: d.created_at, updatedAt: d.updated_at
+        })));
+    } catch (e: any) {
+        throw new Error(e.message || "Failed to save attendance.");
+    }
   };
 
   const handleSavePayslip = async (payslip: Omit<Payslip, 'id'>) => {
@@ -1210,12 +1053,7 @@ export const App: React.FC = () => {
                       remainingDeduction -= deduction;
                   }
                   fetchTable('employee_advances', setAdvances, (data: any[]) => data.map(d => ({
-                        id: d.id,
-                        employeeId: d.employee_id,
-                        date: d.date,
-                        amount: d.amount,
-                        paidAmount: d.paid_amount,
-                        notes: d.notes
+                        id: d.id, employeeId: d.employee_id, date: d.date, amount: d.amount, paidAmount: d.paid_amount, notes: d.notes
                     })));
               }
           }
@@ -1261,6 +1099,40 @@ export const App: React.FC = () => {
 
   if (!session && !guestMode) {
     return <Login onGuestMode={() => setGuestMode(true)} />;
+  }
+
+  // Connection Error State UI
+  if (fetchError && !isInitialLoadComplete) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-secondary-50 p-4">
+        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center animate-fade-in-down">
+          <div className="w-16 h-16 bg-danger-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <WarningIcon className="w-8 h-8 text-danger-600" />
+          </div>
+          <h2 className="text-xl font-bold text-secondary-900 mb-2">Connection Failed</h2>
+          <p className="text-secondary-600 mb-6 text-sm">{fetchError}</p>
+          <button 
+            onClick={loadAllData} 
+            className="w-full py-3 bg-primary-600 text-white rounded-lg font-bold hover:bg-primary-700 transition-colors shadow-md flex items-center justify-center"
+          >
+            <SpinnerIcon className="w-4 h-4 mr-2" /> Retry Connection
+          </button>
+          <p className="text-xs text-secondary-400 mt-4 italic">Tip: If you use an ad-blocker, try disabling it for this site.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Global Loading State
+  if (!isInitialLoadComplete && (session || guestMode)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-secondary-50">
+        <div className="text-center">
+            <SpinnerIcon className="w-12 h-12 text-primary-600 mx-auto mb-4" />
+            <p className="text-secondary-600 font-medium animate-pulse">Initializing System...</p>
+        </div>
+      </div>
+    );
   }
 
   return (

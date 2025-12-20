@@ -19,6 +19,7 @@ interface TimberExpenseFormProps {
 const BLANK_EXPENSE: Omit<TimberExpense, 'id'> = {
     date: new Date().toISOString().split('T')[0],
     supplierName: '',
+    openingBalance: 0,
     loadWeight: 0,
     vehicleWeight: 0,
     cft: 0,
@@ -82,7 +83,7 @@ const TimberExpenseForm: React.FC<TimberExpenseFormProps> = ({ onClose, onSave, 
         const { name, value, type } = e.target;
         const isNumber = type === 'number';
         
-        setExpense(prev => ({ ...prev, [name]: isNumber ? Number(value) : value }));
+        setExpense(prev => ({ ...prev, [name]: isNumber ? (value === '' ? 0 : Number(value)) : value }));
         
         if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
     };
@@ -112,9 +113,12 @@ const TimberExpenseForm: React.FC<TimberExpenseFormProps> = ({ onClose, onSave, 
     const validate = (): boolean => {
         const newErrors: { [key: string]: string } = {};
         if (!expense.supplierName.trim()) newErrors.supplierName = "Supplier is required.";
-        if (Number(expense.loadWeight) <= 0) newErrors.loadWeight = "Load Weight must be positive.";
-        if (Number(expense.vehicleWeight) <= 0) newErrors.vehicleWeight = "Vehicle Weight must be positive.";
-        if (Number(expense.loadWeight) <= Number(expense.vehicleWeight)) newErrors.loadWeight = "Load weight must be greater than vehicle weight.";
+        
+        // Validation for the relationship if both are provided
+        if (expense.loadWeight > 0 && expense.vehicleWeight > 0 && Number(expense.loadWeight) <= Number(expense.vehicleWeight)) {
+            newErrors.loadWeight = "Load weight must be greater than vehicle weight.";
+        }
+        
         if (!expense.date) newErrors.date = "Date is required.";
         if (Number(expense.rate) <= 0) newErrors.rate = "Rate must be positive.";
         
@@ -149,7 +153,7 @@ const TimberExpenseForm: React.FC<TimberExpenseFormProps> = ({ onClose, onSave, 
                 <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl animate-fade-in-down overflow-hidden">
                     <div className="flex items-center justify-between p-5 border-b">
                         <h2 className="text-xl font-bold text-gray-800">{modalTitle}</h2>
-                        <button onClick={onClose} className="p-1 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+                        <button onClick={onClose} className="p-1 rounded-full text-secondary-400 hover:bg-gray-100 hover:text-gray-600">
                             <CloseIcon className="w-6 h-6" />
                         </button>
                     </div>
@@ -176,14 +180,18 @@ const TimberExpenseForm: React.FC<TimberExpenseFormProps> = ({ onClose, onSave, 
                                 {errors.supplierName && <p className="mt-1 text-sm text-red-500">{errors.supplierName}</p>}
                             </div>
                             <div>
-                                <label htmlFor="loadWeight" className="block text-sm font-medium text-gray-700 mb-1">Load Weight <span className="text-red-500">*</span></label>
-                                <input id="loadWeight" name="loadWeight" type="number" value={expense.loadWeight || ''} onChange={handleChange} className={`${commonInputClasses} ${errors.loadWeight ? 'border-red-500' : ''}`} placeholder="0.00" />
+                                <label htmlFor="loadWeight" className="block text-sm font-medium text-gray-700 mb-1">Load Weight</label>
+                                <input id="loadWeight" name="loadWeight" type="number" value={expense.loadWeight === 0 ? '' : expense.loadWeight} onChange={handleChange} className={`${commonInputClasses} ${errors.loadWeight ? 'border-red-500' : ''}`} placeholder="0.00" />
                                 {errors.loadWeight && <p className="mt-1 text-sm text-red-500">{errors.loadWeight}</p>}
                             </div>
                             <div>
-                                <label htmlFor="vehicleWeight" className="block text-sm font-medium text-gray-700 mb-1">Vehicle Weight <span className="text-red-500">*</span></label>
-                                <input id="vehicleWeight" name="vehicleWeight" type="number" value={expense.vehicleWeight || ''} onChange={handleChange} className={`${commonInputClasses} ${errors.vehicleWeight ? 'border-red-500' : ''}`} placeholder="0.00" />
+                                <label htmlFor="vehicleWeight" className="block text-sm font-medium text-gray-700 mb-1">Vehicle Weight</label>
+                                <input id="vehicleWeight" name="vehicleWeight" type="number" value={expense.vehicleWeight === 0 ? '0' : expense.vehicleWeight} onChange={handleChange} className={`${commonInputClasses} ${errors.vehicleWeight ? 'border-red-500' : ''}`} placeholder="0.00" />
                                 {errors.vehicleWeight && <p className="mt-1 text-sm text-red-500">{errors.vehicleWeight}</p>}
+                            </div>
+                            <div>
+                                <label htmlFor="openingBalance" className="block text-sm font-medium text-gray-700 mb-1">Opening Balance</label>
+                                <input id="openingBalance" name="openingBalance" type="number" step="0.01" value={expense.openingBalance === 0 ? '' : expense.openingBalance} onChange={handleChange} className={commonInputClasses} placeholder="0.00" />
                             </div>
                             <div>
                                 <label htmlFor="cft" className="block text-sm font-medium text-gray-700 mb-1">CFT (Calculated)</label>
@@ -191,7 +199,7 @@ const TimberExpenseForm: React.FC<TimberExpenseFormProps> = ({ onClose, onSave, 
                             </div>
                              <div>
                                 <label htmlFor="rate" className="block text-sm font-medium text-gray-700 mb-1">Rate (per CFT) <span className="text-red-500">*</span></label>
-                                <input id="rate" name="rate" type="number" value={expense.rate || ''} onChange={handleChange} className={`${commonInputClasses} ${errors.rate ? 'border-red-500' : ''}`} placeholder="0.00" />
+                                <input id="rate" name="rate" type="number" value={expense.rate === 0 ? '' : expense.rate} onChange={handleChange} className={`${commonInputClasses} ${errors.rate ? 'border-red-500' : ''}`} placeholder="0.00" />
                                 {errors.rate && <p className="mt-1 text-sm text-red-500">{errors.rate}</p>}
                             </div>
                             <div>
