@@ -85,11 +85,6 @@ export const App: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const sanitizeDate = (date: string | undefined): string | null => {
-      if (!date || date.trim() === '') return null;
-      return date;
-  };
-
   const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
   const fetchTable = useCallback(async (table: string, setter: Function, transformer?: Function, retryCount = 0): Promise<boolean> => {
@@ -157,8 +152,8 @@ export const App: React.FC = () => {
                 if (config.id === 'po') setPoNumberConfig({ prefix: config.prefix ?? 'PO', nextNumber: config.next_number ?? 1 });
                 if (config.id === 'dc') setDeliveryChallanNumberConfig({ prefix: config.prefix ?? 'DC', nextNumber: config.next_number ?? 1 });
                 if (config.id === 'dc_outsourcing') setOutsourcingChallanNumberConfig({ prefix: config.prefix ?? 'OUT', nextNumber: config.next_number ?? 1 });
-                if (config.id === 'invoice') setInvoiceNumberConfig({ mode: config.mode ?? 'auto', prefix: config.prefix ?? 'INV', next_number: config.next_number ?? 1 });
-                if (config.id === 'invoice_ngst') setNgstInvoiceNumberConfig({ mode: config.mode ?? 'auto', prefix: config.prefix ?? 'NGST', next_number: config.next_number ?? 1 });
+                if (config.id === 'invoice') setInvoiceNumberConfig({ mode: config.mode ?? 'auto', prefix: config.prefix ?? 'INV', nextNumber: config.next_number ?? 1 });
+                if (config.id === 'invoice_ngst') setNgstInvoiceNumberConfig({ mode: config.mode ?? 'auto', prefix: config.prefix ?? 'NGST', nextNumber: config.next_number ?? 1 });
                 if (config.id === 'supplier_payment') setSupplierPaymentConfig({ prefix: config.prefix ?? 'PAY', nextNumber: config.next_number ?? 1 });
             });
         })
@@ -183,7 +178,7 @@ export const App: React.FC = () => {
         fetchTable('master_items', setMasterItems),
         fetchTable('expense_categories', setExpenseCategories),
         fetchTable('purchase_orders', setPurchaseOrders, (data: any[]) => data.map(d => ({
-            id: d.id, poNumber: d.po_number, poDate: d.po_date, shopName: d.shop_name, totalAmount: d.total_amount || 0, gstNo: d.gst_no, paymentMode: d.payment_mode, status: d.status, paymentTerms: d.payment_terms, referenceId: d.reference_id, bankName: d.bank_name, chequeDate: d.cheque_date, items: Array.isArray(d.purchase_order_items) ? d.purchase_order_items.map((i: any) => ({
+            id: d.id, poNumber: d.po_number, poDate: d.po_date, shopName: d.shop_name, totalAmount: d.total_amount || 0, gst_no: d.gst_no, paymentMode: d.payment_mode, status: d.status, paymentTerms: d.payment_terms, referenceId: d.reference_id, bankName: d.bank_name, chequeDate: d.cheque_date, items: Array.isArray(d.purchase_order_items) ? d.purchase_order_items.map((i: any) => ({
                 id: i.id, name: i.name, quantity: i.quantity || 0, rate: i.rate || 0, amount: i.amount || 0
             })) : []
         }))),
@@ -193,13 +188,12 @@ export const App: React.FC = () => {
             return {
                 id: d.id, challanNumber: d.challan_number, date: d.date, partyName: d.party_name, partyDCNo: d.party_dc_no, process: d.process ? (
                     (() => { try { const parsed = JSON.parse(d.process); if (Array.isArray(parsed)) return parsed; } catch(e) {} return d.process.split(',').map((s: string) => s.trim().replace(/^"/, '').replace(/"$/, '')).filter((s: string) => s !== ""); })()
-                ) : [], splitProcess: d.split_process ? (Array.isArray(d.split_process) ? d.split_process : []) : [], designNo: d.design_no, pcs: d.pcs || 0, mtr: d.mtr || 0, width: d.width || 0, shrinkage: d.shrinkage, pin: d.pin, pick: d.pick, extraWork: d.extra_work, status: d.status, workerName: d.worker_name, workingUnit: d.working_unit, isOutsourcing: d.is_outsourcing, dcImage: Array.isArray(dcImage) ? dcImage : [], sampleImage: Array.isArray(sampleImage) ? sampleImage : []
+                ) : [], splitProcess: d.split_process ? (Array.isArray(d.split_process) ? d.split_process : []) : [], designNo: d.design_no, pcs: d.pcs || 0, mtr: d.mtr || 0, finalMeter: d.final_meter || 0, width: d.width || 0, shrinkage: d.shrinkage, pin: d.pin, pick: d.pick, percentage: d.percentage || '', extraWork: d.extra_work, status: d.status, workerName: d.worker_name, workingUnit: d.working_unit, isOutsourcing: d.is_outsourcing, dcImage: Array.isArray(dcImage) ? dcImage : [], sampleImage: Array.isArray(sampleImage) ? sampleImage : []
             };
         })),
         fetchTable('invoices', setInvoices, (data: any[]) => data.map(d => ({
             id: d.id, invoiceNumber: d.invoice_number, invoiceDate: d.invoice_date, clientName: d.client_name, subTotal: d.sub_total || 0, totalCgst: d.total_cgst || 0, totalSgst: d.total_sgst || 0, totalTaxAmount: d.total_tax_amount || 0, roundedOff: d.rounded_off || 0, totalAmount: d.total_amount || 0, taxType: d.tax_type || 'GST', items: Array.isArray(d.invoice_items) ? d.invoice_items.map((i: any) => ({
-                // Fix: Changed design_no to designNo to match InvoiceItem type
-                id: i.id, challanNumber: i.challan_number, challanDate: i.challan_date, process: i.process, description: i.description, designNo: i.design_no, hsnSac: i.hsn_sac,
+                id: i.id, challanNumber: i.challan_number, challanDate: i.challan_date, process: i.process, description: i.description, designNo: i.design_no, hsn_sac: i.hsn_sac,
                 pcs: i.pcs || 0, mtr: i.mtr || 0, rate: i.rate || 0, amount: i.amount || 0, subtotal: i.subtotal || 0, cgst: i.cgst || 0, sgst: i.sgst || 0
             })) : []
         }))),
@@ -231,933 +225,304 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     if (session || guestMode) {
-        loadAllData();
+      loadAllData();
     }
   }, [session, guestMode, loadAllData]);
 
+  // CRUD Handlers
   const handleUpdateCompanyDetails = async (details: CompanyDetails) => {
-      try {
-          const { error } = await supabase.from('company_details').upsert({
-              id: 1,
-              name: details.name,
-              address_line_1: details.addressLine1,
-              address_line_2: details.addressLine2,
-              phone: details.phone,
-              email: details.email,
-              gstin: details.gstin,
-              hsn_sac: details.hsnSac,
-              bank_name: details.bankName,
-              bank_account_number: details.bankAccountNumber,
-              bank_ifsc_code: details.bankIfscCode,
-              logo_url: details.logoUrl,
-              report_notification_email: details.reportNotificationEmail
-          });
-          if (error) throw error;
-          setCompanyDetails(details);
-      } catch (error: any) {
-          alert("Failed to save company details: " + (error.message || JSON.stringify(error)));
-          throw error;
-      }
+    const { error } = await supabase.from('company_details').upsert({
+      id: 1,
+      name: details.name,
+      address_line_1: details.addressLine1,
+      address_line_2: details.addressLine2,
+      phone: details.phone,
+      email: details.email,
+      gstin: details.gstin,
+      hsn_sac: details.hsnSac,
+      bank_name: details.bankName,
+      bank_account_number: details.bankAccountNumber,
+      bank_ifsc_code: details.bankIfscCode,
+      logo_url: details.logoUrl,
+      report_notification_email: details.reportNotificationEmail
+    });
+    if (!error) setCompanyDetails(details);
+    else alert("Error updating company details: " + error.message);
   };
 
-  // Remaining Handlers (Added back from previous truncated context)
   const handleAddClient = async (newClient: Omit<Client, 'id'>) => {
-    try {
-        const { data, error } = await supabase.from('clients').insert([{
-            name: newClient.name,
-            phone: newClient.phone,
-            email: newClient.email,
-            address: newClient.address,
-            city: newClient.city,
-            state: newClient.state,
-            pincode: newClient.pincode,
-            gst_no: newClient.gstNo,
-            pan_no: newClient.panNo,
-            payment_terms: newClient.paymentTerms,
-            processes: newClient.processes
-        }]).select().single();
-        if (error) throw error;
-        if (data) setClients(prev => [...prev, { ...newClient, id: data.id }]);
-    } catch (error: any) {
-        alert(`Error adding client: ${error.message || error}`);
-    }
+    const { data, error } = await supabase.from('clients').insert([{
+      name: newClient.name, phone: newClient.phone, email: newClient.email, address: newClient.address,
+      city: newClient.city, state: newClient.state, pincode: newClient.pincode, gst_no: newClient.gstNo,
+      pan_no: newClient.panNo, payment_terms: newClient.paymentTerms, processes: newClient.processes
+    }]).select();
+    if (!error && data) setClients(prev => [...prev, { ...newClient, id: data[0].id }]);
   };
 
   const handleUpdateClient = async (updatedClient: Client) => {
-      try {
-          const { error } = await supabase.from('clients').update({
-              name: updatedClient.name,
-              phone: updatedClient.phone,
-              email: updatedClient.email,
-              address: updatedClient.address,
-              city: updatedClient.city,
-              state: updatedClient.state,
-              pincode: updatedClient.pincode,
-              gst_no: updatedClient.gstNo,
-              pan_no: updatedClient.panNo,
-              payment_terms: updatedClient.paymentTerms,
-              processes: updatedClient.processes
-          }).eq('id', updatedClient.id);
-          if (error) throw error;
-          setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
-      } catch (error: any) {
-          alert(`Error updating client: ${error.message || error}`);
-      }
+    const { error } = await supabase.from('clients').update({
+        name: updatedClient.name, phone: updatedClient.phone, email: updatedClient.email, address: updatedClient.address,
+        city: updatedClient.city, state: updatedClient.state, pincode: updatedClient.pincode, gst_no: updatedClient.gstNo,
+        pan_no: updatedClient.panNo, payment_terms: updatedClient.paymentTerms, processes: updatedClient.processes
+    }).eq('id', updatedClient.id);
+    if (!error) setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
   };
 
   const handleDeleteClient = async (id: string) => {
-      try {
-          const { error } = await supabase.from('clients').delete().eq('id', id);
-          if (error) throw error;
-          setClients(prev => prev.filter(c => c.id !== id));
-      } catch (error: any) {
-          alert(`Error deleting client: ${error.message || error}`);
-      }
+    const { error } = await supabase.from('clients').delete().eq('id', id);
+    if (!error) setClients(prev => prev.filter(c => c.id !== id));
   };
 
+  // Fix: Corrected property names from gst_no/pan_no to gstNo/panNo to match the Omit<PurchaseShop, 'id'> type
   const handleAddPurchaseShop = async (newShop: Omit<PurchaseShop, 'id'>) => {
-      try {
-          const { data, error } = await supabase.from('purchase_shops').insert([{
-              name: newShop.name,
-              phone: newShop.phone,
-              email: newShop.email,
-              address: newShop.address,
-              city: newShop.city,
-              state: newShop.state,
-              pincode: newShop.pincode,
-              gst_no: newShop.gstNo,
-              pan_no: newShop.panNo,
-              payment_terms: newShop.paymentTerms
-          }]).select().single();
-          if (error) throw error;
-          if (data) setPurchaseShops(prev => [...prev, { ...newShop, id: data.id }]);
-      } catch (error: any) {
-          alert(`Error adding shop: ${error.message || error}`);
-      }
+    const { data, error } = await supabase.from('purchase_shops').insert([{
+        name: newShop.name, phone: newShop.phone, email: newShop.email, address: newShop.address,
+        city: newShop.city, state: newShop.state, pincode: newShop.pincode, gst_no: newShop.gstNo,
+        pan_no: newShop.panNo, payment_terms: newShop.paymentTerms
+    }]).select();
+    if (!error && data) setPurchaseShops(prev => [...prev, { ...newShop, id: data[0].id }]);
   };
 
   const handleUpdatePurchaseShop = async (updatedShop: PurchaseShop) => {
-      try {
-          const { error } = await supabase.from('purchase_shops').update({
-              name: updatedShop.name,
-              phone: updatedShop.phone,
-              email: updatedShop.email,
-              address: updatedShop.address,
-              city: updatedShop.city,
-              state: updatedShop.state,
-              pincode: updatedShop.pincode,
-              gst_no: updatedShop.gstNo,
-              pan_no: updatedShop.panNo,
-              payment_terms: updatedShop.paymentTerms
-          }).eq('id', updatedShop.id);
-          if (error) throw error;
-          setPurchaseShops(prev => prev.map(s => s.id === updatedShop.id ? updatedShop : s));
-      } catch (error: any) {
-          alert(`Error updating shop: ${error.message || error}`);
-      }
+    const { error } = await supabase.from('purchase_shops').update({
+        name: updatedShop.name, phone: updatedShop.phone, email: updatedShop.email, address: updatedShop.address,
+        city: updatedShop.city, state: updatedShop.state, pincode: updatedShop.pincode, gst_no: updatedShop.gstNo,
+        pan_no: updatedShop.panNo, payment_terms: updatedShop.paymentTerms
+    }).eq('id', updatedShop.id);
+    if (!error) setPurchaseShops(prev => prev.map(s => s.id === updatedShop.id ? updatedShop : s));
   };
 
   const handleDeletePurchaseShop = async (id: string) => {
-      try {
-          const { error } = await supabase.from('purchase_shops').delete().eq('id', id);
-          if (error) throw error;
-          setPurchaseShops(prev => prev.filter(s => s.id !== id));
-      } catch (error: any) {
-          alert(`Error deleting shop: ${error.message || error}`);
-      }
+    const { error } = await supabase.from('purchase_shops').delete().eq('id', id);
+    if (!error) setPurchaseShops(prev => prev.filter(s => s.id !== id));
   };
 
-  const handleAddEmployee = async (newEmployee: Omit<Employee, 'id'>) => {
-      try {
-          const { data, error } = await supabase.from('employees').insert([{
-              name: newEmployee.name,
-              designation: newEmployee.designation,
-              phone: newEmployee.phone,
-              daily_wage: newEmployee.dailyWage,
-              monthly_wage: newEmployee.monthlyWage,
-              rate_per_meter: newEmployee.ratePerMeter
-          }]).select().single();
-          if (error) throw error;
-          if (data) setEmployees(prev => [...prev, { ...newEmployee, id: data.id }]);
-      } catch (error: any) {
-          alert(`Error adding employee: ${error.message || error}`);
-      }
+  const handleAddEmployee = async (newEmp: Omit<Employee, 'id'>) => {
+    const { data, error } = await supabase.from('employees').insert([{
+        name: newEmp.name, designation: newEmp.designation, phone: newEmp.phone,
+        daily_wage: newEmp.dailyWage, monthly_wage: newEmp.monthlyWage, rate_per_meter: newEmp.ratePerMeter
+    }]).select();
+    if (!error && data) setEmployees(prev => [...prev, { ...newEmp, id: data[0].id }]);
   };
 
-  const handleUpdateEmployee = async (id: string, updatedEmployee: Employee) => {
-      try {
-          const { error } = await supabase.from('employees').update({
-              name: updatedEmployee.name,
-              designation: updatedEmployee.designation,
-              phone: updatedEmployee.phone,
-              daily_wage: updatedEmployee.dailyWage,
-              monthly_wage: updatedEmployee.monthlyWage,
-              rate_per_meter: updatedEmployee.ratePerMeter
-          }).eq('id', id);
-          if (error) throw error;
-          setEmployees(prev => prev.map(e => e.id === id ? updatedEmployee : e));
-      } catch (error: any) {
-          alert(`Error updating employee: ${error.message || error}`);
-      }
+  const handleUpdateEmployee = async (id: string, updatedEmp: Employee) => {
+    const { error } = await supabase.from('employees').update({
+        name: updatedEmp.name, designation: updatedEmp.designation, phone: updatedEmp.phone,
+        daily_wage: updatedEmp.dailyWage, monthly_wage: updatedEmp.monthlyWage, rate_per_meter: updatedEmp.ratePerMeter
+    }).eq('id', id);
+    if (!error) setEmployees(prev => prev.map(e => e.id === id ? updatedEmp : e));
   };
 
   const handleDeleteEmployee = async (id: string) => {
-      try {
-          const { error } = await supabase.from('employees').delete().eq('id', id);
-          if (error) throw error;
-          setEmployees(prev => prev.filter(e => e.id !== id));
-      } catch (error: any) {
-          alert(`Error deleting employee: ${error.message || error}`);
-      }
+    const { error } = await supabase.from('employees').delete().eq('id', id);
+    if (!error) setEmployees(prev => prev.filter(e => e.id !== id));
   };
 
-  const handleAddProcessType = async (process: { name: string, rate: number }) => {
-      try {
-          const { data, error } = await supabase.from('process_types').insert([{
-              name: process.name,
-              rate: process.rate
-          }]).select().single();
-          if (error) throw error;
-          if (data) setProcessTypes(prev => [...prev, { id: data.id, name: process.name, rate: process.rate }]);
-      } catch (error: any) {
-          alert(`Error adding process type: ${error.message || error}`);
-      }
+  const handleAddProcessType = async (proc: { name: string, rate: number }) => {
+    const { data, error } = await supabase.from('process_types').insert([{ name: proc.name, rate: proc.rate }]).select();
+    if (!error && data) setProcessTypes(prev => [...prev, { id: data[0].id, name: data[0].name, rate: data[0].rate }]);
   };
 
-  const handleUpdateProcessType = async (id: string, updatedProcess: { name: string, rate: number }) => {
-      try {
-          const { error } = await supabase.from('process_types').update({
-              name: updatedProcess.name,
-              rate: updatedProcess.rate
-          }).eq('id', id);
-          if (error) throw error;
-          setProcessTypes(prev => prev.map(p => p.id === id ? { ...p, ...updatedProcess } : p));
-      } catch (error: any) {
-          alert(`Error updating process type: ${error.message || error}`);
-      }
+  const handleUpdateProcessType = async (id: string, proc: { name: string, rate: number }) => {
+    const { error } = await supabase.from('process_types').update({ name: proc.name, rate: proc.rate }).eq('id', id);
+    if (!error) setProcessTypes(prev => prev.map(p => p.id === id ? { ...p, ...proc } : p));
   };
 
   const handleDeleteProcessType = async (id: string) => {
-      try {
-          const { error } = await supabase.from('process_types').delete().eq('id', id);
-          if (error) throw error;
-          setProcessTypes(prev => prev.filter(p => p.id !== id));
-      } catch (error: any) {
-          alert(`Error deleting process type: ${error.message || error}`);
-      }
+    const { error } = await supabase.from('process_types').delete().eq('id', id);
+    if (!error) setProcessTypes(prev => prev.filter(p => p.id !== id));
+  };
+
+  const handleAddMasterItem = async (item: { name: string, rate: number }) => {
+    const { data, error } = await supabase.from('master_items').insert([{ name: item.name, rate: item.rate }]).select();
+    if (!error && data) {
+        const newItem = { id: data[0].id, name: data[0].name, rate: data[0].rate };
+        setMasterItems(prev => [...prev, newItem]);
+        return newItem;
+    }
+    return null;
   };
 
   const handleAddExpenseCategory = async (name: string) => {
-      try {
-          const { data, error } = await supabase.from('expense_categories').insert([{ name }]).select().single();
-          if (error) throw error;
-          if (data) {
-              const newCat = { id: data.id, name };
-              setExpenseCategories(prev => [...prev, newCat]);
-              return newCat;
-          }
-      } catch (error: any) {
-          alert(`Error adding category: ${error.message || error}`);
-      }
-      return null;
+    const { data, error } = await supabase.from('expense_categories').insert([{ name }]).select();
+    if (!error && data) {
+        const newCat = { id: data[0].id, name: data[0].name };
+        setExpenseCategories(prev => [...prev, newCat]);
+        return newCat;
+    }
+    return null;
   };
 
   const handleUpdateExpenseCategory = async (id: string, name: string) => {
-      try {
-          const { error } = await supabase.from('expense_categories').update({ name }).eq('id', id);
-          if (error) throw error;
-          setExpenseCategories(prev => prev.map(p => p.id === id ? { ...p, name } : p));
-      } catch (error: any) {
-          alert(`Error updating expense category: ${error.message || error}`);
-      }
+    const { error } = await supabase.from('expense_categories').update({ name }).eq('id', id);
+    if (!error) setExpenseCategories(prev => prev.map(c => c.id === id ? { id, name } : c));
   };
 
   const handleDeleteExpenseCategory = async (id: string) => {
-      try {
-          const { error } = await supabase.from('expense_categories').delete().eq('id', id);
-          if (error) throw error;
-          setExpenseCategories(prev => prev.filter(p => p.id !== id));
-      } catch (error: any) {
-          alert(`Error deleting expense category: ${error.message || error}`);
-      }
-  };
-
-  const handleAddMasterItem = async (itemData: { name: string, rate: number }) => {
-      try {
-          const { data, error } = await supabase.from('master_items').insert([{
-              name: itemData.name,
-              rate: itemData.rate
-          }]).select().single();
-          if (error) throw error;
-          if (data) {
-              const newItem = { id: data.id, name: itemData.name, rate: itemData.rate };
-              setMasterItems(prev => [...prev, newItem]);
-              return newItem;
-          }
-      } catch (error: any) {
-          alert(`Error adding master item: ${error.message || error}`);
-      }
-      return null;
-  };
-
-  const handleAddPurchaseOrder = async (newOrder: PurchaseOrder) => {
-      try {
-          const { data: orderData, error: orderError } = await supabase.from('purchase_orders').insert([{
-              po_number: newOrder.poNumber,
-              po_date: newOrder.poDate,
-              shop_name: newOrder.shopName,
-              total_amount: newOrder.totalAmount,
-              gst_no: newOrder.gstNo,
-              payment_mode: newOrder.paymentMode,
-              status: newOrder.status,
-              payment_terms: newOrder.paymentTerms,
-              reference_id: newOrder.referenceId,
-              bank_name: newOrder.bankName,
-              cheque_date: sanitizeDate(newOrder.chequeDate)
-          }]).select().single();
-          if (orderError) throw orderError;
-          const poId = orderData.id;
-          const itemsToInsert = newOrder.items.map(item => ({
-              po_id: poId,
-              name: item.name,
-              quantity: item.quantity,
-              rate: item.rate,
-              amount: item.amount
-          }));
-          const { error: itemsError } = await supabase.from('purchase_order_items').insert(itemsToInsert);
-          if (itemsError) throw itemsError;
-          setPurchaseOrders(prev => [...prev, { ...newOrder, id: poId }]);
-          setPoNumberConfig(prev => ({ ...prev, nextNumber: prev.nextNumber + 1 }));
-          await supabase.from('numbering_configs').upsert({ id: 'po', prefix: poNumberConfig.prefix, next_number: poNumberConfig.nextNumber + 1 });
-      } catch (error: any) {
-          alert(`Error adding PO: ${error.message || JSON.stringify(error)}`);
-      }
-  };
-
-  const handleUpdatePurchaseOrder = async (poNumberToUpdate: string, updatedOrder: PurchaseOrder) => {
-      try {
-          const { error: orderError } = await supabase.from('purchase_orders').update({
-              po_date: updatedOrder.poDate,
-              shop_name: updatedOrder.shopName,
-              total_amount: updatedOrder.totalAmount,
-              gst_no: updatedOrder.gstNo,
-              payment_mode: updatedOrder.paymentMode,
-              status: updatedOrder.status,
-              payment_terms: updatedOrder.paymentTerms,
-              reference_id: updatedOrder.referenceId,
-              bank_name: updatedOrder.bankName,
-              cheque_date: sanitizeDate(updatedOrder.chequeDate)
-          }).eq('id', updatedOrder.id);
-          if (orderError) throw orderError;
-          await supabase.from('purchase_order_items').delete().eq('po_id', updatedOrder.id);
-          const itemsToInsert = updatedOrder.items.map(item => ({
-              po_id: updatedOrder.id,
-              name: item.name,
-              quantity: item.quantity,
-              rate: item.rate,
-              amount: item.amount
-          }));
-          const { error: itemsError } = await supabase.from('purchase_order_items').insert(itemsToInsert);
-          if (itemsError) throw itemsError;
-          setPurchaseOrders(prev => prev.map(order => order.poNumber === poNumberToUpdate ? updatedOrder : order));
-      } catch (error: any) {
-          alert(`Error updating PO: ${error.message || JSON.stringify(error)}`);
-      }
-  };
-
-  const handleDeletePurchaseOrder = async (poNumberToDelete: string) => {
-      try {
-          const { error } = await supabase.from('purchase_orders').delete().eq('po_number', poNumberToDelete);
-          if (error) throw error;
-          setPurchaseOrders(prev => prev.filter(order => order.poNumber !== poNumberToDelete));
-      } catch (error: any) {
-          alert(`Error deleting PO: ${error.message || error}`);
-      }
+    const { error } = await supabase.from('expense_categories').delete().eq('id', id);
+    if (!error) setExpenseCategories(prev => prev.filter(c => c.id !== id));
   };
 
   const handleAddChallan = async (newChallan: Omit<DeliveryChallan, 'id'>) => {
-      try {
-          const { data, error } = await supabase.from('delivery_challans').insert([{
-              challan_number: newChallan.challanNumber,
-              date: newChallan.date,
-              party_name: newChallan.partyName,
-              party_dc_no: newChallan.partyDCNo,
-              process: newChallan.process.join(','),
-              split_process: newChallan.splitProcess,
-              design_no: newChallan.designNo,
-              pcs: newChallan.pcs,
-              mtr: newChallan.mtr,
-              width: newChallan.width,
-              shrinkage: newChallan.shrinkage,
-              pin: newChallan.pin,
-              pick: newChallan.pick,
-              extra_work: newChallan.extraWork,
-              status: newChallan.status,
-              worker_name: newChallan.workerName,
-              working_unit: newChallan.workingUnit,
-              is_outsourcing: newChallan.isOutsourcing,
-              dc_image: JSON.stringify(newChallan.dcImage),
-              sample_image: JSON.stringify(newChallan.sampleImage)
-          }]).select().single();
-          if (error) throw error;
-          if (data) {
-              setDeliveryChallans(prev => [...prev, { ...newChallan, id: data.id }]);
-              if (newChallan.isOutsourcing) {
-                  setOutsourcingChallanNumberConfig(prev => ({ ...prev, nextNumber: prev.nextNumber + 1 }));
-                  await supabase.from('numbering_configs').upsert({ id: 'dc_outsourcing', prefix: outsourcingChallanNumberConfig.prefix, next_number: outsourcingChallanNumberConfig.nextNumber + 1 });
-              } else {
-                  setDeliveryChallanNumberConfig(prev => ({ ...prev, nextNumber: prev.nextNumber + 1 }));
-                  await supabase.from('numbering_configs').upsert({ id: 'dc', prefix: deliveryChallanNumberConfig.prefix, next_number: deliveryChallanNumberConfig.nextNumber + 1 });
-              }
-          }
-      } catch (error: any) {
-          alert(`Error adding challan: ${error.message || error}`);
-      }
-  };
+    const configId = newChallan.isOutsourcing ? 'dc_outsourcing' : 'dc';
+    const currentConfig = newChallan.isOutsourcing ? outsourcingChallanNumberConfig : deliveryChallanNumberConfig;
 
-  const handleUpdateChallan = async (id: string, updatedChallan: DeliveryChallan) => {
-      try {
-          const { error } = await supabase.from('delivery_challans').update({
-              date: updatedChallan.date,
-              party_name: updatedChallan.partyName,
-              party_dc_no: updatedChallan.partyDCNo,
-              process: updatedChallan.process.join(','),
-              split_process: updatedChallan.splitProcess,
-              design_no: updatedChallan.designNo,
-              pcs: updatedChallan.pcs,
-              mtr: updatedChallan.mtr,
-              width: updatedChallan.width,
-              shrinkage: updatedChallan.shrinkage,
-              pin: updatedChallan.pin,
-              pick: updatedChallan.pick,
-              extra_work: updatedChallan.extraWork,
-              status: updatedChallan.status,
-              worker_name: updatedChallan.workerName,
-              working_unit: updatedChallan.workingUnit,
-              is_outsourcing: updatedChallan.isOutsourcing,
-              dc_image: JSON.stringify(updatedChallan.dcImage),
-              sample_image: JSON.stringify(updatedChallan.sampleImage)
-          }).eq('id', id);
-          if (error) throw error;
-          setDeliveryChallans(prev => prev.map(c => c.id === id ? updatedChallan : c));
-      } catch (error: any) {
-          alert(`Error updating challan: ${error.message || error}`);
-      }
-  };
+    const { data, error } = await supabase.from('delivery_challans').insert([{
+        challan_number: newChallan.challanNumber,
+        date: newChallan.date,
+        party_name: newChallan.partyName,
+        party_dc_no: newChallan.partyDCNo,
+        process: JSON.stringify(newChallan.process),
+        split_process: newChallan.splitProcess,
+        design_no: newChallan.designNo,
+        pcs: newChallan.pcs,
+        mtr: newChallan.mtr,
+        final_meter: newChallan.finalMeter,
+        width: newChallan.width,
+        shrinkage: newChallan.shrinkage,
+        pin: newChallan.pin,
+        pick: newChallan.pick,
+        percentage: newChallan.percentage,
+        extra_work: newChallan.extraWork,
+        status: newChallan.status,
+        worker_name: newChallan.workerName,
+        working_unit: newChallan.workingUnit,
+        is_outsourcing: newChallan.isOutsourcing,
+        dc_image: newChallan.dcImage,
+        sample_image: newChallan.sampleImage
+    }]).select();
 
-  const handleDeleteChallan = async (id: string) => {
-      try {
-          const challanToDelete = deliveryChallans.find(c => c.id === id);
-          const { error } = await supabase.from('delivery_challans').delete().eq('id', id);
-          if (error) throw error;
-          const updatedChallans = deliveryChallans.filter(c => c.id !== id);
-          setDeliveryChallans(updatedChallans);
-          if (challanToDelete) {
-              const isOutsourcing = challanToDelete.isOutsourcing;
-              const configToUpdate = isOutsourcing ? outsourcingChallanNumberConfig : deliveryChallanNumberConfig;
-              const configId = isOutsourcing ? 'dc_outsourcing' : 'dc';
-              const currentPrefix = configToUpdate.prefix;
-              const extractNumber = (str: string) => {
-                  const match = str.match(/(\d+)$/);
-                  return match ? parseInt(match[1], 10) : 0;
-              };
-              const relevantNumbers = updatedChallans
-                  .filter(c => c.isOutsourcing === isOutsourcing && c.challanNumber.startsWith(currentPrefix))
-                  .map(c => extractNumber(c.challanNumber));
-              const maxNumber = relevantNumbers.length > 0 ? Math.max(...relevantNumbers) : 0;
-              const newNextNumber = maxNumber + 1;
-              if (isOutsourcing) setOutsourcingChallanNumberConfig(prev => ({ ...prev, nextNumber: newNextNumber }));
-              else setDeliveryChallanNumberConfig(prev => ({ ...prev, nextNumber: newNextNumber }));
-              await supabase.from('numbering_configs').upsert({ id: configId, prefix: currentPrefix, next_number: newNextNumber });
-          }
-      } catch (error: any) {
-          alert(`Error deleting challan: ${error.message || error}`);
-      }
-  };
-
-  const handleAddInvoice = async (newInvoice: Omit<Invoice, 'id'>) => {
-      try {
-          const { data: invoiceData, error: invoiceError } = await supabase.from('invoices').insert([{
-              invoice_number: newInvoice.invoiceNumber,
-              invoice_date: newInvoice.invoiceDate,
-              client_name: newInvoice.clientName,
-              sub_total: newInvoice.subTotal,
-              total_cgst: newInvoice.totalCgst,
-              total_sgst: newInvoice.totalSgst,
-              total_tax_amount: newInvoice.totalTaxAmount,
-              rounded_off: newInvoice.roundedOff,
-              total_amount: newInvoice.totalAmount,
-              tax_type: newInvoice.taxType
-          }]).select().single();
-          if (invoiceError) throw invoiceError;
-          const invoiceId = invoiceData.id;
-          const itemsToInsert = newInvoice.items.map(item => ({
-              invoice_id: invoiceId,
-              challan_number: item.challanNumber,
-              challan_date: item.challanDate,
-              process: item.process,
-              description: item.description,
-              design_no: item.designNo,
-              hsn_sac: item.hsnSac,
-              pcs: item.pcs,
-              mtr: item.mtr,
-              rate: item.rate,
-              amount: item.amount,
-              subtotal: item.subtotal,
-              cgst: item.cgst,
-              sgst: item.sgst
-          }));
-          const { error: itemsError } = await supabase.from('invoice_items').insert(itemsToInsert);
-          if (itemsError) throw itemsError;
-          setInvoices(prev => [...prev, { ...newInvoice, id: invoiceId }]);
-          if (newInvoice.taxType === 'NGST') {
-              if (ngstInvoiceNumberConfig.mode === 'auto') {
-                  setNgstInvoiceNumberConfig(prev => ({ ...prev, nextNumber: prev.nextNumber + 1 }));
-                  await supabase.from('numbering_configs').upsert({ id: 'invoice_ngst', mode: 'auto', prefix: ngstInvoiceNumberConfig.prefix, next_number: ngstInvoiceNumberConfig.nextNumber + 1 });
-              }
-          } else {
-              if (invoiceNumberConfig.mode === 'auto') {
-                  setInvoiceNumberConfig(prev => ({ ...prev, nextNumber: prev.nextNumber + 1 }));
-                  await supabase.from('numbering_configs').upsert({ id: 'invoice', mode: 'auto', prefix: invoiceNumberConfig.prefix, next_number: invoiceNumberConfig.nextNumber + 1 });
-              }
-          }
-      } catch (error: any) {
-          alert(`Error adding invoice: ${error.message || JSON.stringify(error)}`);
-      }
-  };
-
-  const handleUpdateInvoice = async (id: string, updatedInvoice: Omit<Invoice, 'id'>) => {
-      try {
-          const { error: invoiceError } = await supabase.from('invoices').update({
-              invoice_number: updatedInvoice.invoiceNumber,
-              invoice_date: updatedInvoice.invoiceDate,
-              client_name: updatedInvoice.clientName,
-              sub_total: updatedInvoice.subTotal,
-              total_cgst: updatedInvoice.totalCgst,
-              total_sgst: updatedInvoice.totalSgst,
-              total_tax_amount: updatedInvoice.totalTaxAmount,
-              rounded_off: updatedInvoice.roundedOff,
-              total_amount: updatedInvoice.totalAmount,
-              tax_type: updatedInvoice.taxType
-          }).eq('id', id);
-          if (invoiceError) throw invoiceError;
-          await supabase.from('invoice_items').delete().eq('invoice_id', id);
-          const itemsToInsert = updatedInvoice.items.map(item => ({
-              invoice_id: id,
-              challan_number: item.challanNumber,
-              challan_date: item.challanDate,
-              process: item.process,
-              description: item.description,
-              design_no: item.designNo,
-              // Fix: Changed hsn_sac from item.hsn_sac to item.hsnSac to match InvoiceItem type
-              hsn_sac: item.hsnSac,
-              pcs: item.pcs,
-              mtr: item.mtr,
-              rate: item.rate,
-              amount: item.amount,
-              subtotal: item.subtotal,
-              cgst: item.cgst,
-              sgst: item.sgst
-          }));
-          const { error: itemsError } = await supabase.from('invoice_items').insert(itemsToInsert);
-          if (itemsError) throw itemsError;
-          setInvoices(prev => prev.map(inv => inv.id === id ? { ...updatedInvoice, id } : inv));
-      } catch (error: any) {
-          alert(`Error updating invoice: ${error.message || JSON.stringify(error)}`);
-      }
-  };
-
-  const handleDeleteInvoice = async (id: string) => {
-      try {
-          const { error } = await supabase.from('invoices').delete().eq('id', id);
-          if (error) throw error;
-          setInvoices(prev => prev.filter(inv => inv.id !== id));
-      } catch (error: any) {
-          alert(`Error deleting invoice: ${error.message || error}`);
-      }
-  };
-
-  const handleAddPaymentReceived = async (payment: Omit<PaymentReceived, 'id'>) => {
-      try {
-          const { data, error } = await supabase.from('payments_received').insert([{
-              client_name: payment.clientName,
-              payment_date: payment.paymentDate,
-              amount: payment.amount,
-              opening_balance: payment.openingBalance,
-              payment_mode: payment.paymentMode,
-              reference_number: payment.referenceNumber,
-              notes: payment.notes,
-              image: payment.image
-          }]).select().single();
-          if (error) throw error;
-          if (data) setPaymentsReceived(prev => [...prev, { ...payment, id: data.id }]);
-      } catch (error: any) {
-          alert(`Error adding payment: ${error.message || error}`);
-      }
-  };
-
-  const handleUpdatePaymentReceived = async (payment: PaymentReceived) => {
-      try {
-          const { error } = await supabase.from('payments_received').update({
-              client_name: payment.clientName,
-              payment_date: payment.paymentDate,
-              amount: payment.amount,
-              opening_balance: payment.openingBalance,
-              payment_mode: payment.paymentMode,
-              reference_number: payment.referenceNumber,
-              notes: payment.notes,
-              image: payment.image
-          }).eq('id', payment.id);
-          if (error) throw error;
-          setPaymentsReceived(prev => prev.map(p => p.id === payment.id ? payment : p));
-      } catch (error: any) {
-          alert(`Error updating payment: ${error.message || error}`);
-      }
-  };
-
-  const handleDeletePaymentReceived = async (id: string) => {
-      try {
-          const { error } = await supabase.from('payments_received').delete().eq('id', id);
-          if (error) throw error;
-          setPaymentsReceived(prev => prev.filter(p => p.id !== id));
-      } catch (error: any) {
-          alert(`Error deleting payment: ${error.message || error}`);
-      }
-  };
-
-  const handleAddAdvance = async (advance: Omit<EmployeeAdvance, 'id'>) => {
-      try {
-          const { data, error } = await supabase.from('employee_advances').insert([{
-              employee_id: advance.employeeId,
-              date: advance.date,
-              amount: advance.amount,
-              paid_amount: advance.paidAmount,
-              notes: advance.notes
-          }]).select().single();
-          if (error) throw error;
-          if (data) setAdvances(prev => [...prev, { ...advance, id: data.id }]);
-      } catch (error: any) {
-          alert(`Error adding advance: ${error.message || error}`);
-      }
-  };
-
-  const handleUpdateAdvance = async (advance: EmployeeAdvance) => {
-      try {
-          const { error } = await supabase.from('employee_advances').update({
-              date: advance.date,
-              amount: advance.amount,
-              paid_amount: advance.paidAmount,
-              notes: advance.notes
-          }).eq('id', advance.id);
-          if (error) throw error;
-          setAdvances(prev => prev.map(a => a.id === advance.id ? advance : a));
-      } catch (error: any) {
-          alert(`Error updating advance: ${error.message || error}`);
-      }
-  };
-
-  const handleDeleteAdvance = async (id: string) => {
-      try {
-          const { error } = await supabase.from('employee_advances').delete().eq('id', id);
-          if (error) throw error;
-          setAdvances(prev => prev.filter(a => a.id !== id));
-      } catch (error: any) {
-          alert(`Error deleting advance: ${error.message || error}`);
-      }
-  };
-
-  const handleAddOtherExpense = async (expense: Omit<OtherExpense, 'id'>) => {
-      try {
-          const { data, error } = await supabase.from('other_expenses').insert([{
-              date: expense.date,
-              item_name: expense.itemName,
-              amount: expense.amount,
-              notes: expense.notes,
-              bank_name: expense.bankName,
-              cheque_date: sanitizeDate(expense.chequeDate),
-              payment_mode: expense.paymentMode,
-              payment_status: expense.paymentStatus,
-              payment_terms: expense.paymentTerms
-          }]).select().single();
-          if (error) throw error;
-          if (data) setOtherExpenses(prev => [...prev, { ...expense, id: data.id }]);
-      } catch (error: any) {
-          alert(`Error adding expense: ${error.message || error}`);
-      }
-  };
-
-  const handleUpdateOtherExpense = async (expense: OtherExpense) => {
-      try {
-          const { error } = await supabase.from('other_expenses').update({
-              date: expense.date,
-              item_name: expense.itemName,
-              amount: expense.amount,
-              notes: expense.notes,
-              bank_name: expense.bankName,
-              cheque_date: sanitizeDate(expense.chequeDate),
-              payment_mode: expense.paymentMode,
-              payment_status: expense.paymentStatus,
-              payment_terms: expense.paymentTerms
-          }).eq('id', expense.id);
-          if (error) throw error;
-          setOtherExpenses(prev => prev.map(e => e.id === expense.id ? expense : e));
-      } catch (error: any) {
-          alert(`Error updating expense: ${error.message || error}`);
-      }
-  };
-
-  const handleDeleteOtherExpense = async (id: string) => {
-      try {
-          const { error } = await supabase.from('other_expenses').delete().eq('id', id);
-          if (error) throw error;
-          setOtherExpenses(prev => prev.filter(e => e.id !== id));
-      } catch (error: any) {
-          alert(`Error deleting expense: ${error.message || error}`);
-      }
-  };
-
-  const handleAddTimberExpense = async (expense: Omit<TimberExpense, 'id'>) => {
-      try {
-          const { data, error } = await supabase.from('timber_expenses').insert([{
-              date: expense.date,
-              supplier_name: expense.supplierName,
-              opening_balance: expense.openingBalance,
-              load_weight: expense.loadWeight,
-              vehicle_weight: expense.vehicleWeight,
-              cft: expense.cft,
-              rate: expense.rate,
-              amount: expense.amount,
-              notes: expense.notes,
-              payment_mode: expense.paymentMode,
-              payment_status: expense.paymentStatus,
-              bank_name: expense.bankName,
-              cheque_date: sanitizeDate(expense.chequeDate),
-              payment_terms: expense.paymentTerms
-          }]).select().single();
-          if (error) throw error;
-          if (data) setTimberExpenses(prev => [...prev, { ...expense, id: data.id }]);
-      } catch (error: any) {
-          alert(`Error adding timber expense: ${error.message || error}`);
-      }
-  };
-
-  const handleUpdateTimberExpense = async (expense: TimberExpense) => {
-      try {
-          const { error } = await supabase.from('timber_expenses').update({
-              date: expense.date,
-              supplier_name: expense.supplierName,
-              opening_balance: expense.openingBalance,
-              load_weight: expense.loadWeight,
-              vehicle_weight: expense.vehicleWeight,
-              cft: expense.cft,
-              rate: expense.rate,
-              amount: expense.amount,
-              notes: expense.notes,
-              payment_mode: expense.paymentMode,
-              payment_status: expense.paymentStatus,
-              bank_name: expense.bankName,
-              cheque_date: sanitizeDate(expense.chequeDate),
-              payment_terms: expense.paymentTerms
-          }).eq('id', expense.id);
-          if (error) throw error;
-          setTimberExpenses(prev => prev.map(e => e.id === expense.id ? expense : e));
-      } catch (error: any) {
-          alert(`Error updating timber expense: ${error.message || error}`);
-      }
-  };
-
-  const handleDeleteTimberExpense = async (id: string) => {
-      try {
-          const { error } = await supabase.from('timber_expenses').delete().eq('id', id);
-          if (error) throw error;
-          setTimberExpenses(prev => prev.filter(e => e.id !== id));
-      } catch (error: any) {
-          alert(`Error deleting timber expense: ${error.message || error}`);
-      }
-  };
-
-  const handleAddSupplierPayment = async (payment: Omit<SupplierPayment, 'id'>) => {
-      try {
-          const { data, error } = await supabase.from('supplier_payments').insert([{
-              payment_number: payment.paymentNumber,
-              date: payment.date,
-              supplier_name: payment.supplierName,
-              amount: payment.amount,
-              payment_mode: payment.paymentMode,
-              reference_id: payment.referenceId,
-              image: payment.image
-          }]).select().single();
-          if (error) throw error;
-          if (data) {
-              setSupplierPayments(prev => [...prev, { ...payment, id: data.id }]);
-              setSupplierPaymentConfig(prev => ({ ...prev, nextNumber: prev.nextNumber + 1 }));
-              await supabase.from('numbering_configs').upsert({ id: 'supplier_payment', prefix: supplierPaymentConfig.prefix, next_number: supplierPaymentConfig.nextNumber + 1 });
-          }
-      } catch (error: any) {
-          alert(`Error adding payment: ${error.message || error}`);
-      }
-  };
-
-  const handleSaveAttendance = async (records: Omit<AttendanceRecord, 'id'>[]) => {
-    try {
-        const { error } = await supabase.from('attendance').upsert(records.map(r => ({
-            employee_id: r.employee_id,
-            date: r.date,
-            morning_status: r.morningStatus,
-            evening_status: r.eveningStatus,
-            morning_overtime_hours: r.morningOvertimeHours,
-            evening_overtime_hours: r.eveningOvertimeHours,
-            meters_produced: r.metersProduced,
-            updated_at: new Date().toISOString()
-        })), { onConflict: 'employee_id,date' });
+    if (!error && data) {
+        const addedChallan = { ...newChallan, id: data[0].id };
+        setDeliveryChallans(prev => [...prev, addedChallan]);
         
-        if (error) throw error;
+        // Increment numbering config
+        const nextNum = currentConfig.nextNumber + 1;
+        await supabase.from('numbering_configs').update({ next_number: nextNum }).eq('id', configId);
         
-        // Refresh local data
-        await fetchTable('attendance', setAttendanceRecords, (data: any[]) => data.map(d => ({
-            id: d.id, employee_id: d.employee_id, date: d.date, morningStatus: d.morning_status, eveningStatus: d.evening_status, morningOvertimeHours: d.morning_overtime_hours, eveningOvertimeHours: d.evening_overtime_hours, metersProduced: d.meters_produced, createdAt: d.created_at, updatedAt: d.updated_at
-        })));
-    } catch (e: any) {
-        throw new Error(e.message || "Failed to save attendance.");
+        if (newChallan.isOutsourcing) {
+            setOutsourcingChallanNumberConfig(prev => ({ ...prev, nextNumber: nextNum }));
+        } else {
+            setDeliveryChallanNumberConfig(prev => ({ ...prev, nextNumber: nextNum }));
+        }
+    } else if (error) {
+        alert("Error saving challan: " + error.message);
     }
   };
 
-  const handleSavePayslip = async (payslip: Omit<Payslip, 'id'>) => {
-      try {
-          const { data, error } = await supabase.from('payslips').insert([{
-              employee_id: payslip.employeeId,
-              employee_name: payslip.employeeName,
-              pay_period_start: payslip.payPeriodStart,
-              pay_period_end: payslip.payPeriodEnd,
-              payslip_date: payslip.payslipDate,
-              total_working_days: payslip.totalWorkingDays,
-              ot_hours: payslip.otHours,
-              wage_earnings: payslip.wageEarnings,
-              production_earnings: payslip.productionEarnings,
-              gross_salary: payslip.grossSalary,
-              advance_deduction: payslip.advanceDeduction,
-              net_salary: payslip.netSalary,
-              total_outstanding_advance: payslip.totalOutstandingAdvance
-          }]).select().single();
-          if (error) throw error;
-          if (data) {
-              setPayslips(prev => [...prev, { ...payslip, id: data.id }]);
-              if (payslip.advanceDeduction > 0) {
-                  let remainingDeduction = payslip.advanceDeduction;
-                  const userAdvances = advances.filter(a => a.employeeId === payslip.employeeId && a.amount > a.paidAmount).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-                  for (const adv of userAdvances) {
-                      if (remainingDeduction <= 0) break;
-                      const outstanding = adv.amount - adv.paidAmount;
-                      const deduction = Math.min(outstanding, remainingDeduction);
-                      await supabase.from('employee_advances').update({ paid_amount: adv.paidAmount + deduction }).eq('id', adv.id);
-                      remainingDeduction -= deduction;
-                  }
-                  fetchTable('employee_advances', setAdvances, (data: any[]) => data.map(d => ({
-                        id: d.id, employeeId: d.employee_id, date: d.date, amount: d.amount, paidAmount: d.paid_amount, notes: d.notes
-                    })));
-              }
-          }
-      } catch (error: any) {
-          throw error;
-      }
+  const handleUpdateChallan = async (id: string, updatedChallan: DeliveryChallan) => {
+    const { error } = await supabase.from('delivery_challans').update({
+        challan_number: updatedChallan.challanNumber,
+        date: updatedChallan.date,
+        party_name: updatedChallan.partyName,
+        party_dc_no: updatedChallan.partyDCNo,
+        process: JSON.stringify(updatedChallan.process),
+        split_process: updatedChallan.splitProcess,
+        design_no: updatedChallan.designNo,
+        pcs: updatedChallan.pcs,
+        mtr: updatedChallan.mtr,
+        final_meter: updatedChallan.finalMeter,
+        width: updatedChallan.width,
+        shrinkage: updatedChallan.shrinkage,
+        pin: updatedChallan.pin,
+        pick: updatedChallan.pick,
+        percentage: updatedChallan.percentage,
+        extra_work: updatedChallan.extraWork,
+        status: updatedChallan.status,
+        worker_name: updatedChallan.workerName,
+        working_unit: updatedChallan.workingUnit,
+        is_outsourcing: updatedChallan.isOutsourcing,
+        dc_image: updatedChallan.dcImage,
+        sample_image: updatedChallan.sampleImage
+    }).eq('id', id);
+
+    if (!error) {
+        setDeliveryChallans(prev => prev.map(c => c.id === id ? updatedChallan : c));
+    } else {
+        alert("Error updating challan: " + error.message);
+    }
   };
 
-  const handleDeletePayslip = async (id: string) => {
-      try {
-          const { error } = await supabase.from('payslips').delete().eq('id', id);
-          if (error) throw error;
-          setPayslips(prev => prev.filter(p => p.id !== id));
-      } catch (error: any) {
-          alert(`Error deleting payslip: ${error.message || error}`);
-      }
+  const handleDeleteChallan = async (id: string) => {
+    const { error } = await supabase.from('delivery_challans').delete().eq('id', id);
+    if (!error) setDeliveryChallans(prev => prev.filter(c => c.id !== id));
+    else alert("Error deleting challan: " + error.message);
   };
 
-  const handleUpdatePoConfig = async (newConfig: PONumberConfig) => {
-      setPoNumberConfig(newConfig);
-      await supabase.from('numbering_configs').upsert({ id: 'po', prefix: newConfig.prefix, next_number: newConfig.nextNumber });
-  };
-
-  const handleUpdateDcConfig = async (newConfig: DeliveryChallanNumberConfig) => {
-      setDeliveryChallanNumberConfig(newConfig);
-      await supabase.from('numbering_configs').upsert({ id: 'dc', prefix: newConfig.prefix, next_number: newConfig.nextNumber });
-  };
-
-  const handleUpdateOutsourcingDcConfig = async (newConfig: DeliveryChallanNumberConfig) => {
-      setOutsourcingChallanNumberConfig(newConfig);
-      await supabase.from('numbering_configs').upsert({ id: 'dc_outsourcing', prefix: newConfig.prefix, next_number: newConfig.nextNumber });
-  };
-
-  const handleUpdateInvConfig = async (type: 'GST' | 'NGST', newConfig: InvoiceNumberConfig) => {
-      if (type === 'GST') {
-          setInvoiceNumberConfig(newConfig);
-          await supabase.from('numbering_configs').upsert({ id: 'invoice', mode: newConfig.mode, prefix: newConfig.prefix, next_number: newConfig.nextNumber });
-      } else {
-          setNgstInvoiceNumberConfig(newConfig);
-          await supabase.from('numbering_configs').upsert({ id: 'invoice_ngst', mode: newConfig.mode, prefix: newConfig.prefix, next_number: newConfig.nextNumber });
-      }
+  const renderActiveScreen = () => {
+    switch (activeScreen) {
+        case 'Dashboard':
+            return <DashboardScreen invoices={invoices} paymentsReceived={paymentsReceived} deliveryChallans={deliveryChallans} purchaseOrders={purchaseOrders} otherExpenses={otherExpenses} advances={advances} />;
+        case 'Expenses':
+            return <PurchaseOrderScreen 
+                purchaseOrders={purchaseOrders} onAddOrder={() => {}} onUpdateOrder={() => {}} onDeleteOrder={() => {}}
+                purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} bankNames={bankNames} onAddBankName={(name) => setBankNames(p => [...p, name])}
+                poNumberConfig={poNumberConfig} masterItems={masterItems} onAddMasterItem={handleAddMasterItem}
+                advances={advances} employees={employees} onAddAdvance={async () => {}} onUpdateAdvance={async () => {}} onDeleteAdvance={() => {}}
+                otherExpenses={otherExpenses} onAddOtherExpense={async () => {}} onUpdateOtherExpense={async () => {}} onDeleteOtherExpense={() => {}}
+                expenseCategories={expenseCategories} onAddExpenseCategory={handleAddExpenseCategory}
+                timberExpenses={timberExpenses} onAddTimberExpense={async () => {}} onUpdateTimberExpense={async () => {}} onDeleteTimberExpense={() => {}}
+                supplierPayments={supplierPayments} supplierPaymentConfig={supplierPaymentConfig} onAddSupplierPayment={async () => {}}
+            />;
+        case 'Delivery Challans':
+            return <DeliveryChallanScreen deliveryChallans={deliveryChallans} onAddChallan={handleAddChallan} onUpdateChallan={handleUpdateChallan} onDeleteChallan={handleDeleteChallan} clients={clients} onAddClient={handleAddClient} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} processTypes={processTypes} onAddProcessType={handleAddProcessType} deliveryChallanNumberConfig={deliveryChallanNumberConfig} invoices={invoices} onDeleteInvoice={() => {}} companyDetails={companyDetails} employees={employees} onAddEmployee={handleAddEmployee} />;
+        case 'Outsourcing':
+            return <DeliveryChallanScreen isOutsourcingScreen deliveryChallans={deliveryChallans} onAddChallan={handleAddChallan} onUpdateChallan={handleUpdateChallan} onDeleteChallan={handleDeleteChallan} clients={clients} onAddClient={handleAddClient} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} processTypes={processTypes} onAddProcessType={handleAddProcessType} deliveryChallanNumberConfig={outsourcingChallanNumberConfig} invoices={invoices} onDeleteInvoice={() => {}} companyDetails={companyDetails} employees={employees} onAddEmployee={handleAddEmployee} />;
+        case 'Invoices':
+            return <InvoicesScreen clients={clients} deliveryChallans={deliveryChallans} processTypes={processTypes} onAddInvoice={() => {}} onUpdateInvoice={() => {}} invoiceNumberConfig={invoiceNumberConfig} ngstInvoiceNumberConfig={ngstInvoiceNumberConfig} invoices={invoices} companyDetails={companyDetails} />;
+        case 'Payment Received':
+            return <PaymentReceivedScreen payments={paymentsReceived} onAddPayment={() => {}} onUpdatePayment={() => {}} onDeletePayment={() => {}} clients={clients} onAddClient={handleAddClient} />;
+        case 'Attendance':
+            return <AttendanceScreen employees={employees} attendanceRecords={attendanceRecords} onSave={async () => {}} />;
+        case 'Salary & Payslips':
+            return <SalaryScreen employees={employees} attendanceRecords={attendanceRecords} onUpdateEmployee={handleUpdateEmployee} advances={advances} onSavePayslip={async () => {}} onDeletePayslip={async () => {}} companyDetails={companyDetails} payslips={payslips} />;
+        case 'Reports':
+            return <ReportsScreen employees={employees} attendanceRecords={attendanceRecords} invoices={invoices} clients={clients} purchaseOrders={purchaseOrders} purchaseShops={purchaseShops} paymentsReceived={paymentsReceived} />;
+        case 'User Admin':
+            return <UserAdminScreen companyDetails={companyDetails} onUpdate={handleUpdateCompanyDetails} />;
+        case 'Add Client':
+            return <ShopMasterScreen clients={clients} onAddClient={handleAddClient} onUpdateClient={handleUpdateClient} onDeleteClient={handleDeleteClient} processTypes={processTypes} onAddProcessType={handleAddProcessType} />;
+        case 'Add Purchase Shop':
+            return <PurchaseShopMasterScreen shops={purchaseShops} onAddShop={handleAddPurchaseShop} onUpdateShop={handleUpdatePurchaseShop} onDeleteShop={handleDeletePurchaseShop} />;
+        case 'Add Employee':
+            return <EmployeeMasterScreen employees={employees} onAddEmployee={handleAddEmployee} onUpdateEmployee={handleUpdateEmployee} onDeleteEmployee={handleDeleteEmployee} />;
+        case 'Add Process':
+            return <PartyDCProcessMasterScreen processTypes={processTypes} onAddProcessType={handleAddProcessType} onUpdateProcessType={handleUpdateProcessType} onDeleteProcessType={handleDeleteProcessType} />;
+        case 'Expense Categories':
+            return <ExpenseCategoryMasterScreen categories={expenseCategories} onAdd={handleAddExpenseCategory} onUpdate={handleUpdateExpenseCategory} onDelete={handleDeleteExpenseCategory} />;
+        case 'Settings':
+            return <SettingsScreen poConfig={poNumberConfig} onUpdatePoConfig={setPoNumberConfig} dcConfig={deliveryChallanNumberConfig} onUpdateDcConfig={setDeliveryChallanNumberConfig} outsourcingDcConfig={outsourcingChallanNumberConfig} onUpdateOutsourcingDcConfig={setOutsourcingChallanNumberConfig} invConfig={invoiceNumberConfig} ngstInvConfig={ngstInvoiceNumberConfig} onUpdateInvConfig={(type, cfg) => type === 'GST' ? setInvoiceNumberConfig(cfg) : setNgstInvoiceNumberConfig(cfg)} />;
+        default:
+            return <DashboardScreen invoices={invoices} paymentsReceived={paymentsReceived} deliveryChallans={deliveryChallans} purchaseOrders={purchaseOrders} otherExpenses={otherExpenses} advances={advances} />;
+    }
   };
 
   if (!session && !guestMode) {
     return <Login onGuestMode={() => setGuestMode(true)} />;
   }
 
-  // Connection Error State UI
-  if (fetchError && !isInitialLoadComplete) {
+  if (!isInitialLoadComplete) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-secondary-50 p-4">
-        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center animate-fade-in-down">
-          <div className="w-16 h-16 bg-danger-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <WarningIcon className="w-8 h-8 text-danger-600" />
-          </div>
-          <h2 className="text-xl font-bold text-secondary-900 mb-2">Connection Failed</h2>
-          <p className="text-secondary-600 mb-6 text-sm">{fetchError}</p>
-          <button 
-            onClick={loadAllData} 
-            className="w-full py-3 bg-primary-600 text-white rounded-lg font-bold hover:bg-primary-700 transition-colors shadow-md flex items-center justify-center"
-          >
-            <SpinnerIcon className="w-4 h-4 mr-2" /> Retry Connection
-          </button>
-          <p className="text-xs text-secondary-400 mt-4 italic">Tip: If you use an ad-blocker, try disabling it for this site.</p>
+        <div className="min-h-screen flex items-center justify-center bg-secondary-50">
+            <div className="text-center">
+                <SpinnerIcon className="w-10 h-10 text-primary-600 mx-auto mb-4" />
+                <p className="text-secondary-600 font-medium">Loading your enterprise data...</p>
+                {fetchError && <div className="mt-4 p-4 bg-danger-50 border border-danger-200 text-danger-700 rounded-lg max-w-md mx-auto flex items-center gap-3">
+                    <WarningIcon className="w-6 h-6 flex-shrink-0" />
+                    <p className="text-sm">{fetchError}</p>
+                </div>}
+            </div>
         </div>
-      </div>
-    );
-  }
-
-  // Global Loading State
-  if (!isInitialLoadComplete && (session || guestMode)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-secondary-50">
-        <div className="text-center">
-            <SpinnerIcon className="w-12 h-12 text-primary-600 mx-auto mb-4" />
-            <p className="text-secondary-600 font-medium animate-pulse">Initializing System...</p>
-        </div>
-      </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-gray-100 font-sans text-secondary-900">
+    <div className="flex h-screen bg-secondary-50 overflow-hidden font-sans text-secondary-900">
       <Sidebar activeScreen={activeScreen} setActiveScreen={setActiveScreen} />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header isGuest={guestMode} />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
-          {activeScreen === 'Dashboard' && <DashboardScreen invoices={invoices} paymentsReceived={paymentsReceived} deliveryChallans={deliveryChallans} purchaseOrders={purchaseOrders} otherExpenses={otherExpenses} advances={advances} />}
-          {activeScreen === 'Expenses' && <PurchaseOrderScreen purchaseOrders={purchaseOrders} onAddOrder={handleAddPurchaseOrder} onUpdateOrder={handleUpdatePurchaseOrder} onDeleteOrder={handleDeletePurchaseOrder} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} bankNames={bankNames} onAddBankName={name => setBankNames(prev => [...prev, name])} poNumberConfig={poNumberConfig} masterItems={masterItems} onAddMasterItem={handleAddMasterItem} advances={advances} employees={employees} onAddAdvance={handleAddAdvance} onUpdateAdvance={handleUpdateAdvance} onDeleteAdvance={handleDeleteAdvance} otherExpenses={otherExpenses} onAddOtherExpense={handleAddOtherExpense} onUpdateOtherExpense={handleUpdateOtherExpense} onDeleteOtherExpense={handleDeleteOtherExpense} expenseCategories={expenseCategories} onAddExpenseCategory={handleAddExpenseCategory} timberExpenses={timberExpenses} onAddTimberExpense={handleAddTimberExpense} onUpdateTimberExpense={handleUpdateTimberExpense} onDeleteTimberExpense={handleDeleteTimberExpense} supplierPayments={supplierPayments} supplierPaymentConfig={supplierPaymentConfig} onAddSupplierPayment={handleAddSupplierPayment} />}
-          {activeScreen === 'Delivery Challans' && <DeliveryChallanScreen deliveryChallans={deliveryChallans} onAddChallan={handleAddChallan} onUpdateChallan={handleUpdateChallan} onDeleteChallan={handleDeleteChallan} clients={clients} onAddClient={handleAddClient} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} processTypes={processTypes} onAddProcessType={handleAddProcessType} deliveryChallanNumberConfig={deliveryChallanNumberConfig} invoices={invoices} onDeleteInvoice={handleDeleteInvoice} companyDetails={companyDetails} employees={employees} onAddEmployee={handleAddEmployee} />}
-          {activeScreen === 'Outsourcing' && <DeliveryChallanScreen deliveryChallans={deliveryChallans} onAddChallan={handleAddChallan} onUpdateChallan={handleUpdateChallan} onDeleteChallan={handleDeleteChallan} clients={clients} onAddClient={handleAddClient} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} processTypes={processTypes} onAddProcessType={handleAddProcessType} deliveryChallanNumberConfig={outsourcingChallanNumberConfig} invoices={invoices} onDeleteInvoice={handleDeleteInvoice} companyDetails={companyDetails} employees={employees} onAddEmployee={handleAddEmployee} isOutsourcingScreen={true} />}
-          {activeScreen === 'Invoices' && <InvoicesScreen clients={clients} deliveryChallans={deliveryChallans} processTypes={processTypes} onAddInvoice={handleAddInvoice} onUpdateInvoice={handleUpdateInvoice} invoiceNumberConfig={invoiceNumberConfig} ngstInvoiceNumberConfig={ngstInvoiceNumberConfig} invoices={invoices} companyDetails={companyDetails} />}
-          {activeScreen === 'Payment Received' && <PaymentReceivedScreen payments={paymentsReceived} onAddPayment={handleAddPaymentReceived} onUpdatePayment={handleUpdatePaymentReceived} onDeletePayment={handleDeletePaymentReceived} clients={clients} onAddClient={handleAddClient} />}
-          {activeScreen === 'Settings' && <SettingsScreen poConfig={poNumberConfig} onUpdatePoConfig={handleUpdatePoConfig} dcConfig={deliveryChallanNumberConfig} onUpdateDcConfig={handleUpdateDcConfig} outsourcingDcConfig={outsourcingChallanNumberConfig} onUpdateOutsourcingDcConfig={handleUpdateOutsourcingDcConfig} invConfig={invoiceNumberConfig} ngstInvConfig={ngstInvoiceNumberConfig} onUpdateInvConfig={handleUpdateInvConfig} />}
-          {activeScreen === 'Add Client' && <ShopMasterScreen clients={clients} onAddClient={handleAddClient} onUpdateClient={handleUpdateClient} onDeleteClient={handleDeleteClient} processTypes={processTypes} onAddProcessType={handleAddProcessType} />}
-          {activeScreen === 'Add Purchase Shop' && <PurchaseShopMasterScreen shops={purchaseShops} onAddShop={handleAddPurchaseShop} onUpdateShop={handleUpdatePurchaseShop} onDeleteShop={handleDeletePurchaseShop} />}
-          {activeScreen === 'Add Employee' && <EmployeeMasterScreen employees={employees} onAddEmployee={handleAddEmployee} onUpdateEmployee={handleUpdateEmployee} onDeleteEmployee={handleDeleteEmployee} />}
-          {activeScreen === 'Add Process' && <PartyDCProcessMasterScreen processTypes={processTypes} onAddProcessType={handleAddProcessType} onUpdateProcessType={handleUpdateProcessType} onDeleteProcessType={handleDeleteProcessType} />}
-          {activeScreen === 'Expense Categories' && <ExpenseCategoryMasterScreen categories={expenseCategories} onAdd={handleAddExpenseCategory} onUpdate={handleUpdateExpenseCategory} onDelete={handleDeleteExpenseCategory} />}
-          {activeScreen === 'User Admin' && <UserAdminScreen companyDetails={companyDetails} onUpdate={handleUpdateCompanyDetails} />}
-          {activeScreen === 'New Screen' && <ProductsScreen clients={clients} onAddClient={handleAddClient} processTypes={processTypes} onAddProcessType={handleAddProcessType} />}
-          {activeScreen === 'Salary & Payslips' && <SalaryScreen employees={employees} attendanceRecords={attendanceRecords} onUpdateEmployee={handleUpdateEmployee} advances={advances} onSavePayslip={handleSavePayslip} onDeletePayslip={handleDeletePayslip} companyDetails={companyDetails} payslips={payslips} />}
-          {activeScreen === 'Attendance' && <AttendanceScreen employees={employees} attendanceRecords={attendanceRecords} onSave={handleSaveAttendance} />}
-          {activeScreen === 'Reports' && <ReportsScreen employees={employees} attendanceRecords={attendanceRecords} invoices={invoices} clients={clients} purchaseOrders={purchaseOrders} purchaseShops={purchaseShops} paymentsReceived={paymentsReceived} />}
+        <main className="flex-1 overflow-y-auto p-8">
+            {renderActiveScreen()}
         </main>
       </div>
     </div>

@@ -269,7 +269,6 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
 
                 {activeTab === 'create' && (
                     <div className="p-6">
-                        {/* ... (previous search form content remains same) ... */}
                         <div className="mb-4 flex flex-col md:flex-row justify-between md:items-center gap-4">
                             <h1 className="text-xl font-semibold text-gray-800">Select Challans for Invoice</h1>
                             
@@ -384,7 +383,7 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+                                <label className="block text-sm font-medium text-secondary-700 mb-1">From Date</label>
                                 <div className="relative">
                                     <button
                                         type="button"
@@ -398,7 +397,7 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+                                <label className="block text-sm font-medium text-secondary-700 mb-1">To Date</label>
                                 <div className="relative">
                                     <button
                                         type="button"
@@ -457,7 +456,9 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {filteredChallans.map(challan => (
+                                            {filteredChallans.map(challan => {
+                                                const meterToDisplay = (challan.finalMeter && challan.finalMeter > 0) ? challan.finalMeter : challan.mtr;
+                                                return (
                                                 <tr key={challan.id} className="bg-white border-b hover:bg-gray-50">
                                                     <td className="w-4 p-4">
                                                         <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked={selectedChallanIds.has(challan.id)} onChange={() => handleSelectChallan(challan.id)} />
@@ -468,9 +469,9 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
                                                     <td className="px-6 py-4">{challan.process.join(', ')}</td>
                                                     <td className="px-6 py-4">{challan.designNo}</td>
                                                     <td className="px-6 py-4 text-right">{challan.pcs}</td>
-                                                    <td className="px-6 py-4 text-right">{challan.mtr.toFixed(2)}</td>
+                                                    <td className="px-6 py-4 text-right">{meterToDisplay.toFixed(2)}</td>
                                                 </tr>
-                                            ))}
+                                            )})}
                                         </tbody>
                                     </table>
                                 </div>

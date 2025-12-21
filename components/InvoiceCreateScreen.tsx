@@ -151,7 +151,11 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({
 
                 const group = groupedItemsMap.get(groupKey);
                 group.pcs += challan.pcs;
-                group.mtr += challan.mtr;
+                
+                // FIX: Use Final Meter if it exists, fallback to Mtr.
+                const meterToBill = (challan.finalMeter && challan.finalMeter > 0) ? challan.finalMeter : challan.mtr;
+                group.mtr += meterToBill;
+
                 group._challanIds.push(challan.id);
                 group._challanNumbers.push(challan.challanNumber);
                 group._challanDates.push(challan.date);
@@ -159,10 +163,6 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({
             });
 
             const initialLineItems: InvoiceItem[] = Array.from(groupedItemsMap.entries()).map(([groupKey, group]) => {
-                const roundedMtr = Math.round(group.mtr); // Initial round for grouping, user can edit
-                // Since user asked not to round off, maybe we should NOT round initial mtr either?
-                // But generally initial values from challans might be summed. Challan MTRs are usually decimals.
-                // Let's use exact sum for better accuracy if user requested "no roundoff"
                 const exactMtr = group.mtr; 
                 const subtotal = exactMtr * group.rate;
                 const cgst = taxType === 'GST' ? subtotal * 0.025 : 0;
@@ -178,7 +178,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({
                     designNo: Array.from(group._designNos).sort().join(', '),
                     hsnSac: group.hsnSac,
                     pcs: group.pcs,
-                    mtr: exactMtr, // Use exact meter sum
+                    mtr: exactMtr, 
                     rate: group.rate,
                     subtotal,
                     cgst,
@@ -224,7 +224,6 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({
     const totalSgst = useMemo(() => lineItems.reduce((total, item) => total + item.sgst, 0), [lineItems]);
     const totalTaxAmount = totalCgst + totalSgst;
     const totalAmountBeforeRounding = subTotal + totalTaxAmount;
-    // Safeguard against NaN
     const roundedTotal = Math.round(totalAmountBeforeRounding) || 0;
     const roundedOff = roundedTotal - (totalAmountBeforeRounding || 0);
 
@@ -247,7 +246,6 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({
         }
         
         try {
-            // Print first
             window.print();
             
             const finalTaxType: 'GST' | 'NGST' = taxType === 'NGST' ? 'NGST' : 'GST';
@@ -265,7 +263,6 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({
                 taxType: finalTaxType
             };
 
-            // Use setTimeout to allow the print dialog to handle focus/closing before state update unmounts this component
             setTimeout(() => {
                 onSave(invoiceData);
             }, 500);

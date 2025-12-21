@@ -116,7 +116,6 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
 
   useEffect(() => {
     setCurrentPage(1);
-    // Reset tab if screen type changes
     if (isOutsourcingScreen) {
         setActiveTab('outsourcing');
     } else if (activeTab === 'outsourcing') {
@@ -262,7 +261,6 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
         await onAddChallan(challanData);
     }
     
-    // Tab switching logic might need adjustment based on screen
     if (isOutsourcingScreen) {
         setActiveTab('outsourcing');
     } else {
@@ -319,10 +317,12 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
             'Design No': challan.designNo || '',
             'Pcs': challan.pcs,
             'Meters': challan.mtr,
+            'Final Mtr': challan.finalMeter || 0,
             'Width': challan.width || '',
             'Shrinkage': challan.shrinkage || '',
             'Pin': challan.pin || '',
             'Pick': challan.pick || '',
+            'Percentage': challan.percentage || '',
             'Worker': challan.workerName || '',
             'Unit': challan.workingUnit || ''
         }));
@@ -496,8 +496,10 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
                     <th scope="col" className="px-4 py-3">Design No</th>
                     <th scope="col" className="px-4 py-3 text-right">Pcs</th>
                     <th scope="col" className="px-4 py-3 text-right">Mtr</th>
+                    <th scope="col" className="px-4 py-3 text-right">Final Mtr</th>
                     <th scope="col" className="px-4 py-3 text-right">Width</th>
                     <th scope="col" className="px-4 py-3">Shrinkage</th>
+                    <th scope="col" className="px-4 py-3 text-right">Percentage</th>
                     <th scope="col" className="px-4 py-3">Pin</th>
                     <th scope="col" className="px-4 py-3">Pick</th>
                     <th scope="col" className="px-4 py-3">Worker Name</th>
@@ -536,8 +538,10 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
                       <td className="px-4 py-3 whitespace-nowrap">{challan.designNo}</td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">{challan.pcs}</td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">{challan.mtr}</td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">{challan.finalMeter || '-'}</td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">{challan.width || '-'}</td>
                       <td className="px-4 py-3 whitespace-nowrap">{challan.shrinkage || '-'}</td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">{challan.percentage || '-'}</td>
                       <td className="px-4 py-3 whitespace-nowrap">{challan.pin || '-'}</td>
                       <td className="px-4 py-3 whitespace-nowrap">{challan.pick || '-'}</td>
                       <td className="px-4 py-3 whitespace-nowrap">{challan.workerName || '-'}</td>

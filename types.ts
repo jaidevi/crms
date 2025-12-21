@@ -186,10 +186,12 @@ export interface DeliveryChallan {
   designNo: string;
   pcs: number;
   mtr: number;
+  finalMeter: number;
   width: number;
   shrinkage: string;
   pin: string;
   pick: string;
+  percentage: string;
   extraWork: string;
   status: string; // 'Not Delivered', 'Ready to Invoice', 'Delivered', 'Rework'
   workerName: string;

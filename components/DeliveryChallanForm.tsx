@@ -1,11 +1,30 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { CloseIcon, CalendarIcon, CameraIcon, PlusIcon, TrashIcon } from './Icons';
+
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { CloseIcon, CalendarIcon, CameraIcon, PlusIcon, TrashIcon, SearchIcon, ChevronDownIcon } from './Icons';
 import DatePicker from './DatePicker';
 import AddShopModal from './AddShopModal';
 import AddPurchaseShopModal from './AddPurchaseShopModal';
 import EmployeeModal from './EmployeeModal';
 import ProcessTypeModal from './PartyDCProcessModal';
 import type { DeliveryChallan, Client, PurchaseShop, ProcessType, DeliveryChallanNumberConfig, Employee, CompanyDetails } from '../types';
+
+// Helper hook for click outside
+const useClickOutside = (ref: React.RefObject<HTMLElement>, handler: () => void) => {
+    useEffect(() => {
+        const listener = (event: MouseEvent | TouchEvent) => {
+            if (!ref.current || ref.current.contains(event.target as Node)) {
+                return;
+            }
+            handler();
+        };
+        document.addEventListener('mousedown', listener);
+        document.addEventListener('touchstart', listener);
+        return () => {
+            document.removeEventListener('mousedown', listener);
+            document.removeEventListener('touchstart', listener);
+        };
+    }, [ref, handler]);
+};
 
 interface DeliveryChallanFormProps {
     onClose: () => void;
@@ -35,14 +54,16 @@ const BLANK_CHALLAN: Omit<DeliveryChallan, 'id'> = {
     designNo: '',
     pcs: 0,
     mtr: 0,
+    finalMeter: 0,
     width: 0,
     shrinkage: '',
     pin: '',
     pick: '',
+    percentage: '',
     extraWork: '',
     status: 'Not Delivered',
     workerName: '',
-    workingUnit: 'Meters',
+    workingUnit: 'Unit I',
     isOutsourcing: false,
     dcImage: [],
     sampleImage: []
@@ -67,6 +88,23 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
     const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
     
+    // Searchable dropdown states
+    const [isPartyDropdownOpen, setIsPartyDropdownOpen] = useState(false);
+    const [partySearchTerm, setPartySearchTerm] = useState('');
+    const partyDropdownRef = useRef<HTMLDivElement>(null);
+    useClickOutside(partyDropdownRef, () => {
+        setIsPartyDropdownOpen(false);
+        setPartySearchTerm('');
+    });
+
+    const [isFromPartyDropdownOpen, setIsFromPartyDropdownOpen] = useState(false);
+    const [fromPartySearchTerm, setFromPartySearchTerm] = useState('');
+    const fromPartyDropdownRef = useRef<HTMLDivElement>(null);
+    useClickOutside(fromPartyDropdownRef, () => {
+        setIsFromPartyDropdownOpen(false);
+        setFromPartySearchTerm('');
+    });
+
     // Process input state
     const [currentProcess, setCurrentProcess] = useState('');
     const [currentSplitProcess, setCurrentSplitProcess] = useState('');
@@ -82,32 +120,60 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                 date: new Date().toISOString().split('T')[0],
                 isOutsourcing: isOutsourcingScreen,
                 status: isOutsourcingScreen ? 'Not Delivered' : 'Not Delivered',
-                workingUnit: isOutsourcingScreen ? 'Outsourcing' : 'Meters'
+                workingUnit: 'Unit I'
             });
         }
     }, [challanToEdit, deliveryChallanNumberConfig, isOutsourcingScreen]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
-        const isNumber = type === 'number';
-        setChallan(prev => ({ ...prev, [name]: isNumber ? (value === '' ? 0 : Number(value)) : value }));
+        const isNumberField = type === 'number';
+        const newValue = isNumberField ? (value === '' ? 0 : Number(value)) : value;
+
+        setChallan(prev => {
+            const updated = { ...prev, [name]: newValue };
+            
+            // Logic: Auto-calculate Final Meter based on Meter + Gain %
+            if (name === 'mtr' || name === 'percentage') {
+                const currentMtr = name === 'mtr' ? Number(newValue) : prev.mtr;
+                const percInput = name === 'percentage' ? String(newValue) : prev.percentage;
+                
+                // Strip everything except numbers, decimal point, and sign
+                const percValue = parseFloat(percInput.replace(/[^\d.-]/g, '')) || 0;
+                
+                if (currentMtr > 0) {
+                    // Correct Calculation: Meter + Gain Percentage (e.g. 1000 + 5% = 1050)
+                    const gainAmount = (currentMtr * percValue) / 100;
+                    const calculatedFinal = currentMtr + gainAmount;
+                    updated.finalMeter = Number(calculatedFinal.toFixed(2));
+                } else {
+                    updated.finalMeter = 0;
+                }
+            }
+            
+            return updated;
+        });
+
         if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
     };
 
-    const handlePartyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const value = e.target.value;
+    const handleSelectParty = (value: string) => {
         if (value === '_add_new_') {
             setShowAddPartyModal(true);
         } else {
             setChallan(prev => ({ ...prev, partyName: value }));
             if (errors.partyName) setErrors(prev => ({ ...prev, partyName: '' }));
         }
+        setIsPartyDropdownOpen(false);
+        setPartySearchTerm('');
     };
 
-    const handleFromPartyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        setFromParty(e.target.value);
+    const handleSelectFromParty = (value: string) => {
+        setFromParty(value);
         if (errors.fromParty) setErrors(prev => ({ ...prev, fromParty: '' }));
-        if (errors.partyName) setErrors(prev => ({ ...prev, partyName: '' })); // Clear potential mismatch error
+        if (errors.partyName) setErrors(prev => ({ ...prev, partyName: '' }));
+        setIsFromPartyDropdownOpen(false);
+        setFromPartySearchTerm('');
     };
 
     const handleProcessChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -157,7 +223,6 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'dcImage' | 'sampleImage') => {
         if (e.target.files && e.target.files.length > 0) {
-            // FIX: Explicitly cast Array.from result to File[] to ensure mapping correctly identifies items as Blobs for readAsDataURL.
             const files = Array.from(e.target.files) as File[];
             const readers = files.map((file: File) => {
                 return new Promise<string>((resolve) => {
@@ -228,8 +293,20 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
 
     const commonInputClasses = "block w-full px-3 py-2.5 text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500";
     const statusOptions = ['Not Delivered', 'Ready to Invoice', 'Delivered', 'Rework', 'Processing', 'Pending'];
+    const workingUnitOptions = ['Unit I', 'Unit II'];
 
-    // Render Logic specific for Outsourcing vs Normal
+    const filteredClients = useMemo(() => {
+        const sorted = [...clients].sort((a, b) => a.name.localeCompare(b.name));
+        if (!partySearchTerm) return sorted;
+        return sorted.filter(c => c.name.toLowerCase().includes(partySearchTerm.toLowerCase()));
+    }, [clients, partySearchTerm]);
+
+    const filteredFromClients = useMemo(() => {
+        const sorted = [...clients].sort((a, b) => a.name.localeCompare(b.name));
+        if (!fromPartySearchTerm) return sorted;
+        return sorted.filter(c => c.name.toLowerCase().includes(fromPartySearchTerm.toLowerCase()));
+    }, [clients, fromPartySearchTerm]);
+
     return (
         <>
             {showAddPartyModal && (
@@ -249,7 +326,6 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                     
                     <div className="p-6 overflow-y-auto flex-grow space-y-8">
                         
-                        {/* --- Section 1: Challan Information --- */}
                         <div className="border border-gray-200 rounded-lg p-4 relative">
                             <h3 className="text-sm font-bold text-gray-900 bg-white px-2 absolute -top-2.5 left-4">Challan Information</h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
@@ -278,44 +354,178 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                             
                             {isOutsourcingScreen ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                                    <div>
+                                    <div ref={fromPartyDropdownRef}>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">From Party <span className="text-red-500">*</span></label>
-                                        <select value={fromParty} onChange={handleFromPartyChange} className={`${commonInputClasses} ${errors.fromParty ? 'border-red-500' : ''}`}>
-                                            <option value="">Select a client</option>
-                                            {clients.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                                        </select>
+                                        <div className="relative">
+                                            <button
+                                                type="button"
+                                                className={`${commonInputClasses} flex items-center justify-between bg-white ${errors.fromParty ? 'border-red-500' : ''}`}
+                                                onClick={() => setIsFromPartyDropdownOpen(!isFromPartyDropdownOpen)}
+                                            >
+                                                <span className={`block truncate ${fromParty ? 'text-gray-900' : 'text-gray-500'}`}>
+                                                    {fromParty || 'Select a client'}
+                                                </span>
+                                                <ChevronDownIcon className="h-5 w-5 text-gray-400" />
+                                            </button>
+                                            {isFromPartyDropdownOpen && (
+                                                <div className="absolute z-30 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                                                    <div className="sticky top-0 z-10 bg-white px-2 py-1.5 border-b border-gray-200">
+                                                        <div className="relative">
+                                                            <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                                                                <SearchIcon className="h-4 w-4 text-gray-400" />
+                                                            </div>
+                                                            <input
+                                                                type="text"
+                                                                className="block w-full pl-8 pr-3 py-1 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                                                placeholder="Search party..."
+                                                                value={fromPartySearchTerm}
+                                                                onChange={(e) => setFromPartySearchTerm(e.target.value)}
+                                                                autoFocus
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    {filteredFromClients.map((client) => (
+                                                        <div
+                                                            key={client.id}
+                                                            className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-blue-50 ${fromParty === client.name ? 'text-blue-900 bg-blue-100 font-medium' : 'text-gray-900'}`}
+                                                            onClick={() => handleSelectFromParty(client.name)}
+                                                        >
+                                                            <span className="block truncate">{client.name}</span>
+                                                        </div>
+                                                    ))}
+                                                    {filteredFromClients.length === 0 && (
+                                                        <div className="cursor-default select-none relative py-2 pl-3 pr-9 text-gray-500 text-center">
+                                                            No matches found
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                         {errors.fromParty && <p className="mt-1 text-sm text-red-500">{errors.fromParty}</p>}
                                     </div>
-                                    <div>
+                                    <div ref={partyDropdownRef}>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">To Party <span className="text-red-500">*</span></label>
-                                        <select name="partyName" value={challan.partyName} onChange={handlePartyChange} className={`${commonInputClasses} ${errors.partyName ? 'border-red-500' : ''}`}>
-                                            <option value="">Select a client</option>
-                                            {clients.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                                            <option value="_add_new_" className="font-semibold text-blue-600">++ Add New Party ++</option>
-                                        </select>
+                                        <div className="relative">
+                                            <button
+                                                type="button"
+                                                className={`${commonInputClasses} flex items-center justify-between bg-white ${errors.partyName ? 'border-red-500' : ''}`}
+                                                onClick={() => setIsPartyDropdownOpen(!isPartyDropdownOpen)}
+                                            >
+                                                <span className={`block truncate ${challan.partyName ? 'text-gray-900' : 'text-gray-500'}`}>
+                                                    {challan.partyName || 'Select a client'}
+                                                </span>
+                                                <ChevronDownIcon className="h-5 w-5 text-gray-400" />
+                                            </button>
+                                            {isPartyDropdownOpen && (
+                                                <div className="absolute z-30 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                                                    <div className="sticky top-0 z-10 bg-white px-2 py-1.5 border-b border-gray-200">
+                                                        <div className="relative">
+                                                            <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                                                                <SearchIcon className="h-4 w-4 text-gray-400" />
+                                                            </div>
+                                                            <input
+                                                                type="text"
+                                                                className="block w-full pl-8 pr-3 py-1 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                                                placeholder="Search party..."
+                                                                value={partySearchTerm}
+                                                                onChange={(e) => setPartySearchTerm(e.target.value)}
+                                                                autoFocus
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div
+                                                        className="cursor-pointer select-none relative py-2 pl-3 pr-9 text-blue-600 font-semibold hover:bg-blue-50 border-b border-gray-100"
+                                                        onClick={() => handleSelectParty('_add_new_')}
+                                                    >
+                                                        <span className="flex items-center"><PlusIcon className="w-4 h-4 mr-1" /> Add New Party</span>
+                                                    </div>
+                                                    {filteredClients.map((client) => (
+                                                        <div
+                                                            key={client.id}
+                                                            className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-blue-50 ${challan.partyName === client.name ? 'text-blue-900 bg-blue-100 font-medium' : 'text-gray-900'}`}
+                                                            onClick={() => handleSelectParty(client.name)}
+                                                        >
+                                                            <span className="block truncate">{client.name}</span>
+                                                        </div>
+                                                    ))}
+                                                    {filteredClients.length === 0 && (
+                                                        <div className="cursor-default select-none relative py-2 pl-3 pr-9 text-gray-500 text-center">
+                                                            No matches found
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                         {errors.partyName && <p className="mt-1 text-sm text-red-500">{errors.partyName}</p>}
                                     </div>
                                 </div>
                             ) : (
-                                <div className="mt-4">
+                                <div className="mt-4" ref={partyDropdownRef}>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Party Name <span className="text-red-500">*</span></label>
-                                    <select name="partyName" value={challan.partyName} onChange={handlePartyChange} className={`${commonInputClasses} ${errors.partyName ? 'border-red-500' : ''}`}>
-                                        <option value="">Select Party</option>
-                                        {clients.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                                        <option value="_add_new_" className="font-semibold text-blue-600">++ Add New Party ++</option>
-                                    </select>
+                                    <div className="relative">
+                                        <button
+                                            type="button"
+                                            className={`${commonInputClasses} flex items-center justify-between bg-white ${errors.partyName ? 'border-red-500' : ''}`}
+                                            onClick={() => setIsPartyDropdownOpen(!isPartyDropdownOpen)}
+                                        >
+                                            <span className={`block truncate ${challan.partyName ? 'text-gray-900' : 'text-gray-500'}`}>
+                                                {challan.partyName || 'Select Party'}
+                                            </span>
+                                            <ChevronDownIcon className="h-5 w-5 text-gray-400" />
+                                        </button>
+                                        {isPartyDropdownOpen && (
+                                            <div className="absolute z-30 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                                                <div className="sticky top-0 z-10 bg-white px-2 py-1.5 border-b border-gray-200">
+                                                    <div className="relative">
+                                                        <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                                                            <SearchIcon className="h-4 w-4 text-gray-400" />
+                                                        </div>
+                                                        <input
+                                                            type="text"
+                                                            className="block w-full pl-8 pr-3 py-1 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                                            placeholder="Search party..."
+                                                            value={partySearchTerm}
+                                                            onChange={(e) => setPartySearchTerm(e.target.value)}
+                                                            autoFocus
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div
+                                                    className="cursor-pointer select-none relative py-2 pl-3 pr-9 text-blue-600 font-semibold hover:bg-blue-50 border-b border-gray-100"
+                                                    onClick={() => handleSelectParty('_add_new_')}
+                                                >
+                                                    <span className="flex items-center"><PlusIcon className="w-4 h-4 mr-1" /> Add New Party</span>
+                                                </div>
+                                                {filteredClients.map((client) => (
+                                                    <div
+                                                        key={client.id}
+                                                        className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-blue-50 ${challan.partyName === client.name ? 'text-blue-900 bg-blue-100 font-medium' : 'text-gray-900'}`}
+                                                        onClick={() => handleSelectParty(client.name)}
+                                                    >
+                                                        <span className="block truncate">{client.name}</span>
+                                                    </div>
+                                                ))}
+                                                {filteredClients.length === 0 && (
+                                                    <div className="cursor-default select-none relative py-2 pl-3 pr-9 text-gray-500 text-center">
+                                                        No matches found
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
                                     {errors.partyName && <p className="mt-1 text-sm text-red-500">{errors.partyName}</p>}
                                 </div>
                             )}
                         </div>
 
-                        {/* --- Section 2: Production Details (Mainly for Outsourcing) --- */}
                         <div className="border border-gray-200 rounded-lg p-4 relative">
                             <h3 className="text-sm font-bold text-gray-900 bg-white px-2 absolute -top-2.5 left-4">Production Details</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Working Unit</label>
-                                    <input type="text" name="workingUnit" value={challan.workingUnit} onChange={handleChange} className={commonInputClasses} />
+                                    <select name="workingUnit" value={challan.workingUnit} onChange={handleChange} className={commonInputClasses}>
+                                        {workingUnitOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                    </select>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Worker Name</label>
@@ -332,7 +542,6 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                             </div>
                         </div>
 
-                        {/* --- Section 3: Fabric & Process Details --- */}
                         <div className="border border-gray-200 rounded-lg p-4 relative">
                             <h3 className="text-sm font-bold text-gray-900 bg-white px-2 absolute -top-2.5 left-4">Fabric &amp; Process Details</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
@@ -386,7 +595,7 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-4">
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mt-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">No of pcs</label>
                                     <input type="number" name="pcs" value={challan.pcs || ''} onChange={handleChange} className={`${commonInputClasses} ${errors.pcs ? 'border-red-500' : ''}`} />
@@ -395,6 +604,10 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Mtr</label>
                                     <input type="number" name="mtr" value={challan.mtr || ''} onChange={handleChange} className={commonInputClasses} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Final Meter</label>
+                                    <input type="number" name="finalMeter" value={challan.finalMeter || ''} readOnly className={`${commonInputClasses} bg-gray-100 font-medium cursor-not-allowed`} tabIndex={-1} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Width</label>
@@ -412,10 +625,13 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Pick</label>
                                     <input type="text" name="pick" value={challan.pick} onChange={handleChange} className={commonInputClasses} />
                                 </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Percentage</label>
+                                    <input type="text" name="percentage" value={challan.percentage} onChange={handleChange} className={commonInputClasses} placeholder="e.g. 5%" />
+                                </div>
                             </div>
                         </div>
 
-                        {/* --- Section 4: Attachments --- */}
                         <div className="border border-gray-200 rounded-lg p-4 relative">
                             <h3 className="text-sm font-bold text-gray-900 bg-white px-2 absolute -top-2.5 left-4">Attachments</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
@@ -425,7 +641,7 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                                         className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 min-h-[100px]"
                                         onClick={() => dcImageInputRef.current?.click()}
                                     >
-                                        <input type="file" ref={dcImageInputRef} onChange={e => handleImageUpload(e, 'dcImage')} className="hidden" multiple accept="image/*" />
+                                        <input type="file" min="1" max="10" ref={dcImageInputRef} onChange={e => handleImageUpload(e, 'dcImage')} className="hidden" multiple accept="image/*" />
                                         {challan.dcImage.length > 0 ? (
                                             <div className="flex flex-wrap gap-2 w-full justify-center">
                                                 {challan.dcImage.map((img, idx) => (
@@ -452,7 +668,7 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                                         className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 min-h-[100px]"
                                         onClick={() => sampleImageInputRef.current?.click()}
                                     >
-                                        <input type="file" ref={sampleImageInputRef} onChange={e => handleImageUpload(e, 'sampleImage')} className="hidden" multiple accept="image/*" />
+                                        <input type="file" min="1" max="10" ref={sampleImageInputRef} onChange={e => handleImageUpload(e, 'sampleImage')} className="hidden" multiple accept="image/*" />
                                         {challan.sampleImage.length > 0 ? (
                                             <div className="flex flex-wrap gap-2 w-full justify-center">
                                                 {challan.sampleImage.map((img, idx) => (
@@ -479,7 +695,7 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                     </div>
 
                     <div className="flex items-center justify-end p-5 bg-gray-50 border-t shrink-0 space-x-3">
-                        <button onClick={onClose} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md text-sm font-semibold hover:bg-gray-50">Cancel</button>
+                        <button onClick={onClose} className="px-4 py-2 bg-white border border-secondary-300 text-secondary-700 rounded-md text-sm font-semibold hover:bg-secondary-50">Cancel</button>
                         <button onClick={handleSubmit} className="px-5 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700">
                             {challanToEdit ? 'Update Challan' : 'Save Challan'}
                         </button>

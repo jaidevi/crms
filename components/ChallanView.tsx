@@ -37,7 +37,6 @@ const ChallanView: React.FC<ChallanViewProps> = ({ challan, companyDetails, onBa
             </div>
 
             <div id="printable-challan" className="max-w-4xl mx-auto bg-white p-8 text-sm font-sans text-secondary-800 border border-secondary-300">
-                {/* Header */}
                 <header className="flex justify-between items-start pb-4">
                     <div>
                         <h2 className="text-2xl font-bold text-primary-700">{companyDetails.name}</h2>
@@ -56,8 +55,6 @@ const ChallanView: React.FC<ChallanViewProps> = ({ challan, companyDetails, onBa
 
                 <div className="border-b border-secondary-200 my-4"></div>
                 
-                {/* From and To section removed as per user request */}
-                
                 <section className="my-6">
                     <table className="w-full text-left border-collapse border">
                         <thead>
@@ -72,7 +69,6 @@ const ChallanView: React.FC<ChallanViewProps> = ({ challan, companyDetails, onBa
                              <tr className="border-b">
                                 <td className="p-2 text-center border align-top">1</td>
                                 <td className="p-2 font-medium border align-top leading-relaxed">
-                                    {/* Logic: If split process exists, show ONLY split process. Else show main process. */}
                                     {challan.splitProcess && challan.splitProcess.length > 0 ? (
                                         <>
                                             <span className="font-semibold">Process:</span> {challan.splitProcess.join(', ')} <br/>
@@ -88,6 +84,12 @@ const ChallanView: React.FC<ChallanViewProps> = ({ challan, companyDetails, onBa
                                         <>
                                             <br/>
                                             <span className="font-semibold">Shrinkage:</span> {challan.shrinkage}
+                                        </>
+                                    )}
+                                    {challan.percentage && (
+                                        <>
+                                            <br/>
+                                            <span className="font-semibold">Percentage:</span> {challan.percentage}
                                         </>
                                     )}
                                 </td>
