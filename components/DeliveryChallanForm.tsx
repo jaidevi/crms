@@ -61,9 +61,9 @@ const BLANK_CHALLAN: Omit<DeliveryChallan, 'id'> = {
     pick: '',
     percentage: '',
     extraWork: '',
-    status: 'Not Delivered',
+    status: '',
     workerName: '',
-    workingUnit: 'Unit I',
+    workingUnit: '',
     isOutsourcing: false,
     dcImage: [],
     sampleImage: []
@@ -119,8 +119,8 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                 challanNumber: `${deliveryChallanNumberConfig.prefix}${deliveryChallanNumberConfig.nextNumber}`,
                 date: new Date().toISOString().split('T')[0],
                 isOutsourcing: isOutsourcingScreen,
-                status: isOutsourcingScreen ? 'Not Delivered' : 'Not Delivered',
-                workingUnit: 'Unit I'
+                status: '',
+                workingUnit: ''
             });
         }
     }, [challanToEdit, deliveryChallanNumberConfig, isOutsourcingScreen]);
@@ -269,6 +269,7 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
         if (!challan.challanNumber) newErrors.challanNumber = "Challan Number is required.";
         if (!challan.date) newErrors.date = "Date is required.";
         if (!challan.partyName) newErrors.partyName = isOutsourcingScreen ? "To Party is required." : "Party Name is required.";
+        if (!challan.status) newErrors.status = "Status is required.";
         if (challan.process.length === 0) newErrors.process = "At least one process is required.";
         if (challan.pcs <= 0) newErrors.pcs = "Pcs must be greater than 0.";
         
@@ -340,15 +341,18 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                                             {formatDateForInput(challan.date) || 'Select date'}
                                             <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                         </button>
+                                        {/* Fix: Replaced undefined variable 'p' with 'prev' in setChallan update */}
                                         {isDatePickerOpen && <DatePicker value={challan.date} onChange={d => { setChallan(prev => ({...prev, date: d})); setDatePickerOpen(false); }} onClose={() => setDatePickerOpen(false)} />}
                                     </div>
                                     {errors.date && <p className="mt-1 text-sm text-red-500">{errors.date}</p>}
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Status <span className="text-red-500">*</span></label>
-                                    <select name="status" value={challan.status} onChange={handleChange} className={commonInputClasses}>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Status <span className="text-red-500">*</span></label>
+                                    <select name="status" value={challan.status} onChange={handleChange} className={`${commonInputClasses} ${errors.status ? 'border-red-500' : ''}`}>
+                                        <option value="" disabled>Select Status</option>
                                         {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
                                     </select>
+                                    {errors.status && <p className="mt-1 text-sm text-red-500">{errors.status}</p>}
                                 </div>
                             </div>
                             
@@ -522,8 +526,9 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                             <h3 className="text-sm font-bold text-gray-900 bg-white px-2 absolute -top-2.5 left-4">Production Details</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Working Unit</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Working Unit</label>
                                     <select name="workingUnit" value={challan.workingUnit} onChange={handleChange} className={commonInputClasses}>
+                                        <option value="" disabled>Select Working Unit</option>
                                         {workingUnitOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                     </select>
                                 </div>
