@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { CalendarIcon, SearchIcon, PrintIcon, ChevronDownIcon, DownloadIcon } from './Icons';
 import DatePicker from './DatePicker';
@@ -442,19 +443,19 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
 
                 {reportType === 'attendance' && (
                     <>
-                        {/* Attendance Summary Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                            <div className="bg-primary-50 p-4 rounded-lg border border-primary-100">
-                                <p className="text-sm text-primary-600 font-medium">Total Working Days</p>
-                                <p className="text-2xl font-bold text-primary-800">{attendanceSummary.totalDaysWorked}</p>
+                        {/* Attendance Summary Cards - Forced Single Row */}
+                        <div className="flex gap-4 mb-8">
+                            <div className="flex-1 bg-primary-50 p-3 rounded-lg border border-primary-100">
+                                <p className="text-[10px] text-primary-600 font-bold uppercase tracking-tight">Total Working Days</p>
+                                <p className="text-xl font-bold text-primary-800">{attendanceSummary.totalDaysWorked}</p>
                             </div>
-                            <div className="bg-success-50 p-4 rounded-lg border border-success-100">
-                                <p className="text-sm text-success-600 font-medium">Total Meters Produced</p>
-                                <p className="text-2xl font-bold text-success-800">{attendanceSummary.totalMeters.toFixed(2)}</p>
+                            <div className="flex-1 bg-success-50 p-3 rounded-lg border border-success-100">
+                                <p className="text-[10px] text-success-600 font-bold uppercase tracking-tight">Total Meters Produced</p>
+                                <p className="text-xl font-bold text-success-800">{attendanceSummary.totalMeters.toFixed(2)}</p>
                             </div>
-                            <div className="bg-orange-50 p-4 rounded-lg border border-orange-100">
-                                <p className="text-sm text-orange-600 font-medium">Total Overtime Hours</p>
-                                <p className="text-2xl font-bold text-orange-800">{attendanceSummary.totalOvertime} hrs</p>
+                            <div className="flex-1 bg-orange-50 p-3 rounded-lg border border-orange-100">
+                                <p className="text-[10px] text-orange-600 font-bold uppercase tracking-tight">Total Overtime Hours</p>
+                                <p className="text-xl font-bold text-orange-800">{attendanceSummary.totalOvertime} hrs</p>
                             </div>
                         </div>
 

@@ -347,7 +347,7 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                                     {errors.date && <p className="mt-1 text-sm text-red-500">{errors.date}</p>}
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Status <span className="text-red-500">*</span></label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Status <span className="text-red-500">*</span></label>
                                     <select name="status" value={challan.status} onChange={handleChange} className={`${commonInputClasses} ${errors.status ? 'border-red-500' : ''}`}>
                                         <option value="" disabled>Select Status</option>
                                         {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
@@ -526,7 +526,7 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                             <h3 className="text-sm font-bold text-gray-900 bg-white px-2 absolute -top-2.5 left-4">Production Details</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Working Unit</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Working Unit</label>
                                     <select name="workingUnit" value={challan.workingUnit} onChange={handleChange} className={commonInputClasses}>
                                         <option value="" disabled>Select Working Unit</option>
                                         {workingUnitOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -700,7 +700,7 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                     </div>
 
                     <div className="flex items-center justify-end p-5 bg-gray-50 border-t shrink-0 space-x-3">
-                        <button onClick={onClose} className="px-4 py-2 bg-white border border-secondary-300 text-secondary-700 rounded-md text-sm font-semibold hover:bg-secondary-50">Cancel</button>
+                        <button onClick={onClose} className="px-4 py-2 bg-white border border-gray-300 text-secondary-700 rounded-md text-sm font-semibold hover:bg-secondary-50">Cancel</button>
                         <button onClick={handleSubmit} className="px-5 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700">
                             {challanToEdit ? 'Update Challan' : 'Save Challan'}
                         </button>
