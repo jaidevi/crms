@@ -138,7 +138,7 @@ export const App: React.FC = () => {
                     phone: data.phone || '',
                     email: data.email || '',
                     gstin: data.gstin || '',
-                    hsnSac: data.hsn_sac || '998821',
+                    hsn_sac: data.hsn_sac || '998821',
                     bankName: data.bank_name || '',
                     bankAccountNumber: data.bank_account_number || '',
                     bankIfscCode: data.bank_ifsc_code || '',
@@ -166,10 +166,10 @@ export const App: React.FC = () => {
     // Parallel fetch for remaining data
     await Promise.all([
         fetchTable('clients', setClients, (data: any[]) => data.map(d => ({
-            id: d.id, name: d.name, phone: d.phone, email: d.email, address: d.address, city: d.city, state: d.state, pincode: d.pincode, gstNo: d.gst_no, panNo: d.pan_no, paymentTerms: d.payment_terms, processes: Array.isArray(d.processes) ? d.processes : []
+            id: d.id, name: d.name, phone: d.phone, email: d.email, address: d.address, city: d.city, state: d.state, pincode: d.pincode, gst_no: d.gst_no, pan_no: d.pan_no, payment_terms: d.payment_terms, processes: Array.isArray(d.processes) ? d.processes : []
         }))),
         fetchTable('purchase_shops', setPurchaseShops, (data: any[]) => data.map(d => ({
-            id: d.id, name: d.name, phone: d.phone, email: d.email, address: d.address, city: d.city, state: d.state, pincode: d.pincode, gstNo: d.gst_no, panNo: d.pan_no, paymentTerms: d.payment_terms
+            id: d.id, name: d.name, phone: d.phone, email: d.email, address: d.address, city: d.city, state: d.state, pincode: d.pincode, gst_no: d.gst_no, pan_no: d.pan_no, payment_terms: d.payment_terms
         }))),
         fetchTable('employees', setEmployees, (data: any[]) => data.map(d => ({
             id: d.id, name: d.name, designation: d.designation, phone: d.phone, dailyWage: d.daily_wage || 0, monthlyWage: d.monthly_wage || 0, ratePerMeter: d.rate_per_meter || 0
@@ -178,7 +178,7 @@ export const App: React.FC = () => {
         fetchTable('master_items', setMasterItems),
         fetchTable('expense_categories', setExpenseCategories),
         fetchTable('purchase_orders', setPurchaseOrders, (data: any[]) => data.map(d => ({
-            id: d.id, poNumber: d.po_number, poDate: d.po_date, shopName: d.shop_name, totalAmount: d.total_amount || 0, gst_no: d.gst_no, paymentMode: d.payment_mode, status: d.status, paymentTerms: d.payment_terms, referenceId: d.reference_id, bankName: d.bank_name, chequeDate: d.cheque_date, items: Array.isArray(d.purchase_order_items) ? d.purchase_order_items.map((i: any) => ({
+            id: d.id, poNumber: d.po_number, poDate: d.po_date, shopName: d.shop_name, totalAmount: d.total_amount || 0, gst_no: d.gst_no, paymentMode: d.payment_mode, status: d.status, payment_terms: d.payment_terms, referenceId: d.reference_id, bankName: d.bank_name, chequeDate: d.cheque_date, items: Array.isArray(d.purchase_order_items) ? d.purchase_order_items.map((i: any) => ({
                 id: i.id, name: i.name, quantity: i.quantity || 0, rate: i.rate || 0, amount: i.amount || 0
             })) : []
         }))),
@@ -531,7 +531,7 @@ export const App: React.FC = () => {
               process: item.process,
               description: item.description,
               design_no: item.designNo,
-              hsn_sac: item.hsnSac,
+              hsn_sac: item.hsn_sac,
               pcs: item.pcs,
               mtr: item.mtr,
               rate: item.rate,
@@ -552,6 +552,15 @@ export const App: React.FC = () => {
       }
   };
 
+  const handleDeleteInvoice = async (id: string) => {
+    const { error } = await supabase.from('invoices').delete().eq('id', id);
+    if (!error) {
+        setInvoices(prev => prev.filter(inv => inv.id !== id));
+    } else {
+        alert("Error deleting invoice: " + error.message);
+    }
+  };
+
   const renderActiveScreen = () => {
     switch (activeScreen) {
         case 'Dashboard':
@@ -568,9 +577,9 @@ export const App: React.FC = () => {
                 supplierPayments={supplierPayments} supplierPaymentConfig={supplierPaymentConfig} onAddSupplierPayment={async () => {}}
             />;
         case 'Delivery Challans':
-            return <DeliveryChallanScreen deliveryChallans={deliveryChallans} onAddChallan={handleAddChallan} onUpdateChallan={handleUpdateChallan} onDeleteChallan={handleDeleteChallan} clients={clients} onAddClient={handleAddClient} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} processTypes={processTypes} onAddProcessType={handleAddProcessType} deliveryChallanNumberConfig={deliveryChallanNumberConfig} invoices={invoices} onDeleteInvoice={() => {}} companyDetails={companyDetails} employees={employees} onAddEmployee={handleAddEmployee} />;
+            return <DeliveryChallanScreen deliveryChallans={deliveryChallans} onAddChallan={handleAddChallan} onUpdateChallan={handleUpdateChallan} onDeleteChallan={handleDeleteChallan} clients={clients} onAddClient={handleAddClient} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} processTypes={processTypes} onAddProcessType={handleAddProcessType} deliveryChallanNumberConfig={deliveryChallanNumberConfig} invoices={invoices} onDeleteInvoice={handleDeleteInvoice} companyDetails={companyDetails} employees={employees} onAddEmployee={handleAddEmployee} />;
         case 'Outsourcing':
-            return <DeliveryChallanScreen isOutsourcingScreen deliveryChallans={deliveryChallans} onAddChallan={handleAddChallan} onUpdateChallan={handleUpdateChallan} onDeleteChallan={handleDeleteChallan} clients={clients} onAddClient={handleAddClient} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} processTypes={processTypes} onAddProcessType={handleAddProcessType} deliveryChallanNumberConfig={outsourcingChallanNumberConfig} invoices={invoices} onDeleteInvoice={() => {}} companyDetails={companyDetails} employees={employees} onAddEmployee={handleAddEmployee} />;
+            return <DeliveryChallanScreen isOutsourcingScreen deliveryChallans={deliveryChallans} onAddChallan={handleAddChallan} onUpdateChallan={handleUpdateChallan} onDeleteChallan={handleDeleteChallan} clients={clients} onAddClient={handleAddClient} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} processTypes={processTypes} onAddProcessType={handleAddProcessType} deliveryChallanNumberConfig={outsourcingChallanNumberConfig} invoices={invoices} onDeleteInvoice={handleDeleteInvoice} companyDetails={companyDetails} employees={employees} onAddEmployee={handleAddEmployee} />;
         case 'Invoices':
             return <InvoicesScreen clients={clients} deliveryChallans={deliveryChallans} processTypes={processTypes} onAddInvoice={handleAddInvoice} onUpdateInvoice={handleUpdateInvoice} invoiceNumberConfig={invoiceNumberConfig} ngstInvoiceNumberConfig={ngstInvoiceNumberConfig} invoices={invoices} companyDetails={companyDetails} />;
         case 'Payment Received':

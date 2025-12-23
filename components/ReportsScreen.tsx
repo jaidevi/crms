@@ -90,7 +90,6 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
         return Object.values(summaries).sort((a, b) => a.name.localeCompare(b.name));
     }, [attendanceReportData, employees, selectedEntityId, reportType]);
 
-    // Chunking logic for page-wise totals
     const chunkedEmployeeSummaries = useMemo(() => {
         const chunks = [];
         for (let i = 0; i < employeeSummaries.length; i += ROWS_PER_PAGE) {
@@ -188,19 +187,19 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
         if (reportType === 'attendance') {
             sheetName = "Attendance";
             fileName = `Attendance_Report_${startDate}_${endDate}.xlsx`;
-            data = selectedEntityId === 'all' ? employeeSummaries.map((s, idx) => ({ 'Sl#': idx + 1, 'Employee Name': s.name, 'Working Days': s.workingDays, 'Meters Produced': s.meters, 'Overtime Hours': s.ot })) : attendanceReportData.map((rec, idx) => ({ 'Sl#': idx + 1, 'Date': rec.date, 'Employee': getEmployeeName(rec.employee_id), 'Morning Status': rec.morningStatus, 'Evening Status': rec.eveningStatus, 'Overtime Hours': (rec.morningOvertimeHours || 0) + (rec.eveningOvertimeHours || 0), 'Meters Produced': rec.metersProduced }));
+            data = selectedEntityId === 'all' ? employeeSummaries.map((s, idx) => ({ 'S.NO': idx + 1, 'Employee Name': s.name, 'Working Days': s.workingDays, 'Meters Produced': s.meters, 'Overtime Hours': s.ot })) : attendanceReportData.map((rec, idx) => ({ 'S.NO': idx + 1, 'Date': rec.date, 'Employee': getEmployeeName(rec.employee_id), 'Morning Status': rec.morningStatus, 'Evening Status': rec.eveningStatus, 'Overtime Hours': (rec.morningOvertimeHours || 0) + (rec.eveningOvertimeHours || 0), 'Meters Produced': rec.metersProduced }));
         } else if (reportType === 'invoice') {
             sheetName = "Invoices";
             fileName = `Invoice_Report_${startDate}_${endDate}.xlsx`;
-            data = invoiceReportData.map((inv, idx) => ({ 'Sl#': idx + 1, 'Date': inv.invoiceDate, 'Invoice Number': inv.invoiceNumber, 'Client Name': inv.clientName, 'Tax Type': inv.taxType, 'Taxable Value': inv.subTotal, 'Tax Amount': inv.totalTaxAmount, 'Total Amount': inv.totalAmount }));
+            data = invoiceReportData.map((inv, idx) => ({ 'S.NO': idx + 1, 'Date': inv.invoiceDate, 'Invoice Number': inv.invoiceNumber, 'Client Name': inv.clientName, 'Tax Type': inv.taxType, 'Taxable Value': inv.subTotal, 'Tax Amount': inv.totalTaxAmount, 'Total Amount': inv.totalAmount }));
         } else if (reportType === 'purchase') {
             sheetName = "Purchase";
             fileName = `Purchase_Report_${startDate}_${endDate}.xlsx`;
-            data = purchaseReportData.map((po, idx) => ({ 'Sl#': idx + 1, 'Date': po.poDate, 'PO Number': po.poNumber, 'Shop Name': po.shopName, 'Status': po.status, 'Total Amount': po.totalAmount }));
+            data = purchaseReportData.map((po, idx) => ({ 'S.NO': idx + 1, 'Date': po.poDate, 'PO Number': po.poNumber, 'Shop Name': po.shopName, 'Status': po.status, 'Total Amount': po.totalAmount }));
         } else if (reportType === 'payment_received') {
             sheetName = "Payments";
             fileName = `Payment_Received_Report_${startDate}_${endDate}.xlsx`;
-            data = paymentReceivedReportData.map((p, idx) => ({ 'Sl#': idx + 1, 'Date': p.paymentDate, 'Client Name': p.clientName, 'Opening Balance': p.openingBalance, 'Amount Received': p.amount, 'Payment Mode': p.paymentMode, 'Reference Number': p.referenceNumber }));
+            data = paymentReceivedReportData.map((p, idx) => ({ 'S.NO': idx + 1, 'Date': p.paymentDate, 'Client Name': p.clientName, 'Opening Balance': p.openingBalance, 'Amount Received': p.amount, 'Payment Mode': p.paymentMode, 'Reference Number': p.referenceNumber }));
         }
         const ws = XLSX.utils.json_to_sheet(data);
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
@@ -296,7 +295,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                                     <table className="w-full text-[11px] text-left border-collapse table-auto mb-4">
                                         <thead className="text-[10px] text-secondary-700 uppercase bg-secondary-100">
                                             <tr>
-                                                <th className="px-3 py-2 border border-secondary-200 w-10 text-center">Sl#</th>
+                                                <th className="px-3 py-2 border border-secondary-200 w-10 text-center">S.NO</th>
                                                 <th className="px-3 py-2 border border-secondary-200">Employee Name</th>
                                                 <th className="px-3 py-2 border border-secondary-200 text-right">Working Days</th>
                                                 <th className="px-3 py-2 border border-secondary-200 text-right">Meters Produced</th>
@@ -336,7 +335,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                         ) : (
                             <table className="w-full text-xs text-left border-collapse">
                                 <thead className="bg-secondary-100 uppercase">
-                                    <tr><th className="px-3 py-2 border">Sl#</th><th className="px-3 py-2 border">Date</th><th className="px-3 py-2 border">Morning</th><th className="px-3 py-2 border">Evening</th><th className="px-3 py-2 border text-right">OT</th><th className="px-3 py-2 border text-right">Meters</th></tr>
+                                    <tr><th className="px-3 py-2 border w-10 text-center">S.NO</th><th className="px-3 py-2 border">Date</th><th className="px-3 py-2 border">Morning</th><th className="px-3 py-2 border">Evening</th><th className="px-3 py-2 border text-right">OT</th><th className="px-3 py-2 border text-right">Meters</th></tr>
                                 </thead>
                                 <tbody>
                                     {attendanceReportData.map((rec, index) => (
@@ -355,16 +354,104 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                     <div className="overflow-x-auto">
                         <table className="w-full text-[11px] text-left border-collapse">
                             <thead className="bg-secondary-100 uppercase">
-                                <tr><th className="px-3 py-2 border">Date</th><th className="px-3 py-2 border">Invoice #</th><th className="px-3 py-2 border">Client</th><th className="px-3 py-2 border text-right">Amount</th></tr>
+                                <tr>
+                                    <th className="px-3 py-2 border w-10 text-center">S.NO</th>
+                                    <th className="px-3 py-2 border">Date</th>
+                                    <th className="px-3 py-2 border">Invoice #</th>
+                                    <th className="px-3 py-2 border">Client</th>
+                                    <th className="px-3 py-2 border text-right">Amount</th>
+                                </tr>
                             </thead>
                             <tbody>
-                                {invoiceReportData.map(inv => (<tr key={inv.id} className="border-b"><td className="px-3 py-1.5 border">{formatDateForDisplay(inv.invoiceDate)}</td><td className="px-3 py-1.5 border">{inv.invoiceNumber}</td><td className="px-3 py-1.5 border">{inv.clientName}</td><td className="px-3 py-1.5 border text-right font-bold">₹{numberFormat(inv.totalAmount)}</td></tr>))}
+                                {invoiceReportData.map((inv, index) => (
+                                    <tr key={inv.id} className="border-b">
+                                        <td className="px-3 py-1.5 border text-center">{index + 1}</td>
+                                        <td className="px-3 py-1.5 border">{formatDateForDisplay(inv.invoiceDate)}</td>
+                                        <td className="px-3 py-1.5 border">{inv.invoiceNumber}</td>
+                                        <td className="px-3 py-1.5 border">{inv.clientName}</td>
+                                        <td className="px-3 py-1.5 border text-right font-bold">₹{numberFormat(inv.totalAmount)}</td>
+                                    </tr>
+                                ))}
                             </tbody>
-                            <tfoot className="bg-secondary-50 font-bold"><tr><td colSpan={3} className="px-3 py-2 border text-right">Grand Total:</td><td className="px-3 py-2 border text-right">₹{numberFormat(invoiceSummary.totalAmount)}</td></tr></tfoot>
+                            <tfoot className="bg-secondary-50 font-bold">
+                                <tr>
+                                    <td colSpan={4} className="px-3 py-2 border text-right">Grand Total:</td>
+                                    <td className="px-3 py-2 border text-right">₹{numberFormat(invoiceSummary.totalAmount)}</td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 )}
-                {/* purchase and payment_received reports implementation would follow similar logic if needed */}
+
+                {reportType === 'purchase' && (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-[11px] text-left border-collapse">
+                            <thead className="bg-secondary-100 uppercase">
+                                <tr>
+                                    <th className="px-3 py-2 border w-10 text-center">S.NO</th>
+                                    <th className="px-3 py-2 border">Date</th>
+                                    <th className="px-3 py-2 border">PO #</th>
+                                    <th className="px-3 py-2 border">Shop</th>
+                                    <th className="px-3 py-2 border">Status</th>
+                                    <th className="px-3 py-2 border text-right">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {purchaseReportData.map((po, index) => (
+                                    <tr key={po.id} className="border-b">
+                                        <td className="px-3 py-1.5 border text-center">{index + 1}</td>
+                                        <td className="px-3 py-1.5 border">{formatDateForDisplay(po.poDate)}</td>
+                                        <td className="px-3 py-1.5 border">{po.poNumber}</td>
+                                        <td className="px-3 py-1.5 border">{po.shopName}</td>
+                                        <td className="px-3 py-1.5 border">{po.status}</td>
+                                        <td className="px-3 py-1.5 border text-right font-bold">₹{numberFormat(po.totalAmount)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                            <tfoot className="bg-secondary-50 font-bold">
+                                <tr>
+                                    <td colSpan={5} className="px-3 py-2 border text-right">Grand Total:</td>
+                                    <td className="px-3 py-2 border text-right">₹{numberFormat(purchaseSummary.totalAmount)}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                )}
+
+                {reportType === 'payment_received' && (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-[11px] text-left border-collapse">
+                            <thead className="bg-secondary-100 uppercase">
+                                <tr>
+                                    <th className="px-3 py-2 border w-10 text-center">S.NO</th>
+                                    <th className="px-3 py-2 border">Date</th>
+                                    <th className="px-3 py-2 border">Client</th>
+                                    <th className="px-3 py-2 border">Mode</th>
+                                    <th className="px-3 py-2 border">Reference</th>
+                                    <th className="px-3 py-2 border text-right">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {paymentReceivedReportData.map((p, index) => (
+                                    <tr key={p.id} className="border-b">
+                                        <td className="px-3 py-1.5 border text-center">{index + 1}</td>
+                                        <td className="px-3 py-1.5 border">{formatDateForDisplay(p.paymentDate)}</td>
+                                        <td className="px-3 py-1.5 border">{p.clientName}</td>
+                                        <td className="px-3 py-1.5 border">{p.paymentMode}</td>
+                                        <td className="px-3 py-1.5 border">{p.referenceNumber || '-'}</td>
+                                        <td className="px-3 py-1.5 border text-right font-bold">₹{numberFormat(p.amount)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                            <tfoot className="bg-secondary-50 font-bold">
+                                <tr>
+                                    <td colSpan={5} className="px-3 py-2 border text-right">Grand Total:</td>
+                                    <td className="px-3 py-2 border text-right">₹{numberFormat(paymentReceivedSummary.totalAmount)}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                )}
             </div>
         </div>
     );
