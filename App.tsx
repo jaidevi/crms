@@ -138,7 +138,7 @@ export const App: React.FC = () => {
                     phone: data.phone || '',
                     email: data.email || '',
                     gstin: data.gstin || '',
-                    hsn_sac: data.hsn_sac || '998821',
+                    hsnSac: data.hsn_sac || '998821',
                     bankName: data.bank_name || '',
                     bankAccountNumber: data.bank_account_number || '',
                     bankIfscCode: data.bank_ifsc_code || '',
@@ -172,13 +172,13 @@ export const App: React.FC = () => {
             id: d.id, name: d.name, phone: d.phone, email: d.email, address: d.address, city: d.city, state: d.state, pincode: d.pincode, gst_no: d.gst_no, pan_no: d.pan_no, payment_terms: d.payment_terms
         }))),
         fetchTable('employees', setEmployees, (data: any[]) => data.map(d => ({
-            id: d.id, name: d.name, designation: d.designation, phone: d.phone, dailyWage: d.daily_wage || 0, monthlyWage: d.monthly_wage || 0, ratePerMeter: d.rate_per_meter || 0
+            id: d.id, name: d.name, designation: d.designation, phone: d.phone, daily_wage: d.daily_wage || 0, monthly_wage: d.monthly_wage || 0, rate_per_meter: d.rate_per_meter || 0
         }))),
         fetchTable('process_types', setProcessTypes),
         fetchTable('master_items', setMasterItems),
         fetchTable('expense_categories', setExpenseCategories),
         fetchTable('purchase_orders', setPurchaseOrders, (data: any[]) => data.map(d => ({
-            id: d.id, poNumber: d.po_number, poDate: d.po_date, shopName: d.shop_name, totalAmount: d.total_amount || 0, gst_no: d.gst_no, paymentMode: d.payment_mode, status: d.status, payment_terms: d.payment_terms, referenceId: d.reference_id, bankName: d.bank_name, chequeDate: d.cheque_date, items: Array.isArray(d.purchase_order_items) ? d.purchase_order_items.map((i: any) => ({
+            id: d.id, poNumber: d.po_number, poDate: d.po_date, shopName: d.shop_name, totalAmount: d.total_amount || 0, gst_no: d.gst_no, payment_mode: d.payment_mode, status: d.status, payment_terms: d.payment_terms, reference_id: d.reference_id, bank_name: d.bank_name, cheque_date: d.cheque_date, items: Array.isArray(d.purchase_order_items) ? d.purchase_order_items.map((i: any) => ({
                 id: i.id, name: i.name, quantity: i.quantity || 0, rate: i.rate || 0, amount: i.amount || 0
             })) : []
         }))),
@@ -531,7 +531,8 @@ export const App: React.FC = () => {
               process: item.process,
               description: item.description,
               design_no: item.designNo,
-              hsn_sac: item.hsn_sac,
+              // Fix: Changed item.hsn_sac to item.hsnSac to match InvoiceItem type definition.
+              hsn_sac: item.hsnSac,
               pcs: item.pcs,
               mtr: item.mtr,
               rate: item.rate,
