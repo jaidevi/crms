@@ -172,7 +172,7 @@ export const App: React.FC = () => {
             id: d.id, name: d.name, phone: d.phone, email: d.email, address: d.address, city: d.city, state: d.state, pincode: d.pincode, gstNo: d.gst_no, panNo: d.pan_no, paymentTerms: d.payment_terms
         }))),
         fetchTable('employees', setEmployees, (data: any[]) => data.map(d => ({
-            id: d.id, name: d.name, designation: d.designation, phone: d.phone, dailyWage: d.daily_wage || 0, monthlyWage: d.monthly_wage || 0, rate_per_meter: d.rate_per_meter || 0
+            id: d.id, name: d.name, designation: d.designation, phone: d.phone, dailyWage: d.daily_wage || 0, monthlyWage: d.monthly_wage || 0, ratePerMeter: d.rate_per_meter || 0
         }))),
         fetchTable('process_types', setProcessTypes),
         fetchTable('master_items', setMasterItems),
@@ -193,7 +193,7 @@ export const App: React.FC = () => {
         })),
         fetchTable('invoices', setInvoices, (data: any[]) => data.map(d => ({
             id: d.id, invoiceNumber: d.invoice_number, invoiceDate: d.invoice_date, clientName: d.client_name, subTotal: d.sub_total || 0, totalCgst: d.total_cgst || 0, totalSgst: d.total_sgst || 0, totalTaxAmount: d.total_tax_amount || 0, roundedOff: d.rounded_off || 0, totalAmount: d.total_amount || 0, taxType: d.tax_type || 'GST', items: Array.isArray(d.invoice_items) ? d.invoice_items.map((i: any) => ({
-                id: i.id, challanNumber: i.challan_number, challanDate: i.challan_date, process: i.process, description: i.description, designNo: i.design_no, hsn_sac: i.hsn_sac,
+                id: i.id, challanNumber: i.challan_number, challanDate: i.challan_date, process: i.process, description: i.description, designNo: i.design_no, hsnSac: i.hsn_sac,
                 pcs: i.pcs || 0, mtr: i.mtr || 0, rate: i.rate || 0, amount: i.amount || 0, subtotal: i.subtotal || 0, cgst: i.cgst || 0, sgst: i.sgst || 0
             })) : []
         }))),
@@ -273,7 +273,6 @@ export const App: React.FC = () => {
     if (!error) setClients(prev => prev.filter(c => c.id !== id));
   };
 
-  // Fix: Corrected property names from gst_no/pan_no to gstNo/panNo to match the Omit<PurchaseShop, 'id'> type
   const handleAddPurchaseShop = async (newShop: Omit<PurchaseShop, 'id'>) => {
     const { data, error } = await supabase.from('purchase_shops').insert([{
         name: newShop.name, phone: newShop.phone, email: newShop.email, address: newShop.address,
@@ -396,7 +395,6 @@ export const App: React.FC = () => {
         const addedChallan = { ...newChallan, id: data[0].id };
         setDeliveryChallans(prev => [...prev, addedChallan]);
         
-        // Increment numbering config
         const nextNum = currentConfig.nextNumber + 1;
         await supabase.from('numbering_configs').update({ next_number: nextNum }).eq('id', configId);
         
@@ -449,6 +447,111 @@ export const App: React.FC = () => {
     else alert("Error deleting challan: " + error.message);
   };
 
+  const handleAddInvoice = async (newInvoice: Omit<Invoice, 'id'>) => {
+      const { data, error } = await supabase.from('invoices').insert([{
+          invoice_number: newInvoice.invoiceNumber,
+          invoice_date: newInvoice.invoiceDate,
+          client_name: newInvoice.clientName,
+          sub_total: newInvoice.subTotal,
+          total_cgst: newInvoice.totalCgst,
+          total_sgst: newInvoice.totalSgst,
+          total_tax_amount: newInvoice.totalTaxAmount,
+          rounded_off: newInvoice.roundedOff,
+          total_amount: newInvoice.totalAmount,
+          tax_type: newInvoice.taxType
+      }]).select();
+
+      if (!error && data) {
+          const invoiceId = data[0].id;
+          const lineItems = newInvoice.items.map(item => ({
+              invoice_id: invoiceId,
+              challan_number: item.challanNumber,
+              challan_date: item.challanDate,
+              process: item.process,
+              description: item.description,
+              design_no: item.designNo,
+              hsn_sac: item.hsnSac,
+              pcs: item.pcs,
+              mtr: item.mtr,
+              rate: item.rate,
+              subtotal: item.subtotal,
+              cgst: item.cgst,
+              sgst: item.sgst,
+              amount: item.amount
+          }));
+
+          const { error: itemsError } = await supabase.from('invoice_items').insert(lineItems);
+          if (itemsError) {
+              alert("Error saving invoice items: " + itemsError.message);
+              return;
+          }
+
+          // Increment numbering config if auto
+          const configId = newInvoice.taxType === 'NGST' ? 'invoice_ngst' : 'invoice';
+          const currentConfig = newInvoice.taxType === 'NGST' ? ngstInvoiceNumberConfig : invoiceNumberConfig;
+          
+          if (currentConfig.mode === 'auto') {
+              const nextNum = currentConfig.nextNumber + 1;
+              await supabase.from('numbering_configs').update({ next_number: nextNum }).eq('id', configId);
+              if (newInvoice.taxType === 'NGST') {
+                  setNgstInvoiceNumberConfig(prev => ({ ...prev, nextNumber: nextNum }));
+              } else {
+                  setInvoiceNumberConfig(prev => ({ ...prev, nextNumber: nextNum }));
+              }
+          }
+
+          setInvoices(prev => [...prev, { ...newInvoice, id: invoiceId }]);
+      } else if (error) {
+          alert("Error saving invoice: " + error.message);
+      }
+  };
+
+  const handleUpdateInvoice = async (id: string, updatedInvoice: Omit<Invoice, 'id'>) => {
+      const { error } = await supabase.from('invoices').update({
+          invoice_number: updatedInvoice.invoiceNumber,
+          invoice_date: updatedInvoice.invoiceDate,
+          client_name: updatedInvoice.clientName,
+          sub_total: updatedInvoice.subTotal,
+          total_cgst: updatedInvoice.totalCgst,
+          total_sgst: updatedInvoice.totalSgst,
+          total_tax_amount: updatedInvoice.totalTaxAmount,
+          rounded_off: updatedInvoice.roundedOff,
+          total_amount: updatedInvoice.totalAmount,
+          tax_type: updatedInvoice.taxType
+      }).eq('id', id);
+
+      if (!error) {
+          // Delete old items and insert new ones
+          await supabase.from('invoice_items').delete().eq('invoice_id', id);
+          
+          const lineItems = updatedInvoice.items.map(item => ({
+              invoice_id: id,
+              challan_number: item.challanNumber,
+              challan_date: item.challanDate,
+              process: item.process,
+              description: item.description,
+              design_no: item.designNo,
+              hsn_sac: item.hsnSac,
+              pcs: item.pcs,
+              mtr: item.mtr,
+              rate: item.rate,
+              subtotal: item.subtotal,
+              cgst: item.cgst,
+              sgst: item.sgst,
+              amount: item.amount
+          }));
+
+          const { error: itemsError } = await supabase.from('invoice_items').insert(lineItems);
+          if (itemsError) {
+              alert("Error updating invoice items: " + itemsError.message);
+          }
+
+          setInvoices(prev => prev.map(inv => inv.id === id ? { ...updatedInvoice, id } : inv));
+      } else {
+          alert("Error updating invoice: " + error.message);
+      }
+  };
+
   const renderActiveScreen = () => {
     switch (activeScreen) {
         case 'Dashboard':
@@ -469,7 +572,7 @@ export const App: React.FC = () => {
         case 'Outsourcing':
             return <DeliveryChallanScreen isOutsourcingScreen deliveryChallans={deliveryChallans} onAddChallan={handleAddChallan} onUpdateChallan={handleUpdateChallan} onDeleteChallan={handleDeleteChallan} clients={clients} onAddClient={handleAddClient} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} processTypes={processTypes} onAddProcessType={handleAddProcessType} deliveryChallanNumberConfig={outsourcingChallanNumberConfig} invoices={invoices} onDeleteInvoice={() => {}} companyDetails={companyDetails} employees={employees} onAddEmployee={handleAddEmployee} />;
         case 'Invoices':
-            return <InvoicesScreen clients={clients} deliveryChallans={deliveryChallans} processTypes={processTypes} onAddInvoice={() => {}} onUpdateInvoice={() => {}} invoiceNumberConfig={invoiceNumberConfig} ngstInvoiceNumberConfig={ngstInvoiceNumberConfig} invoices={invoices} companyDetails={companyDetails} />;
+            return <InvoicesScreen clients={clients} deliveryChallans={deliveryChallans} processTypes={processTypes} onAddInvoice={handleAddInvoice} onUpdateInvoice={handleUpdateInvoice} invoiceNumberConfig={invoiceNumberConfig} ngstInvoiceNumberConfig={ngstInvoiceNumberConfig} invoices={invoices} companyDetails={companyDetails} />;
         case 'Payment Received':
             return <PaymentReceivedScreen payments={paymentsReceived} onAddPayment={() => {}} onUpdatePayment={() => {}} onDeletePayment={() => {}} clients={clients} onAddClient={handleAddClient} />;
         case 'Attendance':

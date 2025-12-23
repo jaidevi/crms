@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { CloseIcon, CalendarIcon, CameraIcon, PlusIcon, TrashIcon, SearchIcon, ChevronDownIcon } from './Icons';
 import DatePicker from './DatePicker';
@@ -142,7 +141,7 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                 const percValue = parseFloat(percInput.replace(/[^\d.-]/g, '')) || 0;
                 
                 if (currentMtr > 0) {
-                    // Correct Calculation: Meter + Gain Percentage (e.g. 1000 + 5% = 1050)
+                    // Calculation: Meter + (Meter * Percentage / 100)
                     const gainAmount = (currentMtr * percValue) / 100;
                     const calculatedFinal = currentMtr + gainAmount;
                     updated.finalMeter = Number(calculatedFinal.toFixed(2));
@@ -475,7 +474,7 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                                             <span className={`block truncate ${challan.partyName ? 'text-gray-900' : 'text-gray-500'}`}>
                                                 {challan.partyName || 'Select Party'}
                                             </span>
-                                            <ChevronDownIcon className="h-5 w-5 text-gray-400" />
+                                            <ChevronDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
                                         </button>
                                         {isPartyDropdownOpen && (
                                             <div className="absolute z-30 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
@@ -612,7 +611,14 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Final Meter</label>
-                                    <input type="number" name="finalMeter" value={challan.finalMeter || ''} readOnly className={`${commonInputClasses} bg-gray-100 font-medium cursor-not-allowed`} tabIndex={-1} />
+                                    <input 
+                                        type="text" 
+                                        name="finalMeter" 
+                                        value={challan.finalMeter || ''} 
+                                        readOnly 
+                                        className={`${commonInputClasses} bg-gray-100 font-medium cursor-not-allowed border-gray-200`} 
+                                        tabIndex={-1} 
+                                    />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Width</label>

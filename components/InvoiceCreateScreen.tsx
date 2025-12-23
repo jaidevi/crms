@@ -2,11 +2,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { DeliveryChallan, ProcessType, Invoice, InvoiceItem, InvoiceNumberConfig, Client, CompanyDetails } from '../types';
 import DatePicker from './DatePicker';
-import { CloseIcon, CalendarIcon, PrintIcon } from './Icons';
+import { CloseIcon, CalendarIcon, PrintIcon, SpinnerIcon } from './Icons';
 
 interface InvoiceCreateScreenProps {
     onCancel: () => void;
-    onSave: (invoice: Omit<Invoice, 'id'>) => void;
+    onSave: (invoice: Omit<Invoice, 'id'>) => Promise<void>;
     client: Client;
     challansToInvoice: DeliveryChallan[];
     invoiceNumberConfig: InvoiceNumberConfig;
@@ -69,6 +69,7 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({
     const [isDatePickerOpen, setDatePickerOpen] = useState(false);
     const [lineItems, setLineItems] = useState<InvoiceItem[]>([]);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (invoiceToEdit) {
@@ -100,7 +101,6 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({
             const normalize = (str: string) => str.trim().toLowerCase().replace(/^"/, '').replace(/"$/, '');
 
             sortedChallans.forEach(challan => {
-                // Determine processes to use: splitProcess if available, else standard process list
                 const processList = (challan.splitProcess && challan.splitProcess.length > 0) 
                     ? challan.splitProcess 
                     : challan.process;
@@ -132,7 +132,6 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({
                     groupIdentifier = `${designPart} - ${processName}`;
                 }
 
-                // Group key includes rate to separate items if rates differ
                 const groupKey = `${groupIdentifier}|${totalRate}|${hsnSac}`;
 
                 if (!groupedItemsMap.has(groupKey)) {
@@ -151,8 +150,6 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({
 
                 const group = groupedItemsMap.get(groupKey);
                 group.pcs += challan.pcs;
-                
-                // FIX: Use Final Meter if it exists, fallback to Mtr.
                 const meterToBill = (challan.finalMeter && challan.finalMeter > 0) ? challan.finalMeter : challan.mtr;
                 group.mtr += meterToBill;
 
@@ -239,15 +236,15 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSaveAndPrint = () => {
+    const handleSaveAndPrint = async () => {
         if (!validate()) {
             alert('Please check the form for errors. Ensure all required fields are filled and rates are valid.');
             return;
         }
         
+        setIsSaving(true);
         try {
-            window.print();
-            
+            // Commit to Database/State first
             const finalTaxType: 'GST' | 'NGST' = taxType === 'NGST' ? 'NGST' : 'GST';
             const invoiceData: Omit<Invoice, 'id'> = { 
                 invoiceNumber, 
@@ -263,13 +260,16 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({
                 taxType: finalTaxType
             };
 
-            setTimeout(() => {
-                onSave(invoiceData);
-            }, 500);
+            // Wait for DB save
+            await onSave(invoiceData);
+            
+            // Now Print (optional, since it's saved)
+            window.print();
 
         } catch (error) {
             console.error("Error during save and print:", error);
             alert("An error occurred while saving. Please try again.");
+            setIsSaving(false);
         }
     };
     
@@ -292,18 +292,34 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({
     return (
         <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 lg:p-8">
             <div className="flex justify-end items-center mb-6 no-print space-x-2">
-                <button onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-semibold hover:bg-gray-300">
+                <button 
+                    onClick={onCancel} 
+                    disabled={isSaving}
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-semibold hover:bg-gray-300 disabled:opacity-50"
+                >
                     Cancel
                 </button>
-                <button onClick={handlePrintDraft} className="px-4 py-2 bg-secondary-600 text-white rounded-md text-sm font-semibold hover:bg-secondary-700">
+                <button 
+                    onClick={handlePrintDraft} 
+                    disabled={isSaving}
+                    className="px-4 py-2 bg-secondary-600 text-white rounded-md text-sm font-semibold hover:bg-secondary-700 disabled:opacity-50"
+                >
                     <span className="flex items-center"><PrintIcon className="w-4 h-4 mr-1"/> Print Draft</span>
                 </button>
                 <button 
                     onClick={handleSaveAndPrint} 
                     type="button"
-                    className="px-5 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 shadow-sm"
+                    disabled={isSaving}
+                    className="px-5 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 shadow-sm disabled:bg-blue-400 flex items-center"
                 >
-                    {invoiceToEdit ? 'Update & Print Invoice' : 'Save & Print Invoice'}
+                    {isSaving ? (
+                        <>
+                            <SpinnerIcon className="w-4 h-4 mr-2" />
+                            Processing...
+                        </>
+                    ) : (
+                        invoiceToEdit ? 'Update & Print Invoice' : 'Save & Print Invoice'
+                    )}
                 </button>
             </div>
 

@@ -34,8 +34,8 @@ interface InvoicesScreenProps {
     clients: Client[];
     deliveryChallans: DeliveryChallan[];
     processTypes: ProcessType[];
-    onAddInvoice: (newInvoice: Omit<Invoice, 'id'>) => void;
-    onUpdateInvoice: (id: string, updatedInvoice: Omit<Invoice, 'id'>) => void;
+    onAddInvoice: (newInvoice: Omit<Invoice, 'id'>) => Promise<void>;
+    onUpdateInvoice: (id: string, updatedInvoice: Omit<Invoice, 'id'>) => Promise<void>;
     invoiceNumberConfig: InvoiceNumberConfig;
     ngstInvoiceNumberConfig: InvoiceNumberConfig;
     invoices: Invoice[];
@@ -183,19 +183,28 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
         setInvoiceToEdit(null);
     };
     
-    const handleSaveInvoice = (invoiceData: Omit<Invoice, 'id'>) => {
-        if (invoiceToEdit) {
-            onUpdateInvoice(invoiceToEdit.id, invoiceData);
-            alert(`Invoice ${invoiceData.invoiceNumber} updated successfully!`);
-        } else {
-            onAddInvoice(invoiceData);
-            alert(`Invoice ${invoiceData.invoiceNumber} created successfully!`);
+    const handleSaveInvoice = async (invoiceData: Omit<Invoice, 'id'>) => {
+        try {
+            if (invoiceToEdit) {
+                await onUpdateInvoice(invoiceToEdit.id, invoiceData);
+                alert(`Invoice ${invoiceData.invoiceNumber} updated successfully!`);
+            } else {
+                await onAddInvoice(invoiceData);
+                alert(`Invoice ${invoiceData.invoiceNumber} created successfully!`);
+            }
+            
+            // Success: Clean up and switch tab
+            setCreationData(null);
+            setInvoiceToEdit(null);
+            setFilteredChallans([]);
+            setSelectedChallanIds(new Set());
+            setHasSearched(false);
+            setActiveTab('generated');
+            
+        } catch (error: any) {
+            console.error("Failed to save invoice:", error);
+            alert(`Failed to save invoice: ${error.message || "Unknown error"}`);
         }
-        setCreationData(null);
-        setInvoiceToEdit(null);
-        setFilteredChallans([]);
-        setSelectedChallanIds(new Set());
-        setHasSearched(false);
     };
 
     const handleEditInvoice = (invoice: Invoice) => {
@@ -205,12 +214,10 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
             return;
         }
         setInvoiceToEdit(invoice);
-        // We set creationData mostly to trigger the InvoiceCreateScreen view, 
-        // but the data inside (challans) is less relevant as invoiceToEdit will take precedence
         setCreationData({
             client,
-            challans: [], // Empty because we load from invoice items
-            invoiceType: 'process', // Default or derived if stored
+            challans: [], 
+            invoiceType: 'process', 
             taxType: invoice.taxType || 'GST'
         });
     };
