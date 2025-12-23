@@ -210,7 +210,11 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
   }, [deliveryChallans, searchTerm, activeTab, invoicedChallanNumbers]);
   
   const filteredInvoices = useMemo(() => {
-    const sortedList = [...invoices].sort((a, b) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime());
+    // Modified sort to prioritize numerical ascending order on the Labour Bill ID.
+    const sortedList = [...invoices].sort((a, b) => {
+        return a.invoiceNumber.localeCompare(b.invoiceNumber, undefined, { numeric: true, sensitivity: 'base' });
+    });
+    
     if (!searchTerm) {
         return sortedList;
     }

@@ -114,7 +114,11 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ employees, attendanceReco
                  isClientMatch = selectedClient ? inv.clientName === selectedClient.name : false;
             }
             return isDateInRange && isClientMatch;
-        }).sort((a, b) => new Date(a.invoiceDate).getTime() - new Date(b.invoiceDate).getTime());
+        }).sort((a, b) => {
+            // Sort primarily by Invoice Number numerically (ascending)
+            // Use numeric: true to handle cases like "210" appearing before "226" correctly.
+            return a.invoiceNumber.localeCompare(b.invoiceNumber, undefined, { numeric: true, sensitivity: 'base' });
+        });
     }, [invoices, startDate, endDate, selectedEntityId, clients, reportType]);
 
     const invoiceSummary = useMemo(() => {
