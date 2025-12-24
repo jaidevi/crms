@@ -41,6 +41,7 @@ export interface Client {
   gstNo: string;
   panNo: string;
   paymentTerms: string;
+  openingBalance: number;
   processes: ClientProcess[];
 }
 
@@ -56,6 +57,7 @@ export interface PurchaseShop {
   gstNo: string;
   panNo: string;
   paymentTerms: string;
+  openingBalance: number;
 }
 
 export interface Employee {
@@ -150,6 +152,7 @@ export interface TimberExpense {
   id: string;
   date: string;
   supplierName: string;
+  /* FIX: Added openingBalance to TimberExpense interface */
   openingBalance: number;
   loadWeight: number;
   vehicleWeight: number;

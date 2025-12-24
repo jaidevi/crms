@@ -25,6 +25,7 @@ const BLANK_EXPENSE: Omit<TimberExpense, 'id'> = {
     cft: 0,
     rate: 0,
     amount: 0,
+    /* Add openingBalance to BLANK_EXPENSE */
     notes: '',
     bankName: '',
     chequeDate: '',
@@ -94,13 +95,27 @@ const TimberExpenseForm: React.FC<TimberExpenseFormProps> = ({ onClose, onSave, 
             setShowAddSupplierModal(true);
             return;
         }
-        setExpense(prev => ({...prev, supplierName: value}));
+
+        // Find selected shop to get its opening balance
+        const selectedShop = suppliers.find(s => s.name === value);
+        const shopOpeningBalance = selectedShop ? selectedShop.openingBalance : 0;
+
+        setExpense(prev => ({
+            ...prev, 
+            supplierName: value,
+            openingBalance: shopOpeningBalance // Auto-populate opening balance from master data
+        }));
+
         if (errors.supplierName) setErrors(prev => ({...prev, supplierName: ''}));
     }
 
     const handleSaveSupplier = (newShop: Omit<PurchaseShop, 'id'>) => {
         onAddSupplier(newShop);
-        setExpense(prev => ({...prev, supplierName: newShop.name}));
+        setExpense(prev => ({
+            ...prev, 
+            supplierName: newShop.name,
+            openingBalance: newShop.openingBalance
+        }));
         setShowAddSupplierModal(false);
     };
     
@@ -114,7 +129,6 @@ const TimberExpenseForm: React.FC<TimberExpenseFormProps> = ({ onClose, onSave, 
         const newErrors: { [key: string]: string } = {};
         if (!expense.supplierName.trim()) newErrors.supplierName = "Supplier is required.";
         
-        // Validation for the relationship if both are provided
         if (expense.loadWeight > 0 && expense.vehicleWeight > 0 && Number(expense.loadWeight) <= Number(expense.vehicleWeight)) {
             newErrors.loadWeight = "Load weight must be greater than vehicle weight.";
         }
@@ -149,7 +163,7 @@ const TimberExpenseForm: React.FC<TimberExpenseFormProps> = ({ onClose, onSave, 
         <>
            {showAddSupplierModal && <PurchaseShopModal onClose={() => setShowAddSupplierModal(false)} onSave={handleSaveSupplier} existingShopNames={suppliers.map(s => s.name)} />}
             {showAddBankModal && <AddBankModal onClose={() => setShowAddBankModal(false)} onSave={handleSaveBank} existingBankNames={bankNames} />}
-            <div className="fixed inset-0 bg-black bg-opacity-60 z-40 flex justify-center items-start p-4 pt-20" role="dialog">
+            <div className="fixed inset-0 bg-black bg-opacity-60 z-40 flex justify-center items-start p-4 pt-10" role="dialog">
                 <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl animate-fade-in-down overflow-hidden">
                     <div className="flex items-center justify-between p-5 border-b">
                         <h2 className="text-xl font-bold text-gray-800">{modalTitle}</h2>

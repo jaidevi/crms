@@ -172,13 +172,14 @@ export const App: React.FC = () => {
             id: d.id, name: d.name, phone: d.phone, email: d.email, address: d.address, city: d.city, state: d.state, pincode: d.pincode, gstNo: d.gst_no, panNo: d.pan_no, paymentTerms: d.payment_terms
         }))),
         fetchTable('employees', setEmployees, (data: any[]) => data.map(d => ({
-            id: d.id, name: d.name, designation: d.designation, phone: d.phone, daily_wage: d.daily_wage || 0, monthly_wage: d.monthly_wage || 0, rate_per_meter: d.rate_per_meter || 0
+            id: d.id, name: d.name, designation: d.designation, phone: d.phone, dailyWage: d.daily_wage || 0, monthlyWage: d.monthly_wage || 0, ratePerMeter: d.rate_per_meter || 0
         }))),
         fetchTable('process_types', setProcessTypes),
         fetchTable('master_items', setMasterItems),
         fetchTable('expense_categories', setExpenseCategories),
         fetchTable('purchase_orders', setPurchaseOrders, (data: any[]) => data.map(d => ({
-            id: d.id, poNumber: d.po_number, poDate: d.po_date, shopName: d.shop_name, totalAmount: d.total_amount || 0, gst_no: d.gst_no, payment_mode: d.payment_mode, status: d.status, payment_terms: d.payment_terms, reference_id: d.reference_id, bank_name: d.bank_name, cheque_date: d.cheque_date, items: Array.isArray(d.purchase_order_items) ? d.purchase_order_items.map((i: any) => ({
+            /* FIX: Fixed camelCase naming mismatches for purchase orders */
+            id: d.id, poNumber: d.po_number, poDate: d.po_date, shopName: d.shop_name, totalAmount: d.total_amount || 0, gstNo: d.gst_no, paymentMode: d.payment_mode, status: d.status, paymentTerms: d.payment_terms, referenceId: d.reference_id, bankName: d.bank_name, chequeDate: d.cheque_date, items: Array.isArray(d.purchase_order_items) ? d.purchase_order_items.map((i: any) => ({
                 id: i.id, name: i.name, quantity: i.quantity || 0, rate: i.rate || 0, amount: i.amount || 0
             })) : []
         }))),
@@ -204,10 +205,12 @@ export const App: React.FC = () => {
             id: d.id, employeeId: d.employee_id, date: d.date, amount: d.amount || 0, paidAmount: d.paid_amount || 0, notes: d.notes
         }))),
         fetchTable('other_expenses', setOtherExpenses, (data: any[]) => data.map(d => ({
-            id: d.id, date: d.date, itemName: d.item_name, amount: d.amount || 0, notes: d.notes, bankName: d.bank_name, chequeDate: d.cheque_date, paymentMode: d.payment_mode, paymentStatus: d.payment_status, payment_terms: d.payment_terms
+            /* FIX: Fixed camelCase naming mismatch for other_expenses paymentTerms */
+            id: d.id, date: d.date, itemName: d.item_name, amount: d.amount || 0, notes: d.notes, bankName: d.bank_name, chequeDate: d.cheque_date, paymentMode: d.payment_mode, paymentStatus: d.payment_status, paymentTerms: d.payment_terms
         }))),
         fetchTable('timber_expenses', setTimberExpenses, (data: any[]) => data.map(d => ({
-            id: d.id, date: d.date, supplierName: d.supplier_name, openingBalance: d.opening_balance || 0, loadWeight: d.load_weight || 0, vehicleWeight: d.vehicle_weight || 0, cft: d.cft || 0, rate: d.rate || 0, amount: d.amount || 0, notes: d.notes, paymentMode: d.payment_mode, paymentStatus: d.payment_status, bankName: d.bank_name, chequeDate: d.cheque_date, payment_terms: d.payment_terms
+            /* FIX: Fixed camelCase naming mismatch for timber_expenses paymentTerms */
+            id: d.id, date: d.date, supplierName: d.supplier_name, openingBalance: d.opening_balance || 0, loadWeight: d.load_weight || 0, vehicleWeight: d.vehicle_weight || 0, cft: d.cft || 0, rate: d.rate || 0, amount: d.amount || 0, notes: d.notes, paymentMode: d.payment_mode, paymentStatus: d.payment_status, bankName: d.bank_name, chequeDate: d.cheque_date, paymentTerms: d.payment_terms
         }))),
         fetchTable('supplier_payments', setSupplierPayments, (data: any[]) => data.map(d => ({
             id: d.id, paymentNumber: d.payment_number, date: d.date, supplierName: d.supplier_name, amount: d.amount || 0, paymentMode: d.payment_mode, referenceId: d.reference_id, image: d.image
