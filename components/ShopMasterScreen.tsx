@@ -101,6 +101,7 @@ const ClientMasterScreen: React.FC<ClientMasterScreenProps> = ({ clients, onAddC
                 <th scope="col" className="px-6 py-3">GST No</th>
                 <th scope="col" className="px-6 py-3">PAN No</th>
                 <th scope="col" className="px-6 py-3">Payment Terms</th>
+                <th scope="col" className="px-6 py-3 text-right">Opening Bal</th>
                 <th scope="col" className="px-6 py-3 text-center">Actions</th>
               </tr>
             </thead>
@@ -114,6 +115,7 @@ const ClientMasterScreen: React.FC<ClientMasterScreenProps> = ({ clients, onAddC
                   <td className="px-6 py-4">{client.gstNo || '-'}</td>
                   <td className="px-6 py-4">{client.panNo || '-'}</td>
                   <td className="px-6 py-4">{client.paymentTerms || '-'}</td>
+                  <td className="px-6 py-4 text-right">₹{(client.openingBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                   <td className="px-6 py-4 text-center">
                     <div className="flex items-center justify-center gap-4">
                         <button onClick={() => handleOpenModalForEdit(client)} className="p-1 text-gray-400 hover:text-blue-500 rounded-full hover:bg-blue-50" aria-label="Edit client">

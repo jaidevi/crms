@@ -23,6 +23,7 @@ const BLANK_SHOP: PurchaseShop = {
     gstNo: '',
     panNo: '',
     paymentTerms: 'Due on receipt',
+    openingBalance: 0,
 };
 
 const PurchaseShopModal: React.FC<PurchaseShopModalProps> = ({ onClose, onSave, existingShopNames, shopToEdit }) => {
@@ -45,15 +46,15 @@ const PurchaseShopModal: React.FC<PurchaseShopModalProps> = ({ onClose, onSave, 
 
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
+        const { name, value, type } = e.target;
         
         if (name === 'state') {
             const stateData = indianStates.find(s => s.state === value);
             setAvailableCities(stateData ? stateData.cities.sort() : []);
             setShop(prev => ({ ...prev, state: value, city: '' }));
         } else {
-            const finalValue = name === 'name' ? value.toUpperCase() : value;
-            setShop(prev => ({ ...prev, [name]: finalValue }));
+            const finalValue = (name === 'name' || name === 'gstNo' || name === 'panNo') ? value.toUpperCase() : value;
+            setShop(prev => ({ ...prev, [name]: type === 'number' ? (value === '' ? 0 : Number(value)) : finalValue }));
         }
 
         if (errors[name]) {
@@ -115,16 +116,16 @@ const PurchaseShopModal: React.FC<PurchaseShopModalProps> = ({ onClose, onSave, 
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-60 z-[60] flex justify-center items-start p-4 pt-10" role="dialog" aria-modal="true" aria-labelledby="shop-master-modal-title">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 animate-fade-in-down">
-                <div className="flex items-center justify-between p-4 border-b">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 animate-fade-in-down overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="flex items-center justify-between p-4 border-b shrink-0">
                     <h2 id="shop-master-modal-title" className="text-lg font-semibold text-gray-800">{modalTitle}</h2>
                     <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-200" aria-label="Close">
                         <CloseIcon className="w-5 h-5 text-gray-600" />
                     </button>
                 </div>
-                <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
-                    <fieldset className="border border-gray-200 rounded-lg p-4">
-                        <legend className="text-base font-semibold text-gray-900 px-2">Basic Information</legend>
+                <div className="p-6 space-y-6 overflow-y-auto flex-grow">
+                    <fieldset className="border border-gray-200 rounded-lg p-4 relative">
+                        <legend className="text-sm font-semibold text-gray-900 bg-white px-2 absolute -top-2.5 left-4">Basic Information</legend>
                         <div className="space-y-4 pt-4">
                             <div>
                                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -148,8 +149,8 @@ const PurchaseShopModal: React.FC<PurchaseShopModalProps> = ({ onClose, onSave, 
                         </div>
                     </fieldset>
                     
-                    <fieldset className="border border-gray-200 rounded-lg p-4">
-                        <legend className="text-base font-semibold text-gray-900 px-2">Address</legend>
+                    <fieldset className="border border-gray-200 rounded-lg p-4 relative">
+                        <legend className="text-sm font-semibold text-gray-900 bg-white px-2 absolute -top-2.5 left-4">Address</legend>
                         <div className="space-y-4 pt-4">
                             <div>
                                 <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">Address</label>
@@ -182,9 +183,9 @@ const PurchaseShopModal: React.FC<PurchaseShopModalProps> = ({ onClose, onSave, 
                         </div>
                     </fieldset>
 
-                    <fieldset className="border border-gray-200 rounded-lg p-4">
-                        <legend className="text-base font-semibold text-gray-900 px-2">Financial &amp; Tax Details</legend>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                    <fieldset className="border border-gray-200 rounded-lg p-4 relative">
+                        <legend className="text-sm font-semibold text-gray-900 bg-white px-2 absolute -top-2.5 left-4">Financial & Tax Details</legend>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
                             <div>
                                 <label htmlFor="gstNo" className="block text-sm font-medium text-gray-700 mb-1">GST NO</label>
                                 <input id="gstNo" name="gstNo" type="text" value={shop.gstNo} onChange={handleChange} className={`${inputClasses} ${errors.gstNo ? 'border-red-500' : ''}`} />
@@ -203,10 +204,14 @@ const PurchaseShopModal: React.FC<PurchaseShopModalProps> = ({ onClose, onSave, 
                                     ))}
                                 </select>
                             </div>
+                            <div>
+                                <label htmlFor="openingBalance" className="block text-sm font-medium text-gray-700 mb-1">Opening Balance</label>
+                                <input id="openingBalance" name="openingBalance" type="number" step="0.01" value={shop.openingBalance || ''} onChange={handleChange} className={inputClasses} placeholder="0.00" />
+                            </div>
                         </div>
                     </fieldset>
                 </div>
-                <div className="flex justify-end items-center p-4 bg-gray-50 border-t rounded-b-lg space-x-3">
+                <div className="flex justify-end items-center p-4 bg-gray-50 border-t rounded-b-lg space-x-3 shrink-0">
                     <button onClick={onClose} type="button" className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-semibold hover:bg-gray-300">Cancel</button>
                     <button onClick={handleSave} type="button" className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700">{saveButtonText}</button>
                 </div>

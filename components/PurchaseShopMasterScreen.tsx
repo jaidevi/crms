@@ -97,6 +97,7 @@ const PurchaseShopMasterScreen: React.FC<PurchaseShopMasterScreenProps> = ({ sho
                 <th scope="col" className="px-6 py-3">GST No</th>
                 <th scope="col" className="px-6 py-3">PAN No</th>
                 <th scope="col" className="px-6 py-3">Payment Terms</th>
+                <th scope="col" className="px-6 py-3 text-right">Opening Bal</th>
                 <th scope="col" className="px-6 py-3 text-center">Actions</th>
               </tr>
             </thead>
@@ -110,6 +111,7 @@ const PurchaseShopMasterScreen: React.FC<PurchaseShopMasterScreenProps> = ({ sho
                   <td className="px-6 py-4">{shop.gstNo || '-'}</td>
                   <td className="px-6 py-4">{shop.panNo || '-'}</td>
                   <td className="px-6 py-4">{shop.paymentTerms || '-'}</td>
+                  <td className="px-6 py-4 text-right">₹{(shop.openingBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                   <td className="px-6 py-4 text-center">
                     <div className="flex items-center justify-center gap-4">
                         <button onClick={() => handleOpenModalForEdit(shop)} className="p-1 text-gray-400 hover:text-blue-500 rounded-full hover:bg-blue-50" aria-label="Edit shop">

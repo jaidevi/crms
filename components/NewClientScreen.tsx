@@ -21,6 +21,7 @@ interface ClientProcessLineItem {
     amount: number;
 }
 
+// Fixed: Added missing 'openingBalance' property.
 const BLANK_CLIENT: Client = {
     id: '',
     name: '',
@@ -33,6 +34,7 @@ const BLANK_CLIENT: Client = {
     gstNo: '',
     panNo: '',
     paymentTerms: 'Due on receipt',
+    openingBalance: 0,
     processes: [],
 };
 

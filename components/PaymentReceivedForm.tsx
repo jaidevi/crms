@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { CloseIcon, CalendarIcon, ImageIcon } from './Icons';
 import DatePicker from './DatePicker';
@@ -71,7 +72,8 @@ const PaymentReceivedForm: React.FC<PaymentReceivedFormProps> = ({ onClose, onSa
     };
 
     const handleSaveClient = (clientName: string) => {
-        const newClient: Omit<Client, 'id'> = { name: clientName, phone: '', email: '', address: '', city: '', state: '', pincode: '', gstNo: '', panNo: '', paymentTerms: 'Due on receipt', processes: [] };
+        // Fixed: Added missing 'openingBalance' property.
+        const newClient: Omit<Client, 'id'> = { name: clientName, phone: '', email: '', address: '', city: '', state: '', pincode: '', gstNo: '', panNo: '', paymentTerms: 'Due on receipt', openingBalance: 0, processes: [] };
         onAddClient(newClient);
         setPayment(prev => ({ ...prev, clientName }));
         setShowAddClientModal(false);

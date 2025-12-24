@@ -9,7 +9,7 @@ interface NewPartyScreenProps {
     setActiveScreen: (screen: string) => void;
 }
 
-// FIX: Removed 'contactPerson' property which does not exist in the 'PurchaseShop' type.
+/* FIX: Added missing openingBalance property */
 const BLANK_SHOP: Omit<PurchaseShop, 'id'> = {
     name: '',
     phone: '',
@@ -21,6 +21,7 @@ const BLANK_SHOP: Omit<PurchaseShop, 'id'> = {
     gstNo: '',
     panNo: '',
     paymentTerms: 'Due on receipt',
+    openingBalance: 0,
 };
 
 const NewPartyScreen: React.FC<NewPartyScreenProps> = ({ shops, onAddShop, setActiveScreen }) => {

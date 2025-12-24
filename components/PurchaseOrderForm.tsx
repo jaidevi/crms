@@ -159,8 +159,9 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
     const totalAmount = useMemo(() => items.reduce((sum, item) => sum + item.amount, 0), [items]);
 
     const handleSaveShop = (name: string) => {
+        /* FIX: Added missing openingBalance property */
         const newShop: Omit<PurchaseShop, 'id'> = {
-            name, phone: '', email: '', address: '', city: '', state: '', pincode: '', gstNo: '', panNo: '', paymentTerms: 'Due on receipt'
+            name, phone: '', email: '', address: '', city: '', state: '', pincode: '', gstNo: '', panNo: '', paymentTerms: 'Due on receipt', openingBalance: 0
         };
         onAddPurchaseShop(newShop);
         setShopName(name);
