@@ -166,10 +166,10 @@ export const App: React.FC = () => {
     // Parallel fetch for remaining data
     await Promise.all([
         fetchTable('clients', setClients, (data: any[]) => data.map(d => ({
-            id: d.id, name: d.name, phone: d.phone, email: d.email, address: d.address, city: d.city, state: d.state, pincode: d.pincode, gst_no: d.gst_no, pan_no: d.pan_no, payment_terms: d.payment_terms, processes: Array.isArray(d.processes) ? d.processes : []
+            id: d.id, name: d.name, phone: d.phone, email: d.email, address: d.address, city: d.city, state: d.state, pincode: d.pincode, gstNo: d.gst_no, panNo: d.pan_no, paymentTerms: d.payment_terms, processes: Array.isArray(d.processes) ? d.processes : []
         }))),
         fetchTable('purchase_shops', setPurchaseShops, (data: any[]) => data.map(d => ({
-            id: d.id, name: d.name, phone: d.phone, email: d.email, address: d.address, city: d.city, state: d.state, pincode: d.pincode, gst_no: d.gst_no, pan_no: d.pan_no, payment_terms: d.payment_terms
+            id: d.id, name: d.name, phone: d.phone, email: d.email, address: d.address, city: d.city, state: d.state, pincode: d.pincode, gstNo: d.gst_no, panNo: d.pan_no, paymentTerms: d.payment_terms
         }))),
         fetchTable('employees', setEmployees, (data: any[]) => data.map(d => ({
             id: d.id, name: d.name, designation: d.designation, phone: d.phone, daily_wage: d.daily_wage || 0, monthly_wage: d.monthly_wage || 0, rate_per_meter: d.rate_per_meter || 0
@@ -204,10 +204,10 @@ export const App: React.FC = () => {
             id: d.id, employeeId: d.employee_id, date: d.date, amount: d.amount || 0, paidAmount: d.paid_amount || 0, notes: d.notes
         }))),
         fetchTable('other_expenses', setOtherExpenses, (data: any[]) => data.map(d => ({
-            id: d.id, date: d.date, itemName: d.item_name, amount: d.amount || 0, notes: d.notes, bankName: d.bank_name, chequeDate: d.cheque_date, paymentMode: d.payment_mode, paymentStatus: d.payment_status, paymentTerms: d.payment_terms
+            id: d.id, date: d.date, itemName: d.item_name, amount: d.amount || 0, notes: d.notes, bankName: d.bank_name, chequeDate: d.cheque_date, paymentMode: d.payment_mode, paymentStatus: d.payment_status, payment_terms: d.payment_terms
         }))),
         fetchTable('timber_expenses', setTimberExpenses, (data: any[]) => data.map(d => ({
-            id: d.id, date: d.date, supplierName: d.supplier_name, openingBalance: d.opening_balance || 0, loadWeight: d.load_weight || 0, vehicleWeight: d.vehicle_weight || 0, cft: d.cft || 0, rate: d.rate || 0, amount: d.amount || 0, notes: d.notes, paymentMode: d.payment_mode, paymentStatus: d.payment_status, bankName: d.bank_name, chequeDate: d.cheque_date, paymentTerms: d.payment_terms
+            id: d.id, date: d.date, supplierName: d.supplier_name, openingBalance: d.opening_balance || 0, loadWeight: d.load_weight || 0, vehicleWeight: d.vehicle_weight || 0, cft: d.cft || 0, rate: d.rate || 0, amount: d.amount || 0, notes: d.notes, paymentMode: d.payment_mode, paymentStatus: d.payment_status, bankName: d.bank_name, chequeDate: d.cheque_date, payment_terms: d.payment_terms
         }))),
         fetchTable('supplier_payments', setSupplierPayments, (data: any[]) => data.map(d => ({
             id: d.id, paymentNumber: d.payment_number, date: d.date, supplierName: d.supplier_name, amount: d.amount || 0, paymentMode: d.payment_mode, referenceId: d.reference_id, image: d.image
