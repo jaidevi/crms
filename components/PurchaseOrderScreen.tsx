@@ -291,13 +291,23 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
         
         Object.keys(expensesBySupplier).forEach(supplier => {
             // Sort by Date ASC for FIFO allocation
-            const supplierExpenses = expensesBySupplier[supplier].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            const supplierExpenses = [...expensesBySupplier[supplier]].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
             
+            // 3. Get Master Opening Balance for the supplier from purchaseShops Master data
+            const supplierMaster = purchaseShops.find(s => s.name === supplier);
+            const masterOpeningBalance = supplierMaster ? (Number(supplierMaster.openingBalance) || 0) : 0;
+
             let totalPaid = paymentsBySupplier[supplier] || 0;
 
-            supplierExpenses.forEach(exp => {
-                // LIABILITY includes standard amount + opening balance
-                const totalRowLiability = (exp.amount || 0) + (exp.openingBalance || 0);
+            supplierExpenses.forEach((exp, index) => {
+                // LIABILITY: 
+                // We add the Master Opening Balance liability to the FIRST (oldest) transaction row 
+                // so the total supplier debt is correctly accounted for exactly once in the list.
+                let totalRowLiability = (Number(exp.amount) || 0);
+                if (index === 0) {
+                    totalRowLiability += masterOpeningBalance;
+                }
+
                 const paidForThis = Math.min(totalRowLiability, totalPaid);
                 totalPaid = Math.max(0, totalPaid - paidForThis);
                 
@@ -312,12 +322,12 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
         // Handle any expenses that might have no supplier name (should be rare due to validation)
         timberExpenses.forEach(e => {
             if (!e.supplierName) {
-                enriched.push({ ...e, paidAmount: 0, balanceAmount: (e.amount || 0) + (e.openingBalance || 0) });
+                enriched.push({ ...e, paidAmount: 0, balanceAmount: Number(e.amount) || 0 });
             }
         });
 
         return enriched;
-    }, [timberExpenses, supplierPayments]);
+    }, [timberExpenses, supplierPayments, purchaseShops]);
 
     // Memoized data for Timber Expenses
     const filteredTimberExpenses = useMemo(() => {
@@ -633,9 +643,7 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
                                 <th scope="col" className="px-6 py-3 cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('supplierName')}>
                                     <div className="flex items-center">Supplier {getTimberSortIndicator('supplierName')}</div>
                                 </th>
-                                <th scope="col" className="px-6 py-3 cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('openingBalance')}>
-                                    <div className="flex items-center">Opening Bal {getTimberSortIndicator('openingBalance')}</div>
-                                </th>
+                              
                                 <th scope="col" className="px-6 py-3 cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('dueDate')}>
                                     <div className="flex items-center">Due Date {getTimberSortIndicator('dueDate')}</div>
                                 </th>
@@ -664,7 +672,7 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
                                     <tr key={expense.id} className="bg-white border-b hover:bg-secondary-50">
                                         <td className="px-6 py-4 whitespace-nowrap">{formatDateForDisplay(expense.date)}</td>
                                         <td className="px-6 py-4 font-medium text-secondary-900">{expense.supplierName}</td>
-                                        <td className="px-6 py-4 text-right">₹{expense.openingBalance.toFixed(2)}</td>
+                                      
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div>{dueDate ? formatDateForDisplay(toYMDString(dueDate)) : '-'}</div>
                                             {daysUntilDue !== null && !isPaid && (

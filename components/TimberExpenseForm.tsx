@@ -25,7 +25,6 @@ const BLANK_EXPENSE: Omit<TimberExpense, 'id'> = {
     cft: 0,
     rate: 0,
     amount: 0,
-    /* Add openingBalance to BLANK_EXPENSE */
     notes: '',
     bankName: '',
     chequeDate: '',
@@ -69,14 +68,14 @@ const TimberExpenseForm: React.FC<TimberExpenseFormProps> = ({ onClose, onSave, 
     }, [expenseToEdit]);
 
     useEffect(() => {
-        const loadWeight = expense.loadWeight || 0;
-        const vehicleWeight = expense.vehicleWeight || 0;
+        const loadWeight = Number(expense.loadWeight) || 0;
+        const vehicleWeight = Number(expense.vehicleWeight) || 0;
         const cft = Math.max(0, loadWeight - vehicleWeight);
         setExpense(prev => ({ ...prev, cft }));
     }, [expense.loadWeight, expense.vehicleWeight]);
 
     useEffect(() => {
-        const amount = (expense.cft || 0) * (expense.rate || 0);
+        const amount = (Number(expense.cft) || 0) * (Number(expense.rate) || 0);
         setExpense(prev => ({ ...prev, amount }));
     }, [expense.cft, expense.rate]);
 
@@ -96,14 +95,14 @@ const TimberExpenseForm: React.FC<TimberExpenseFormProps> = ({ onClose, onSave, 
             return;
         }
 
-        // Find selected shop to get its opening balance
+        // Auto-fetch Opening Balance from Master Data
         const selectedShop = suppliers.find(s => s.name === value);
-        const shopOpeningBalance = selectedShop ? selectedShop.openingBalance : 0;
+        const masterOpeningBalance = selectedShop ? (Number(selectedShop.openingBalance) || 0) : 0;
 
         setExpense(prev => ({
             ...prev, 
             supplierName: value,
-            openingBalance: shopOpeningBalance // Auto-populate opening balance from master data
+            openingBalance: masterOpeningBalance
         }));
 
         if (errors.supplierName) setErrors(prev => ({...prev, supplierName: ''}));
@@ -129,7 +128,7 @@ const TimberExpenseForm: React.FC<TimberExpenseFormProps> = ({ onClose, onSave, 
         const newErrors: { [key: string]: string } = {};
         if (!expense.supplierName.trim()) newErrors.supplierName = "Supplier is required.";
         
-        if (expense.loadWeight > 0 && expense.vehicleWeight > 0 && Number(expense.loadWeight) <= Number(expense.vehicleWeight)) {
+        if (Number(expense.loadWeight) > 0 && Number(expense.vehicleWeight) > 0 && Number(expense.loadWeight) <= Number(expense.vehicleWeight)) {
             newErrors.loadWeight = "Load weight must be greater than vehicle weight.";
         }
         
@@ -142,7 +141,17 @@ const TimberExpenseForm: React.FC<TimberExpenseFormProps> = ({ onClose, onSave, 
 
     const handleSubmit = () => {
         if (!validate()) return;
-        const finalExpenseData = { ...expense, amount: Number(expense.amount) };
+        
+        // Ensure all numeric values are numbers before saving
+        const finalExpenseData = { 
+            ...expense, 
+            amount: Number(expense.amount),
+            loadWeight: Number(expense.loadWeight),
+            vehicleWeight: Number(expense.vehicleWeight),
+            cft: Number(expense.cft),
+            rate: Number(expense.rate),
+            openingBalance: Number(expense.openingBalance)
+        };
 
         if (isEditing && expenseToEdit) {
             onSave({ ...finalExpenseData, id: expenseToEdit.id });
@@ -157,7 +166,7 @@ const TimberExpenseForm: React.FC<TimberExpenseFormProps> = ({ onClose, onSave, 
     );
     
     const modalTitle = isEditing ? 'Edit Timber Expense' : 'Record New Timber Expense';
-    const commonInputClasses = "block w-full px-3 py-2.5 text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500";
+    const commonInputClasses = "block w-full px-3 py-2.5 text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors";
 
     return (
         <>
@@ -167,7 +176,7 @@ const TimberExpenseForm: React.FC<TimberExpenseFormProps> = ({ onClose, onSave, 
                 <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl animate-fade-in-down overflow-hidden">
                     <div className="flex items-center justify-between p-5 border-b">
                         <h2 className="text-xl font-bold text-gray-800">{modalTitle}</h2>
-                        <button onClick={onClose} className="p-1 rounded-full text-secondary-400 hover:bg-gray-100 hover:text-gray-600">
+                        <button onClick={onClose} className="p-1 rounded-full text-secondary-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
                             <CloseIcon className="w-6 h-6" />
                         </button>
                     </div>
@@ -176,7 +185,7 @@ const TimberExpenseForm: React.FC<TimberExpenseFormProps> = ({ onClose, onSave, 
                              <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Date <span className="text-red-500">*</span></label>
                                 <div className="relative">
-                                    <button type="button" onClick={() => setDatePickerOpen(p => !p)} className={`block w-full text-left ${commonInputClasses}`}>
+                                    <button type="button" onClick={() => setDatePickerOpen(p => !p)} className={`block w-full text-left ${commonInputClasses} ${errors.date ? 'border-red-500' : ''}`}>
                                         {formatDateForInput(expense.date) || 'Select date'}
                                         <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                     </button>
@@ -195,25 +204,18 @@ const TimberExpenseForm: React.FC<TimberExpenseFormProps> = ({ onClose, onSave, 
                             </div>
                             <div>
                                 <label htmlFor="loadWeight" className="block text-sm font-medium text-gray-700 mb-1">Load Weight</label>
-                                <input id="loadWeight" name="loadWeight" type="number" value={expense.loadWeight === 0 ? '' : expense.loadWeight} onChange={handleChange} className={`${commonInputClasses} ${errors.loadWeight ? 'border-red-500' : ''}`} placeholder="0.00" />
+                                <input id="loadWeight" name="loadWeight" type="number" step="0.01" value={expense.loadWeight === 0 ? '' : expense.loadWeight} onChange={handleChange} className={`${commonInputClasses} ${errors.loadWeight ? 'border-red-500' : ''}`} placeholder="0.00" />
                                 {errors.loadWeight && <p className="mt-1 text-sm text-red-500">{errors.loadWeight}</p>}
                             </div>
                             <div>
                                 <label htmlFor="vehicleWeight" className="block text-sm font-medium text-gray-700 mb-1">Vehicle Weight</label>
-                                <input id="vehicleWeight" name="vehicleWeight" type="number" value={expense.vehicleWeight === 0 ? '0' : expense.vehicleWeight} onChange={handleChange} className={`${commonInputClasses} ${errors.vehicleWeight ? 'border-red-500' : ''}`} placeholder="0.00" />
+                                <input id="vehicleWeight" name="vehicleWeight" type="number" step="0.01" value={expense.vehicleWeight === 0 ? '0' : expense.vehicleWeight} onChange={handleChange} className={`${commonInputClasses} ${errors.vehicleWeight ? 'border-red-500' : ''}`} placeholder="0.00" />
                                 {errors.vehicleWeight && <p className="mt-1 text-sm text-red-500">{errors.vehicleWeight}</p>}
                             </div>
-                            <div>
-                                <label htmlFor="openingBalance" className="block text-sm font-medium text-gray-700 mb-1">Opening Balance</label>
-                                <input id="openingBalance" name="openingBalance" type="number" step="0.01" value={expense.openingBalance === 0 ? '' : expense.openingBalance} onChange={handleChange} className={commonInputClasses} placeholder="0.00" />
-                            </div>
-                            <div>
-                                <label htmlFor="cft" className="block text-sm font-medium text-gray-700 mb-1">CFT (Calculated)</label>
-                                <input id="cft" name="cft" type="number" value={expense.cft.toFixed(2)} readOnly className={`${commonInputClasses} bg-gray-100`} />
-                            </div>
+                            
                              <div>
                                 <label htmlFor="rate" className="block text-sm font-medium text-gray-700 mb-1">Rate (per CFT) <span className="text-red-500">*</span></label>
-                                <input id="rate" name="rate" type="number" value={expense.rate === 0 ? '' : expense.rate} onChange={handleChange} className={`${commonInputClasses} ${errors.rate ? 'border-red-500' : ''}`} placeholder="0.00" />
+                                <input id="rate" name="rate" type="number" step="0.01" value={expense.rate === 0 ? '' : expense.rate} onChange={handleChange} className={`${commonInputClasses} ${errors.rate ? 'border-red-500' : ''}`} placeholder="0.00" />
                                 {errors.rate && <p className="mt-1 text-sm text-red-500">{errors.rate}</p>}
                             </div>
                             <div>
@@ -249,9 +251,13 @@ const TimberExpenseForm: React.FC<TimberExpenseFormProps> = ({ onClose, onSave, 
                                     </div>
                                 </div>
                             </div>
+                             <div>
+                                <label htmlFor="cft" className="block text-sm font-medium text-gray-700 mb-1">CFT (Calculated)</label>
+                                <input id="cft" name="cft" type="number" value={expense.cft.toFixed(2)} readOnly className={`${commonInputClasses} bg-gray-100 font-medium`} />
+                            </div>
                             <div>
                                 <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">Total Amount</label>
-                                <input id="amount" name="amount" type="text" value={`₹${expense.amount.toFixed(2)}`} readOnly className={`${commonInputClasses} bg-gray-100 font-semibold text-lg`} />
+                                <input id="amount" name="amount" type="text" value={`₹${expense.amount.toFixed(2)}`} readOnly className={`${commonInputClasses} bg-gray-100 font-bold text-lg text-primary-700`} />
                             </div>
                         </div>
 
@@ -259,12 +265,12 @@ const TimberExpenseForm: React.FC<TimberExpenseFormProps> = ({ onClose, onSave, 
 
                         <div>
                             <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                            <textarea id="notes" name="notes" rows={2} value={expense.notes || ''} onChange={handleChange} className={commonInputClasses} />
+                            <textarea id="notes" name="notes" rows={2} value={expense.notes || ''} onChange={handleChange} className={commonInputClasses} placeholder="Additional details..." />
                         </div>
                     </div>
                     <div className="flex items-center justify-end p-5 bg-gray-50 border-t space-x-3">
-                        <button onClick={onClose} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md text-sm font-semibold hover:bg-gray-50">Cancel</button>
-                        <button onClick={handleSubmit} className="px-5 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700">
+                        <button onClick={onClose} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md text-sm font-semibold hover:bg-gray-50 transition-colors">Cancel</button>
+                        <button onClick={handleSubmit} className="px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-bold hover:bg-blue-700 transition-all transform active:scale-95 shadow-md">
                             {isEditing ? 'Update Expense' : 'Save Expense'}
                         </button>
                     </div>

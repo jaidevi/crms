@@ -166,10 +166,10 @@ export const App: React.FC = () => {
     // Parallel fetch for remaining data
     await Promise.all([
         fetchTable('clients', setClients, (data: any[]) => data.map(d => ({
-            id: d.id, name: d.name, phone: d.phone, email: d.email, address: d.address, city: d.city, state: d.state, pincode: d.pincode, gstNo: d.gst_no, panNo: d.pan_no, paymentTerms: d.payment_terms, processes: Array.isArray(d.processes) ? d.processes : []
+            id: d.id, name: d.name, phone: d.phone, email: d.email, address: d.address, city: d.city, state: d.state, pincode: d.pincode, gstNo: d.gst_no, panNo: d.pan_no, paymentTerms: d.payment_terms, openingBalance: d.opening_balance || 0, processes: Array.isArray(d.processes) ? d.processes : []
         }))),
         fetchTable('purchase_shops', setPurchaseShops, (data: any[]) => data.map(d => ({
-            id: d.id, name: d.name, phone: d.phone, email: d.email, address: d.address, city: d.city, state: d.state, pincode: d.pincode, gstNo: d.gst_no, panNo: d.pan_no, paymentTerms: d.payment_terms
+            id: d.id, name: d.name, phone: d.phone, email: d.email, address: d.address, city: d.city, state: d.state, pincode: d.pincode, gstNo: d.gst_no, panNo: d.pan_no, paymentTerms: d.payment_terms, openingBalance: d.opening_balance || 0
         }))),
         fetchTable('employees', setEmployees, (data: any[]) => data.map(d => ({
             id: d.id, name: d.name, designation: d.designation, phone: d.phone, dailyWage: d.daily_wage || 0, monthlyWage: d.monthly_wage || 0, ratePerMeter: d.rate_per_meter || 0
@@ -178,8 +178,7 @@ export const App: React.FC = () => {
         fetchTable('master_items', setMasterItems),
         fetchTable('expense_categories', setExpenseCategories),
         fetchTable('purchase_orders', setPurchaseOrders, (data: any[]) => data.map(d => ({
-            /* FIX: Fixed camelCase naming mismatches for purchase orders */
-            id: d.id, poNumber: d.po_number, poDate: d.po_date, shopName: d.shop_name, totalAmount: d.total_amount || 0, gstNo: d.gst_no, paymentMode: d.payment_mode, status: d.status, paymentTerms: d.payment_terms, referenceId: d.reference_id, bankName: d.bank_name, chequeDate: d.cheque_date, items: Array.isArray(d.purchase_order_items) ? d.purchase_order_items.map((i: any) => ({
+            id: d.id, poNumber: d.po_number, poDate: d.po_date, shopName: d.shop_name, totalAmount: d.total_amount || 0, gstNo: d.gst_no, paymentMode: d.payment_mode, status: d.status, paymentTerms: d.payment_terms, referenceId: d.reference_id, bankName: d.bank_name, cheque_date: d.cheque_date, items: Array.isArray(d.purchase_order_items) ? d.purchase_order_items.map((i: any) => ({
                 id: i.id, name: i.name, quantity: i.quantity || 0, rate: i.rate || 0, amount: i.amount || 0
             })) : []
         }))),
@@ -205,18 +204,16 @@ export const App: React.FC = () => {
             id: d.id, employeeId: d.employee_id, date: d.date, amount: d.amount || 0, paidAmount: d.paid_amount || 0, notes: d.notes
         }))),
         fetchTable('other_expenses', setOtherExpenses, (data: any[]) => data.map(d => ({
-            /* FIX: Fixed camelCase naming mismatch for other_expenses paymentTerms */
             id: d.id, date: d.date, itemName: d.item_name, amount: d.amount || 0, notes: d.notes, bankName: d.bank_name, chequeDate: d.cheque_date, paymentMode: d.payment_mode, paymentStatus: d.payment_status, paymentTerms: d.payment_terms
         }))),
         fetchTable('timber_expenses', setTimberExpenses, (data: any[]) => data.map(d => ({
-            /* FIX: Fixed camelCase naming mismatch for timber_expenses paymentTerms */
             id: d.id, date: d.date, supplierName: d.supplier_name, openingBalance: d.opening_balance || 0, loadWeight: d.load_weight || 0, vehicleWeight: d.vehicle_weight || 0, cft: d.cft || 0, rate: d.rate || 0, amount: d.amount || 0, notes: d.notes, paymentMode: d.payment_mode, paymentStatus: d.payment_status, bankName: d.bank_name, chequeDate: d.cheque_date, paymentTerms: d.payment_terms
         }))),
         fetchTable('supplier_payments', setSupplierPayments, (data: any[]) => data.map(d => ({
             id: d.id, paymentNumber: d.payment_number, date: d.date, supplierName: d.supplier_name, amount: d.amount || 0, paymentMode: d.payment_mode, referenceId: d.reference_id, image: d.image
         }))),
         fetchTable('attendance', setAttendanceRecords, (data: any[]) => data.map(d => ({
-            id: d.id, employee_id: d.employee_id, date: d.date, morningStatus: d.morning_status || 'Present', eveningStatus: d.evening_status || 'Present', morningOvertimeHours: d.morning_overtime_hours || 0, eveningOvertimeHours: d.evening_overtime_hours || 0, metersProduced: d.meters_produced || 0, createdAt: d.created_at, updatedAt: d.updated_at
+            id: d.id, employee_id: d.employee_id, date: d.date, morningStatus: d.morning_status || 'Present', eveningStatus: d.evening_status || 'Present', morningOvertimeHours: d.morning_overtime_hours || 0, eveningOvertimeHours: d.evening_overtime_hours || 0, metersProduced: d.meters_produced || 0, created_at: d.created_at, updated_at: d.updated_at
         }))),
         fetchTable('payslips', setPayslips, (data: any[]) => data.map(d => ({
             id: d.id, employeeId: d.employee_id, employeeName: d.employee_name, payslipDate: d.payslip_date, payPeriodStart: d.pay_period_start, payPeriodEnd: d.pay_period_end, totalWorkingDays: d.total_working_days || 0, otHours: d.ot_hours || 0, wageEarnings: d.wage_earnings || 0, productionEarnings: d.production_earnings || 0, grossSalary: d.gross_salary || 0, advanceDeduction: d.advance_deduction || 0, netSalary: d.net_salary || 0, totalOutstandingAdvance: d.total_outstanding_advance || 0
@@ -232,7 +229,147 @@ export const App: React.FC = () => {
     }
   }, [session, guestMode, loadAllData]);
 
-  // CRUD Handlers
+  // Timber Expense Handlers
+  const handleAddTimberExpense = async (newExpense: Omit<TimberExpense, 'id'>) => {
+    const { data, error } = await supabase.from('timber_expenses').insert([{
+      date: newExpense.date,
+      supplier_name: newExpense.supplierName,
+      opening_balance: newExpense.openingBalance,
+      load_weight: newExpense.loadWeight,
+      vehicle_weight: newExpense.vehicleWeight,
+      cft: newExpense.cft,
+      rate: newExpense.rate,
+      amount: newExpense.amount,
+      notes: newExpense.notes,
+      bank_name: newExpense.bankName,
+      cheque_date: newExpense.chequeDate || null, 
+      payment_mode: newExpense.paymentMode,
+      payment_status: newExpense.paymentStatus,
+      payment_terms: newExpense.paymentTerms
+    }]).select();
+    if (!error && data) setTimberExpenses(prev => [...prev, { ...newExpense, id: data[0].id }]);
+    else if (error) alert("Error saving timber expense: " + error.message);
+  };
+
+  const handleUpdateTimberExpense = async (updatedExpense: TimberExpense) => {
+    const { error } = await supabase.from('timber_expenses').update({
+      date: updatedExpense.date,
+      supplier_name: updatedExpense.supplierName,
+      opening_balance: updatedExpense.openingBalance,
+      load_weight: updatedExpense.loadWeight,
+      vehicle_weight: updatedExpense.vehicleWeight,
+      cft: updatedExpense.cft,
+      rate: updatedExpense.rate,
+      amount: updatedExpense.amount,
+      notes: updatedExpense.notes,
+      bank_name: updatedExpense.bankName,
+      cheque_date: updatedExpense.chequeDate || null,
+      payment_mode: updatedExpense.paymentMode,
+      payment_status: updatedExpense.paymentStatus,
+      payment_terms: updatedExpense.paymentTerms
+    }).eq('id', updatedExpense.id);
+    if (!error) setTimberExpenses(prev => prev.map(e => e.id === updatedExpense.id ? updatedExpense : e));
+    else alert("Error updating timber expense: " + error.message);
+  };
+
+  const handleDeleteTimberExpense = async (id: string) => {
+    const { error } = await supabase.from('timber_expenses').delete().eq('id', id);
+    if (!error) setTimberExpenses(prev => prev.filter(e => e.id !== id));
+    else alert("Error deleting timber expense: " + error.message);
+  };
+
+  // Supplier Payment Handler
+  const handleAddSupplierPayment = async (payment: Omit<SupplierPayment, 'id'>) => {
+    const { data, error } = await supabase.from('supplier_payments').insert([{
+        payment_number: payment.paymentNumber,
+        date: payment.date,
+        supplier_name: payment.supplierName,
+        amount: payment.amount,
+        payment_mode: payment.paymentMode,
+        reference_id: payment.referenceId,
+        image: payment.image
+    }]).select();
+
+    if (!error && data) {
+        setSupplierPayments(prev => [...prev, { ...payment, id: data[0].id }]);
+        
+        // Increment the numbering config
+        const nextNum = supplierPaymentConfig.nextNumber + 1;
+        await supabase.from('numbering_configs').update({ next_number: nextNum }).eq('id', 'supplier_payment');
+        setSupplierPaymentConfig(prev => ({ ...prev, nextNumber: nextNum }));
+    } else if (error) {
+        throw error; // Let the caller (PurchaseOrderScreen) handle the alert
+    }
+  };
+
+  const handleAddOtherExpense = async (newExpense: Omit<OtherExpense, 'id'>) => {
+      const { data, error } = await supabase.from('other_expenses').insert([{
+          date: newExpense.date,
+          item_name: newExpense.itemName,
+          amount: newExpense.amount,
+          notes: newExpense.notes,
+          bank_name: newExpense.bankName,
+          cheque_date: newExpense.chequeDate || null,
+          payment_mode: newExpense.paymentMode,
+          payment_status: newExpense.paymentStatus,
+          payment_terms: newExpense.paymentTerms
+      }]).select();
+      if (!error && data) setOtherExpenses(prev => [...prev, { ...newExpense, id: data[0].id }]);
+      else if (error) alert("Error saving expense: " + error.message);
+  };
+
+  const handleUpdateOtherExpense = async (updatedExpense: OtherExpense) => {
+      const { error } = await supabase.from('other_expenses').update({
+          date: updatedExpense.date,
+          item_name: updatedExpense.itemName,
+          amount: updatedExpense.amount,
+          notes: updatedExpense.notes,
+          bank_name: updatedExpense.bankName,
+          cheque_date: updatedExpense.chequeDate || null,
+          payment_mode: updatedExpense.paymentMode,
+          payment_status: updatedExpense.paymentStatus,
+          payment_terms: updatedExpense.paymentTerms
+      }).eq('id', updatedExpense.id);
+      if (!error) setOtherExpenses(prev => prev.map(e => e.id === updatedExpense.id ? updatedExpense : e));
+      else alert("Error updating expense: " + error.message);
+  };
+
+  const handleDeleteOtherExpense = async (id: string) => {
+      const { error } = await supabase.from('other_expenses').delete().eq('id', id);
+      if (!error) setOtherExpenses(prev => prev.filter(e => e.id !== id));
+      else alert("Error deleting expense: " + error.message);
+  };
+
+  const handleAddAdvance = async (newAdvance: Omit<EmployeeAdvance, 'id'>) => {
+      const { data, error } = await supabase.from('employee_advances').insert([{
+          employee_id: newAdvance.employeeId,
+          date: newAdvance.date,
+          amount: newAdvance.amount,
+          paid_amount: newAdvance.paidAmount,
+          notes: newAdvance.notes
+      }]).select();
+      if (!error && data) setAdvances(prev => [...prev, { ...newAdvance, id: data[0].id }]);
+      else if (error) alert("Error saving advance: " + error.message);
+  };
+
+  const handleUpdateAdvance = async (updatedAdvance: EmployeeAdvance) => {
+      const { error } = await supabase.from('employee_advances').update({
+          employee_id: updatedAdvance.employeeId,
+          date: updatedAdvance.date,
+          amount: updatedAdvance.amount,
+          paid_amount: updatedAdvance.paidAmount,
+          notes: updatedAdvance.notes
+      }).eq('id', updatedAdvance.id);
+      if (!error) setAdvances(prev => prev.map(a => a.id === updatedAdvance.id ? updatedAdvance : a));
+      else alert("Error updating advance: " + error.message);
+  };
+
+  const handleDeleteAdvance = async (id: string) => {
+      const { error } = await supabase.from('employee_advances').delete().eq('id', id);
+      if (!error) setAdvances(prev => prev.filter(a => a.id !== id));
+      else alert("Error deleting advance: " + error.message);
+  };
+
   const handleUpdateCompanyDetails = async (details: CompanyDetails) => {
     const { error } = await supabase.from('company_details').upsert({
       id: 1,
@@ -257,16 +394,17 @@ export const App: React.FC = () => {
     const { data, error } = await supabase.from('clients').insert([{
       name: newClient.name, phone: newClient.phone, email: newClient.email, address: newClient.address,
       city: newClient.city, state: newClient.state, pincode: newClient.pincode, gst_no: newClient.gstNo,
-      pan_no: newClient.panNo, payment_terms: newClient.paymentTerms, processes: newClient.processes
+      pan_no: newClient.panNo, payment_terms: newClient.paymentTerms, opening_balance: newClient.openingBalance, processes: newClient.processes
     }]).select();
     if (!error && data) setClients(prev => [...prev, { ...newClient, id: data[0].id }]);
   };
 
   const handleUpdateClient = async (updatedClient: Client) => {
+    /* FIX: Changed incorrect property names 'gst_no' and 'pan_no' to 'gstNo' and 'panNo' */
     const { error } = await supabase.from('clients').update({
         name: updatedClient.name, phone: updatedClient.phone, email: updatedClient.email, address: updatedClient.address,
         city: updatedClient.city, state: updatedClient.state, pincode: updatedClient.pincode, gst_no: updatedClient.gstNo,
-        pan_no: updatedClient.panNo, payment_terms: updatedClient.paymentTerms, processes: updatedClient.processes
+        pan_no: updatedClient.panNo, payment_terms: updatedClient.paymentTerms, opening_balance: updatedClient.openingBalance, processes: updatedClient.processes
     }).eq('id', updatedClient.id);
     if (!error) setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
   };
@@ -280,7 +418,7 @@ export const App: React.FC = () => {
     const { data, error } = await supabase.from('purchase_shops').insert([{
         name: newShop.name, phone: newShop.phone, email: newShop.email, address: newShop.address,
         city: newShop.city, state: newShop.state, pincode: newShop.pincode, gst_no: newShop.gstNo,
-        pan_no: newShop.panNo, payment_terms: newShop.paymentTerms
+        pan_no: newShop.panNo, payment_terms: newShop.paymentTerms, opening_balance: newShop.openingBalance
     }]).select();
     if (!error && data) setPurchaseShops(prev => [...prev, { ...newShop, id: data[0].id }]);
   };
@@ -289,7 +427,7 @@ export const App: React.FC = () => {
     const { error } = await supabase.from('purchase_shops').update({
         name: updatedShop.name, phone: updatedShop.phone, email: updatedShop.email, address: updatedShop.address,
         city: updatedShop.city, state: updatedShop.state, pincode: updatedShop.pincode, gst_no: updatedShop.gstNo,
-        pan_no: updatedShop.panNo, payment_terms: updatedShop.paymentTerms
+        pan_no: updatedShop.panNo, payment_terms: updatedShop.paymentTerms, opening_balance: updatedShop.openingBalance
     }).eq('id', updatedShop.id);
     if (!error) setPurchaseShops(prev => prev.map(s => s.id === updatedShop.id ? updatedShop : s));
   };
@@ -534,7 +672,6 @@ export const App: React.FC = () => {
               process: item.process,
               description: item.description,
               design_no: item.designNo,
-              // Fix: Changed item.hsn_sac to item.hsnSac to match InvoiceItem type definition.
               hsn_sac: item.hsnSac,
               pcs: item.pcs,
               mtr: item.mtr,
@@ -574,11 +711,11 @@ export const App: React.FC = () => {
                 purchaseOrders={purchaseOrders} onAddOrder={() => {}} onUpdateOrder={() => {}} onDeleteOrder={() => {}}
                 purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} bankNames={bankNames} onAddBankName={(name) => setBankNames(p => [...p, name])}
                 poNumberConfig={poNumberConfig} masterItems={masterItems} onAddMasterItem={handleAddMasterItem}
-                advances={advances} employees={employees} onAddAdvance={async () => {}} onUpdateAdvance={async () => {}} onDeleteAdvance={() => {}}
-                otherExpenses={otherExpenses} onAddOtherExpense={async () => {}} onUpdateOtherExpense={async () => {}} onDeleteOtherExpense={() => {}}
+                advances={advances} employees={employees} onAddAdvance={handleAddAdvance} onUpdateAdvance={handleUpdateAdvance} onDeleteAdvance={handleDeleteAdvance}
+                otherExpenses={otherExpenses} onAddOtherExpense={handleAddOtherExpense} onUpdateOtherExpense={handleUpdateOtherExpense} onDeleteOtherExpense={handleDeleteOtherExpense}
                 expenseCategories={expenseCategories} onAddExpenseCategory={handleAddExpenseCategory}
-                timberExpenses={timberExpenses} onAddTimberExpense={async () => {}} onUpdateTimberExpense={async () => {}} onDeleteTimberExpense={() => {}}
-                supplierPayments={supplierPayments} supplierPaymentConfig={supplierPaymentConfig} onAddSupplierPayment={async () => {}}
+                timberExpenses={timberExpenses} onAddTimberExpense={handleAddTimberExpense} onUpdateTimberExpense={handleUpdateTimberExpense} onDeleteTimberExpense={handleDeleteTimberExpense}
+                supplierPayments={supplierPayments} supplierPaymentConfig={supplierPaymentConfig} onAddSupplierPayment={handleAddSupplierPayment}
             />;
         case 'Delivery Challans':
             return <DeliveryChallanScreen deliveryChallans={deliveryChallans} onAddChallan={handleAddChallan} onUpdateChallan={handleUpdateChallan} onDeleteChallan={handleDeleteChallan} clients={clients} onAddClient={handleAddClient} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} processTypes={processTypes} onAddProcessType={handleAddProcessType} deliveryChallanNumberConfig={deliveryChallanNumberConfig} invoices={invoices} onDeleteInvoice={handleDeleteInvoice} companyDetails={companyDetails} employees={employees} onAddEmployee={handleAddEmployee} />;

@@ -33,20 +33,27 @@ const TimberPaymentForm: React.FC<TimberPaymentFormProps> = ({ onClose, onSave, 
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
     
-    // Calculate Outstanding and Balance including Opening Balance
+    // Calculate Outstanding and Balance including Master Opening Balance
     const outstandingAmount = useMemo(() => {
         if (!payment.supplierName) return 0;
         
-        const totalLiability = timberExpenses
+        // 1. Get Opening Balance from Master Data
+        const supplierMaster = suppliers.find(s => s.name === payment.supplierName);
+        const masterOpeningBalance = supplierMaster ? (Number(supplierMaster.openingBalance) || 0) : 0;
+
+        // 2. Sum up all individual transaction amounts (ignoring row-level openingBalance to avoid multiplication)
+        const totalTransactionLiability = timberExpenses
             .filter(e => e.supplierName === payment.supplierName)
-            .reduce((sum, e) => sum + (e.amount || 0) + (e.openingBalance || 0), 0);
+            .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
             
+        // 3. Sum up all payments made to this supplier
         const totalPaid = supplierPayments
             .filter(p => p.supplierName === payment.supplierName)
-            .reduce((sum, p) => sum + (p.amount || 0), 0);
+            .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
             
-        return Math.max(0, totalLiability - totalPaid);
-    }, [payment.supplierName, timberExpenses, supplierPayments]);
+        // Final Outstanding = Master Opening Balance + Total Expenses - Total Payments
+        return Math.max(0, masterOpeningBalance + totalTransactionLiability - totalPaid);
+    }, [payment.supplierName, timberExpenses, supplierPayments, suppliers]);
 
     const balanceAmount = useMemo(() => {
         return Math.max(0, outstandingAmount - (payment.amount || 0));
@@ -62,7 +69,7 @@ const TimberPaymentForm: React.FC<TimberPaymentFormProps> = ({ onClose, onSave, 
     const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         if (value === '' || /^\d*\.?\d*$/.test(value)) {
-             setPayment(prev => ({ ...prev, amount: Number(value) }));
+             setPayment(prev => ({ ...prev, amount: value === '' ? 0 : Number(value) }));
              if (errors.amount) setErrors(prev => ({ ...prev, amount: '' }));
         }
     };
@@ -103,7 +110,7 @@ const TimberPaymentForm: React.FC<TimberPaymentFormProps> = ({ onClose, onSave, 
             <div className="bg-white rounded-lg shadow-xl w-full max-w-lg animate-fade-in-down overflow-hidden">
                 <div className="flex items-center justify-between p-5 border-b">
                     <h2 className="text-xl font-bold text-gray-800">Record Supplier Payment</h2>
-                    <button onClick={onClose} className="p-1 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+                    <button onClick={onClose} className="p-1 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
                         <CloseIcon className="w-6 h-6" />
                     </button>
                 </div>
@@ -116,7 +123,7 @@ const TimberPaymentForm: React.FC<TimberPaymentFormProps> = ({ onClose, onSave, 
                          <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Date <span className="text-red-500">*</span></label>
                             <div className="relative">
-                                <button type="button" onClick={() => setDatePickerOpen(p => !p)} className={`block w-full text-left ${commonInputClasses}`}>
+                                <button type="button" onClick={() => setDatePickerOpen(p => !p)} className={`block w-full text-left ${commonInputClasses} ${errors.date ? 'border-red-500' : ''}`}>
                                     {formatDateForInput(payment.date) || 'Select date'}
                                     <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                 </button>
@@ -133,13 +140,13 @@ const TimberPaymentForm: React.FC<TimberPaymentFormProps> = ({ onClose, onSave, 
                             {errors.supplierName && <p className="mt-1 text-sm text-red-500">{errors.supplierName}</p>}
                             {payment.supplierName && (
                                 <p className="mt-1 text-xs text-gray-500">
-                                    Outstanding: <span className="font-semibold text-gray-700">₹{outstandingAmount.toFixed(2)}</span>
+                                    Outstanding: <span className="font-bold text-secondary-900">₹{outstandingAmount.toFixed(2)}</span>
                                 </p>
                             )}
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Paid Amount <span className="text-red-500">*</span></label>
-                            <input type="number" value={payment.amount || ''} onChange={handleAmountChange} className={`${commonInputClasses} ${errors.amount ? 'border-red-500' : ''}`} placeholder="0.00" />
+                            <input type="number" value={payment.amount === 0 ? '' : payment.amount} onChange={handleAmountChange} className={`${commonInputClasses} ${errors.amount ? 'border-red-500' : ''}`} placeholder="0.00" />
                             {errors.amount && <p className="mt-1 text-sm text-red-500">{errors.amount}</p>}
                         </div>
                         <div>
@@ -148,7 +155,7 @@ const TimberPaymentForm: React.FC<TimberPaymentFormProps> = ({ onClose, onSave, 
                                 type="text" 
                                 value={`₹${balanceAmount.toFixed(2)}`} 
                                 readOnly 
-                                className={`${commonInputClasses} bg-gray-100 font-semibold ${balanceAmount > 0 ? 'text-red-600' : 'text-green-600'}`} 
+                                className={`${commonInputClasses} bg-gray-50 font-bold ${balanceAmount > 0 ? 'text-red-600' : 'text-green-600'}`} 
                             />
                         </div>
                         <div>
@@ -191,8 +198,8 @@ const TimberPaymentForm: React.FC<TimberPaymentFormProps> = ({ onClose, onSave, 
 
                 </div>
                 <div className="flex items-center justify-end p-5 bg-gray-50 border-t space-x-3">
-                    <button onClick={onClose} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md text-sm font-semibold hover:bg-gray-50">Cancel</button>
-                    <button onClick={handleSubmit} className="px-5 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700">Save Payment</button>
+                    <button onClick={onClose} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md text-sm font-semibold hover:bg-gray-50 transition-colors">Cancel</button>
+                    <button onClick={handleSubmit} className="px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95">Save Payment</button>
                 </div>
             </div>
         </div>
