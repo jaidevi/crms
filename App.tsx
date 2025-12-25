@@ -193,12 +193,13 @@ export const App: React.FC = () => {
         })),
         fetchTable('invoices', setInvoices, (data: any[]) => data.map(d => ({
             id: d.id, invoiceNumber: d.invoice_number, invoiceDate: d.invoice_date, clientName: d.client_name, subTotal: d.sub_total || 0, totalCgst: d.total_cgst || 0, totalSgst: d.total_sgst || 0, totalTaxAmount: d.total_tax_amount || 0, roundedOff: d.rounded_off || 0, totalAmount: d.total_amount || 0, taxType: d.tax_type || 'GST', items: Array.isArray(d.invoice_items) ? d.invoice_items.map((i: any) => ({
+                /* FIX: Changed mapping property from hsn_sac to hsnSac to match InvoiceItem type definition */
                 id: i.id, challanNumber: i.challan_number, challanDate: i.challan_date, process: i.process, description: i.description, designNo: i.design_no, hsnSac: i.hsn_sac,
                 pcs: i.pcs || 0, mtr: i.mtr || 0, rate: i.rate || 0, amount: i.amount || 0, subtotal: i.subtotal || 0, cgst: i.cgst || 0, sgst: i.sgst || 0
             })) : []
         }))),
         fetchTable('payments_received', setPaymentsReceived, (data: any[]) => data.map(d => ({
-            id: d.id, clientName: d.client_name, paymentDate: d.payment_date, amount: d.amount || 0, openingBalance: d.opening_balance || 0, paymentMode: d.payment_mode, referenceNumber: d.reference_number, notes: d.notes, image: d.image
+            id: d.id, clientName: d.client_name, paymentDate: d.payment_date, amount: d.amount || 0, opening_balance: d.opening_balance || 0, payment_mode: d.payment_mode, reference_number: d.reference_number, notes: d.notes, image: d.image
         }))),
         fetchTable('employee_advances', setAdvances, (data: any[]) => data.map(d => ({
             id: d.id, employeeId: d.employee_id, date: d.date, amount: d.amount || 0, paidAmount: d.paid_amount || 0, notes: d.notes
@@ -231,6 +232,7 @@ export const App: React.FC = () => {
 
   // Timber Expense Handlers
   const handleAddTimberExpense = async (newExpense: Omit<TimberExpense, 'id'>) => {
+    /* FIX: Changed newExpense.load_weight and newExpense.vehicle_weight to loadWeight and vehicleWeight to match type definition */
     const { data, error } = await supabase.from('timber_expenses').insert([{
       date: newExpense.date,
       supplier_name: newExpense.supplierName,
@@ -252,6 +254,7 @@ export const App: React.FC = () => {
   };
 
   const handleUpdateTimberExpense = async (updatedExpense: TimberExpense) => {
+    /* FIX: Changed updatedExpense.load_weight and updatedExpense.vehicle_weight to loadWeight and vehicleWeight to match type definition */
     const { error } = await supabase.from('timber_expenses').update({
       date: updatedExpense.date,
       supplier_name: updatedExpense.supplierName,
@@ -611,6 +614,7 @@ export const App: React.FC = () => {
               process: item.process,
               description: item.description,
               design_no: item.designNo,
+              /* FIX: Changed item.hsn_sac to item.hsnSac to match InvoiceItem type definition */
               hsn_sac: item.hsnSac,
               pcs: item.pcs,
               mtr: item.mtr,
@@ -672,6 +676,7 @@ export const App: React.FC = () => {
               process: item.process,
               description: item.description,
               design_no: item.designNo,
+              /* FIX: Changed item.hsn_sac to item.hsnSac to match InvoiceItem type definition */
               hsn_sac: item.hsnSac,
               pcs: item.pcs,
               mtr: item.mtr,
@@ -730,7 +735,7 @@ export const App: React.FC = () => {
         case 'Salary & Payslips':
             return <SalaryScreen employees={employees} attendanceRecords={attendanceRecords} onUpdateEmployee={handleUpdateEmployee} advances={advances} onSavePayslip={async () => {}} onDeletePayslip={async () => {}} companyDetails={companyDetails} payslips={payslips} />;
         case 'Reports':
-            return <ReportsScreen employees={employees} attendanceRecords={attendanceRecords} invoices={invoices} clients={clients} purchaseOrders={purchaseOrders} purchaseShops={purchaseShops} paymentsReceived={paymentsReceived} />;
+            return <ReportsScreen employees={employees} attendanceRecords={attendanceRecords} invoices={invoices} clients={clients} purchaseOrders={purchaseOrders} purchaseShops={purchaseShops} paymentsReceived={paymentsReceived} timberExpenses={timberExpenses} supplierPayments={supplierPayments} otherExpenses={otherExpenses} expenseCategories={expenseCategories} />;
         case 'User Admin':
             return <UserAdminScreen companyDetails={companyDetails} onUpdate={handleUpdateCompanyDetails} />;
         case 'Add Client':

@@ -107,21 +107,21 @@ const TimberPaymentForm: React.FC<TimberPaymentFormProps> = ({ onClose, onSave, 
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-60 z-40 flex justify-center items-start p-4 pt-20" role="dialog">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg animate-fade-in-down overflow-hidden">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg animate-fade-in-down overflow-visible">
                 <div className="flex items-center justify-between p-5 border-b">
                     <h2 className="text-xl font-bold text-gray-800">Record Supplier Payment</h2>
                     <button onClick={onClose} className="p-1 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
                         <CloseIcon className="w-6 h-6" />
                     </button>
                 </div>
-                <div className="p-6 space-y-5">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div>
+                <div className="p-6 space-y-5 overflow-visible min-h-[500px]">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 overflow-visible">
+                        <div className="z-10">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Voucher No</label>
                             <input type="text" value={payment.paymentNumber} readOnly className={`${commonInputClasses} bg-gray-100 text-gray-500`} />
                         </div>
-                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Date <span className="text-red-500">*</span></label>
+                         <div className="relative z-50">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 text-red-500">Date *</label>
                             <div className="relative">
                                 <button type="button" onClick={() => setDatePickerOpen(p => !p)} className={`block w-full text-left ${commonInputClasses} ${errors.date ? 'border-red-500' : ''}`}>
                                     {formatDateForInput(payment.date) || 'Select date'}
@@ -131,8 +131,8 @@ const TimberPaymentForm: React.FC<TimberPaymentFormProps> = ({ onClose, onSave, 
                             </div>
                             {errors.date && <p className="mt-1 text-sm text-red-500">{errors.date}</p>}
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Name <span className="text-red-500">*</span></label>
+                        <div className="z-10">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 text-red-500">Supplier Name *</label>
                             <select name="supplierName" value={payment.supplierName} onChange={handleChange} className={`${commonInputClasses} ${errors.supplierName ? 'border-red-500' : ''}`}>
                                 <option value="">Select Supplier</option>
                                 {suppliers.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
@@ -144,12 +144,12 @@ const TimberPaymentForm: React.FC<TimberPaymentFormProps> = ({ onClose, onSave, 
                                 </p>
                             )}
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Paid Amount <span className="text-red-500">*</span></label>
+                        <div className="z-10">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 text-red-500">Paid Amount *</label>
                             <input type="number" value={payment.amount === 0 ? '' : payment.amount} onChange={handleAmountChange} className={`${commonInputClasses} ${errors.amount ? 'border-red-500' : ''}`} placeholder="0.00" />
                             {errors.amount && <p className="mt-1 text-sm text-red-500">{errors.amount}</p>}
                         </div>
-                        <div>
+                        <div className="z-10">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Balance Amount</label>
                             <input 
                                 type="text" 
@@ -158,24 +158,24 @@ const TimberPaymentForm: React.FC<TimberPaymentFormProps> = ({ onClose, onSave, 
                                 className={`${commonInputClasses} bg-gray-50 font-bold ${balanceAmount > 0 ? 'text-red-600' : 'text-green-600'}`} 
                             />
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Payment Mode <span className="text-red-500">*</span></label>
+                        <div className="z-10">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 text-red-500">Payment Mode *</label>
                             <select name="paymentMode" value={payment.paymentMode} onChange={handleChange} className={commonInputClasses}>
                                 {paymentModes.map(m => <option key={m} value={m}>{m}</option>)}
                             </select>
                         </div>
-                        <div className="md:col-span-2">
+                        <div className="md:col-span-2 z-10">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Reference ID</label>
                             <input type="text" name="referenceId" value={payment.referenceId} onChange={handleChange} className={commonInputClasses} placeholder="Txn / Cheque No" />
                         </div>
                     </div>
                     
-                    <div>
+                    <div className="z-10">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Select Image</label>
                         <input type="file" ref={fileInputRef} onChange={handleImageChange} className="hidden" accept="image/*" />
                         <div 
                             onClick={() => fileInputRef.current?.click()}
-                            className="border-2 border-dashed border-gray-300 rounded-md p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors"
+                            className="border-2 border-dashed border-secondary-300 rounded-md p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors"
                         >
                             {payment.image ? (
                                 <div className="relative w-full h-32">
@@ -197,7 +197,7 @@ const TimberPaymentForm: React.FC<TimberPaymentFormProps> = ({ onClose, onSave, 
                     </div>
 
                 </div>
-                <div className="flex items-center justify-end p-5 bg-gray-50 border-t space-x-3">
+                <div className="flex items-center justify-end p-5 bg-gray-50 border-t space-x-3 shrink-0">
                     <button onClick={onClose} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md text-sm font-semibold hover:bg-gray-50 transition-colors">Cancel</button>
                     <button onClick={handleSubmit} className="px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95">Save Payment</button>
                 </div>
