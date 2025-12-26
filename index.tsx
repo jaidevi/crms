@@ -1,7 +1,7 @@
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-// Fix: Changed named import to default import to match standard component export pattern
-import App from './App';
+import { App } from './App';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
