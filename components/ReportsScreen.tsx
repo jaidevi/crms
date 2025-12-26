@@ -191,96 +191,107 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
         };
     }, [purchaseReportData]);
 
-    // Timber Report Logic with enhanced Opening Balance Handling
+    // Combined Detailed Timber Report Logic - Full Ledger with explicit Paid columns
     const timberReportData = useMemo(() => {
         if (reportType !== 'timber' || !startDate || !endDate) return [];
         
-        // 1. Group all historical data by supplier for global liability calculation
-        const expensesBySupplier: Record<string, TimberExpense[]> = {};
-        timberExpenses.forEach(e => {
-            if (!expensesBySupplier[e.supplierName]) expensesBySupplier[e.supplierName] = [];
-            expensesBySupplier[e.supplierName].push(e);
-        });
+        const selectedSuppliers = selectedEntityId === 'all' 
+            ? purchaseShops.map(s => s.name)
+            : [purchaseShops.find(s => s.id === selectedEntityId)?.name].filter(Boolean) as string[];
 
-        const paymentsBySupplier: Record<string, number> = {};
-        supplierPayments.forEach(p => {
-            paymentsBySupplier[p.supplierName] = (paymentsBySupplier[p.supplierName] || 0) + p.amount;
-        });
+        const ledgerRows: { 
+            id: string, 
+            date: string, 
+            supplierName: string, 
+            description: string,
+            amount: number, 
+            paidAmount: number, 
+            paidDate: string,
+            balance: number,
+            isOpening?: boolean 
+        }[] = [];
 
-        const resultRows: (TimberExpense & { paidAmount: number; balanceAmount: number; isOpening?: boolean })[] = [];
-        
-        Object.keys(expensesBySupplier).forEach(supplier => {
-            // Check if this supplier is selected
-            let isSupplierMatch = true;
-            if (selectedEntityId !== 'all') {
-                const selectedShop = purchaseShops.find(s => s.id === selectedEntityId);
-                isSupplierMatch = selectedShop ? supplier === selectedShop.name : false;
-            }
-            if (!isSupplierMatch) return;
-
-            // Sort all historical transactions
-            const historicalExpenses = [...expensesBySupplier[supplier]].sort((a, b) => a.date.localeCompare(b.date));
+        selectedSuppliers.forEach(supplier => {
+            // 1. Calculate historical OB as of startDate
             const supplierMaster = purchaseShops.find(s => s.name === supplier);
             const masterOpeningBalance = supplierMaster ? (Number(supplierMaster.openingBalance) || 0) : 0;
             
-            let totalPaid = paymentsBySupplier[supplier] || 0;
+            const expensesBefore = timberExpenses
+                .filter(e => e.supplierName === supplier && e.date < startDate)
+                .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
             
-            // First liability is the Master Opening Balance
-            let remainingOB = masterOpeningBalance;
-            const obPaid = Math.min(remainingOB, totalPaid);
-            remainingOB -= obPaid;
-            totalPaid -= obPaid;
+            const paymentsBefore = supplierPayments
+                .filter(p => p.supplierName === supplier && p.date < startDate)
+                .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+            
+            const periodStartingBalance = masterOpeningBalance + expensesBefore - paymentsBefore;
 
-            // TRACK PRE-PERIOD LIABILITY
-            let prePeriodUnpaidExpenses = 0;
+            // 2. Collect current period Expenses
+            const periodExpenses = timberExpenses
+                .filter(e => e.supplierName === supplier && e.date >= startDate && e.date <= endDate)
+                .map(e => ({
+                    id: e.id,
+                    date: e.date,
+                    supplierName: e.supplierName,
+                    description: `Timber Load (${e.cft.toFixed(2)} CFT @ ₹${e.rate.toFixed(2)})`,
+                    amount: Number(e.amount) || 0,
+                    paidAmount: 0,
+                    paidDate: '',
+                    balance: 0 // placeholder
+                }));
 
-            historicalExpenses.forEach(exp => {
-                const isBeforePeriod = exp.date < startDate;
-                const expenseAmount = Number(exp.amount) || 0;
-                
-                const paidForThis = Math.min(expenseAmount, totalPaid);
-                const balanceForThis = expenseAmount - paidForThis;
-                totalPaid = Math.max(0, totalPaid - paidForThis);
+            // 3. Collect current period Payments from database
+            const periodPayments = supplierPayments
+                .filter(p => p.supplierName === supplier && p.date >= startDate && p.date <= endDate)
+                .map(p => ({
+                    id: p.id,
+                    date: p.date,
+                    supplierName: p.supplierName,
+                    description: `Supplier Payment (${p.paymentNumber})`,
+                    amount: 0,
+                    paidAmount: Number(p.amount) || 0,
+                    paidDate: p.date,
+                    balance: 0 // placeholder
+                }));
 
-                if (isBeforePeriod) {
-                    prePeriodUnpaidExpenses += balanceForThis;
-                } else if (exp.date <= endDate) {
-                    // This transaction falls within the selected period
-                    resultRows.push({
-                        ...exp,
-                        paidAmount: paidForThis,
-                        balanceAmount: balanceForThis
-                    });
-                }
+            // 4. Combine and Sort for this supplier
+            const supplierRows = [
+                ...periodExpenses,
+                ...periodPayments
+            ].sort((a, b) => {
+                const dateComp = a.date.localeCompare(b.date);
+                if (dateComp !== 0) return dateComp;
+                // Purchases before payments on same day
+                return a.amount > 0 ? -1 : 1;
             });
 
-            // ADD OPENING BALANCE ROW IF APPLICABLE
-            const totalOpeningLiability = remainingOB + prePeriodUnpaidExpenses;
-            if (totalOpeningLiability > 0) {
-                resultRows.push({
+            // Add OB row at start
+            if (periodStartingBalance !== 0 || supplierRows.length > 0) {
+                ledgerRows.push({
                     id: `OB-${supplier}`,
                     date: startDate,
                     supplierName: supplier,
-                    openingBalance: totalOpeningLiability,
-                    loadWeight: 0,
-                    vehicleWeight: 0,
-                    cft: 0,
-                    rate: 0,
+                    description: 'Balance Brought Forward',
                     amount: 0,
                     paidAmount: 0,
-                    balanceAmount: totalOpeningLiability,
-                    notes: 'Balance Brought Forward',
-                    paymentMode: 'Cash',
-                    paymentStatus: 'Unpaid',
-                    paymentTerms: 'N/A',
+                    paidDate: '',
+                    balance: periodStartingBalance,
                     isOpening: true
                 });
             }
+
+            // 5. Calculate Running Balance
+            let currentBal = periodStartingBalance;
+            supplierRows.forEach(row => {
+                currentBal = currentBal + row.amount - row.paidAmount;
+                ledgerRows.push({ ...row, balance: currentBal });
+            });
         });
 
-        // Final sort of display rows: chronologically, putting Opening Balances first for the date
-        return resultRows.sort((a, b) => {
-            if (a.date !== b.date) return a.date.localeCompare(b.date);
+        // Final sort if multiple suppliers are selected (chronological)
+        return ledgerRows.sort((a, b) => {
+            const dateComp = a.date.localeCompare(b.date);
+            if (dateComp !== 0) return dateComp;
             if (a.isOpening) return -1;
             if (b.isOpening) return 1;
             return 0;
@@ -288,12 +299,19 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
     }, [timberExpenses, supplierPayments, purchaseShops, startDate, endDate, selectedEntityId, reportType]);
 
     const timberSummary = useMemo(() => {
-        return {
-            totalCft: timberReportData.filter(r => !r.isOpening).reduce((sum, e) => sum + e.cft, 0),
-            totalAmount: timberReportData.filter(r => !r.isOpening).reduce((sum, e) => sum + e.amount, 0),
-            totalPaid: timberReportData.filter(r => !r.isOpening).reduce((sum, e) => sum + e.paidAmount, 0),
-            totalBalance: timberReportData.reduce((sum, e) => sum + e.balanceAmount, 0)
-        };
+        const totalPurchases = timberReportData.filter(r => !r.isOpening).reduce((sum, r) => sum + r.amount, 0);
+        const totalPayments = timberReportData.filter(r => !r.isOpening).reduce((sum, r) => sum + r.paidAmount, 0);
+        
+        const suppliers = Array.from(new Set(timberReportData.map(r => r.supplierName)));
+        let totalOutstanding = 0;
+        suppliers.forEach(s => {
+            const supplierRows = timberReportData.filter(r => r.supplierName === s);
+            if (supplierRows.length > 0) {
+                totalOutstanding += supplierRows[supplierRows.length - 1].balance;
+            }
+        });
+
+        return { totalPurchases, totalPayments, totalOutstanding };
     }, [timberReportData]);
 
     const otherExpenseReportData = useMemo(() => {
@@ -370,11 +388,11 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
         } else if (reportType === 'payment_received') {
             sheetName = "Payments";
             fileName = `Payment_Received_Report_${startDate}_${endDate}.xlsx`;
-            data = paymentReceivedReportData.map((p, idx) => ({ 'S.NO': idx + 1, 'Date': p.paymentDate, 'Client Name': p.clientName, 'Opening Balance': p.openingBalance, 'Amount Received': p.amount, 'Payment Mode': p.paymentMode, 'Reference Number': p.referenceNumber }));
+            data = paymentReceivedReportData.map((p, idx) => ({ 'S.NO': idx + 1, 'Date': p.paymentDate, 'Client Name': p.clientName, 'Opening Balance': p.openingBalance, 'Amount Received': p.amount, 'Payment Mode': p.payment_mode, 'Reference Number': p.reference_number }));
         } else if (reportType === 'timber') {
             sheetName = "Timber";
             fileName = `Timber_Report_${startDate}_${endDate}.xlsx`;
-            data = timberReportData.map((e, idx) => ({ 'S.NO': idx + 1, 'Date': e.date, 'Supplier': e.supplierName, 'Notes': e.notes, 'CFT': e.cft, 'Rate': e.rate, 'Amount': e.amount, 'Paid': e.paidAmount, 'Balance': e.balanceAmount }));
+            data = timberReportData.map((e, idx) => ({ 'S.NO': idx + 1, 'Date': e.date, 'Supplier': e.supplierName, 'Description': e.description, 'Debit (Amount)': e.amount || '', 'Credit (Paid)': e.paidAmount || '', 'Paid Date': e.paidDate || '', 'Balance': e.balance }));
         } else if (reportType === 'other_expense') {
             sheetName = "Expenses";
             fileName = `Expenses_Report_${startDate}_${endDate}.xlsx`;
@@ -562,21 +580,17 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                 {reportType === 'timber' && (
                     <>
                          <div className="flex gap-2 mb-8 no-print">
-                            <div className="flex-1 bg-blue-50 p-2 rounded border border-blue-100 text-center">
-                                <p className="text-[10px] text-blue-600 font-bold uppercase">Total CFT</p>
-                                <p className="text-lg font-bold text-blue-800">{timberSummary.totalCft.toFixed(2)}</p>
-                            </div>
                             <div className="flex-1 bg-indigo-50 p-2 rounded border border-indigo-100 text-center">
-                                <p className="text-[10px] text-indigo-600 font-bold uppercase">Total Amount</p>
-                                <p className="text-lg font-bold text-indigo-800">₹{numberFormat(timberSummary.totalAmount)}</p>
+                                <p className="text-[10px] text-indigo-600 font-bold uppercase">Total Purchases</p>
+                                <p className="text-lg font-bold text-indigo-800">₹{numberFormat(timberSummary.totalPurchases)}</p>
                             </div>
                             <div className="flex-1 bg-success-50 p-2 rounded border border-success-100 text-center">
-                                <p className="text-[10px] text-success-600 font-bold uppercase">Total Paid</p>
-                                <p className="text-lg font-bold text-success-800">₹{numberFormat(timberSummary.totalPaid)}</p>
+                                <p className="text-[10px] text-success-600 font-bold uppercase">Total Payments</p>
+                                <p className="text-lg font-bold text-success-800">₹{numberFormat(timberSummary.totalPayments)}</p>
                             </div>
                             <div className="flex-1 bg-danger-50 p-2 rounded border border-danger-100 text-center">
-                                <p className="text-[10px] text-danger-600 font-bold uppercase">Outstanding</p>
-                                <p className="text-lg font-bold text-danger-800">₹{numberFormat(timberSummary.totalBalance)}</p>
+                                <p className="text-[10px] text-danger-600 font-bold uppercase">Net Outstanding</p>
+                                <p className="text-lg font-bold text-danger-800">₹{numberFormat(timberSummary.totalOutstanding)}</p>
                             </div>
                         </div>
 
@@ -584,38 +598,42 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                             <table className="w-full text-[11px] text-left border-collapse">
                                 <thead className="bg-secondary-100 uppercase">
                                     <tr>
-                                        <th className="px-3 py-2 border w-10 text-center">S.NO</th>
-                                        <th className="px-3 py-2 border">Date</th>
-                                        <th className="px-3 py-2 border">Supplier</th>
-                                        <th className="px-3 py-2 text-right">CFT</th>
-                                        <th className="px-3 py-2 text-right">Rate</th>
-                                        <th className="px-3 py-2 text-right">Amount</th>
-                                        <th className="px-3 py-2 text-right">Paid</th>
-                                        <th className="px-3 py-2 text-right">Balance</th>
+                                        <th className="px-3 py-2 border w-10 text-center font-bold">S.NO</th>
+                                        <th className="px-3 py-2 border font-bold">DATE</th>
+                                        <th className="px-3 py-2 border font-bold">SUPPLIER</th>
+                                        <th className="px-3 py-2 border font-bold">DESCRIPTION</th>
+                                        <th className="px-3 py-2 text-right font-bold">AMOUNT</th>
+                                        <th className="px-3 py-2 text-right font-bold">PAID AMT</th>
+                                        <th className="px-3 py-2 text-center font-bold">PAID DATE</th>
+                                        <th className="px-3 py-2 text-right font-bold">BALANCE</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {timberReportData.map((e, index) => (
-                                        <tr key={e.id} className={`border-b ${e.isOpening ? 'bg-orange-50 italic font-medium' : ''}`}>
+                                    {timberReportData.map((r, index) => (
+                                        <tr key={r.id} className={`border-b ${r.isOpening ? 'bg-orange-50 italic font-medium' : ''}`}>
                                             <td className="px-3 py-1.5 border text-center">{index + 1}</td>
-                                            <td className="px-3 py-1.5 border">{formatDateForDisplay(e.date)}</td>
-                                            <td className="px-3 py-1.5 border font-medium">{e.supplierName}</td>
-                                            <td className="px-3 py-1.5 border text-right">{e.cft > 0 ? e.cft.toFixed(2) : '-'}</td>
-                                            <td className="px-3 py-1.5 border text-right">{e.rate > 0 ? `₹${e.rate.toFixed(2)}` : '-'}</td>
-                                            <td className="px-3 py-1.5 border text-right">{e.amount > 0 ? `₹${numberFormat(e.amount)}` : (e.isOpening ? '' : '₹0.00')}</td>
-                                            <td className="px-3 py-1.5 border text-right text-success-600">{e.paidAmount > 0 ? `₹${numberFormat(e.paidAmount)}` : (e.isOpening ? '' : '₹0.00')}</td>
-                                            <td className={`px-3 py-1.5 border text-right font-bold ${e.balanceAmount > 0 ? 'text-danger-600' : 'text-secondary-400'}`}>₹{numberFormat(e.balanceAmount)}</td>
+                                            <td className="px-3 py-1.5 border">{formatDateForDisplay(r.date)}</td>
+                                            <td className="px-3 py-1.5 border font-medium uppercase">{r.supplierName}</td>
+                                            <td className="px-3 py-1.5 border text-secondary-600">{r.description}</td>
+                                            <td className="px-3 py-1.5 border text-right font-medium text-secondary-800">{r.amount > 0 ? `₹${numberFormat(r.amount)}` : ''}</td>
+                                            <td className="px-3 py-1.5 border text-right font-bold text-success-700">{r.paidAmount > 0 ? `₹${numberFormat(r.paidAmount)}` : ''}</td>
+                                            <td className="px-3 py-1.5 border text-center text-secondary-500">{r.paidDate ? formatDateForDisplay(r.paidDate) : '-'}</td>
+                                            <td className={`px-3 py-1.5 border text-right font-bold ${r.balance > 0 ? 'text-danger-600' : 'text-success-600'}`}>
+                                                ₹{numberFormat(Math.abs(r.balance))} {r.balance > 0 ? 'DR' : (r.balance < 0 ? 'CR' : '')}
+                                            </td>
                                         </tr>
                                     ))}
+                                    {timberReportData.length === 0 && (
+                                        <tr><td colSpan={8} className="px-3 py-8 text-center text-secondary-500 italic">No data found for the selected range and supplier.</td></tr>
+                                    )}
                                 </tbody>
                                 <tfoot className="bg-secondary-50 font-bold">
                                     <tr>
-                                        <td colSpan={3} className="px-3 py-2 border text-right uppercase">Grand Total:</td>
-                                        <td className="px-3 py-2 border text-right">{timberSummary.totalCft.toFixed(2)}</td>
+                                        <td colSpan={4} className="px-3 py-2 border text-right uppercase">Period Totals & Final Balance:</td>
+                                        <td className="px-3 py-2 border text-right">₹{numberFormat(timberSummary.totalPurchases)}</td>
+                                        <td className="px-3 py-2 border text-right text-success-700">₹{numberFormat(timberSummary.totalPayments)}</td>
                                         <td className="px-3 py-2 border"></td>
-                                        <td className="px-3 py-2 border text-right">₹{numberFormat(timberSummary.totalAmount)}</td>
-                                        <td className="px-3 py-2 border text-right text-success-600">₹{numberFormat(timberSummary.totalPaid)}</td>
-                                        <td className="px-3 py-2 border text-right text-danger-600">₹{numberFormat(timberSummary.totalBalance)}</td>
+                                        <td className="px-3 py-2 border text-right text-danger-700 font-extrabold text-xs">₹{numberFormat(timberSummary.totalOutstanding)}</td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -632,11 +650,11 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                             </div>
                             <div className="flex-1 bg-success-50 p-2 rounded border border-success-100 text-center">
                                 <p className="text-[10px] text-success-600 font-bold uppercase">Total Paid</p>
-                                <p className="text-lg font-bold text-success-800">₹{numberFormat(otherExpenseSummary.paidAmount)}</p>
+                                <p className="text-lg font-bold text-secondary-800">₹{numberFormat(otherExpenseSummary.paidAmount)}</p>
                             </div>
                             <div className="flex-1 bg-danger-50 p-2 rounded border border-danger-100 text-center">
                                 <p className="text-[10px] text-danger-600 font-bold uppercase">Pending Bills</p>
-                                <p className="text-lg font-bold text-danger-800">₹{numberFormat(otherExpenseSummary.unpaidAmount)}</p>
+                                <p className="text-lg font-bold text-secondary-800">₹{numberFormat(otherExpenseSummary.unpaidAmount)}</p>
                             </div>
                         </div>
 
@@ -766,8 +784,8 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                                         <td className="px-3 py-1.5 border text-center">{index + 1}</td>
                                         <td className="px-3 py-1.5 border">{formatDateForDisplay(p.paymentDate)}</td>
                                         <td className="px-3 py-1.5 border">{p.clientName}</td>
-                                        <td className="px-3 py-1.5 border">{p.paymentMode}</td>
-                                        <td className="px-3 py-1.5 border">{p.referenceNumber || '-'}</td>
+                                        <td className="px-3 py-1.5 border">{p.payment_mode}</td>
+                                        <td className="px-3 py-1.5 border">{p.reference_number || '-'}</td>
                                         <td className="px-3 py-1.5 border text-right font-bold">₹{numberFormat(p.amount)}</td>
                                     </tr>
                                 ))}

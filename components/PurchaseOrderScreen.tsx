@@ -48,11 +48,10 @@ const toYMDString = (date: Date): string => {
     return `${year}-${month}-${day}`;
 };
 
-// Type for sortable column keys for Purchase Orders
+// Type for sortable column keys
 type SortableKeys = 'poNumber' | 'poDate' | 'shopName' | 'dueDate' | 'totalAmount';
-type TimberSortableKeys = 'date' | 'supplierName' | 'openingBalance' | 'amount' | 'dueDate' | 'paidAmount' | 'balanceAmount';
+type TimberSortableKeys = 'date' | 'supplierName' | 'amount' | 'paidAmount' | 'balanceAmount' | 'paidDate';
 
-// Type for sort configuration for Purchase Orders
 interface SortConfig {
   key: SortableKeys;
   direction: 'ascending' | 'descending';
@@ -62,7 +61,6 @@ interface TimberSortConfig {
   key: TimberSortableKeys;
   direction: 'ascending' | 'descending';
 }
-
 
 interface DisplayAdvance extends EmployeeAdvance {
     employeeName: string;
@@ -78,12 +76,8 @@ const parsePaymentTerms = (terms: string | undefined): number => {
     if (!terms) return Infinity;
     const lowerTerms = terms.toLowerCase();
     if (lowerTerms.includes('due on receipt')) return 0;
-    
     const match = lowerTerms.match(/(\d+)/);
-    if (match && match[1]) {
-        return parseInt(match[1], 10);
-    }
-    
+    if (match && match[1]) return parseInt(match[1], 10);
     return Infinity;
 };
 
@@ -99,33 +93,28 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'purchases' | 'advances' | 'other' | 'timber'>('purchases');
 
-  // State for Purchase Orders
   const [showPOForm, setShowPOForm] = useState(false);
   const [poSearchTerm, setPoSearchTerm] = useState('');
   const [orderToEdit, setOrderToEdit] = useState<PurchaseOrder | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'poDate', direction: 'descending' });
   const [poToDelete, setPoToDelete] = useState<string | null>(null);
 
-  // State for Employee Advances
   const [isAdvanceFormOpen, setIsAdvanceFormOpen] = useState(false);
   const [advanceToEdit, setAdvanceToEdit] = useState<EmployeeAdvance | null>(null);
   const [advanceToDelete, setAdvanceToDelete] = useState<DisplayAdvance | null>(null);
   const [advanceSearchTerm, setAdvanceSearchTerm] = useState('');
 
-  // State for Other Expenses
   const [isOtherExpenseFormOpen, setIsOtherExpenseFormOpen] = useState(false);
   const [otherExpenseToEdit, setOtherExpenseToEdit] = useState<OtherExpense | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<OtherExpense | null>(null);
   const [otherExpenseSearchTerm, setOtherExpenseSearchTerm] = useState('');
 
-  // State for Timber Expenses
   const [isTimberFormOpen, setIsTimberFormOpen] = useState(false);
   const [timberToEdit, setTimberToEdit] = useState<TimberExpense | null>(null);
   const [timberSortConfig, setTimberSortConfig] = useState<TimberSortConfig>({ key: 'date', direction: 'descending' });
   const [timberToDelete, setTimberToDelete] = useState<TimberExpense | null>(null);
   const [timberSearchTerm, setTimberSearchTerm] = useState('');
   const [isPaymentFormOpen, setIsPaymentFormOpen] = useState(false);
-
 
   const getDueDate = useCallback((item: PurchaseOrder | OtherExpense | TimberExpense): Date | null => {
       const itemDate = 'poDate' in item ? item.poDate : item.date;
@@ -137,7 +126,6 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
       return date;
   }, []);
 
-  // Memoized data for Purchase Orders
   const processedOrders = useMemo(() => {
     let filteredData = [...purchaseOrders];
     if (poSearchTerm) {
@@ -153,7 +141,6 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
         filteredData.sort((a, b) => {
             let aValue: any;
             let bValue: any;
-
             if (sortConfig.key === 'dueDate') {
                 aValue = getDueDate(a)?.getTime() ?? (sortConfig.direction === 'ascending' ? Infinity : -Infinity);
                 bValue = getDueDate(b)?.getTime() ?? (sortConfig.direction === 'ascending' ? Infinity : -Infinity);
@@ -161,7 +148,6 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
                 aValue = a[sortConfig.key as Exclude<SortableKeys, 'dueDate'>];
                 bValue = b[sortConfig.key as Exclude<SortableKeys, 'dueDate'>];
             }
-
             if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
             if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
             return 0;
@@ -170,22 +156,16 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
     return filteredData;
   }, [purchaseOrders, poSearchTerm, sortConfig, getDueDate]);
   
-  // Handlers for Purchase Orders
   const handleSaveOrder = (orderData: PurchaseOrder) => {
-    if (orderToEdit) {
-      onUpdateOrder(orderToEdit.poNumber, orderData);
-    } else {
-      onAddOrder(orderData);
-    }
+    if (orderToEdit) onUpdateOrder(orderToEdit.poNumber, orderData);
+    else onAddOrder(orderData);
     setShowPOForm(false);
     setOrderToEdit(null);
   };
   
   const requestSort = (key: SortableKeys) => {
     let direction: 'ascending' | 'descending' = 'ascending';
-    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
-    }
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') direction = 'descending';
     setSortConfig({ key, direction });
   };
   
@@ -196,7 +176,6 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
       : <ChevronDownIcon className="w-4 h-4 ml-1" />;
   };
 
-  // Memoized data for Employee Advances
   const employeeMap = useMemo(() => new Map(employees.map(e => [e.id, e.name])), [employees]);
 
   const filteredAdvances = useMemo(() => {
@@ -213,23 +192,17 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
       );
   }, [advances, advanceSearchTerm, employeeMap]);
 
-  // Handlers for Employee Advances
   const handleSaveAdvance = useCallback(async (advanceData: Omit<EmployeeAdvance, 'id'> | EmployeeAdvance) => {
       try {
-          if ('id' in advanceData && advanceToEdit) {
-              await onUpdateAdvance(advanceData as EmployeeAdvance);
-          } else {
-              await onAddAdvance(advanceData as Omit<EmployeeAdvance, 'id'>);
-          }
+          if ('id' in advanceData && advanceToEdit) await onUpdateAdvance(advanceData as EmployeeAdvance);
+          else await onAddAdvance(advanceData as Omit<EmployeeAdvance, 'id'>);
           setIsAdvanceFormOpen(false);
           setAdvanceToEdit(null);
       } catch (e) {
-          const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
-          alert(`Error saving advance:\n${errorMessage}`);
+          alert(`Error saving advance:\n${e instanceof Error ? e.message : "Unknown error"}`);
       }
   }, [advanceToEdit, onAddAdvance, onUpdateAdvance]);
 
-  // Memoized data for Other Expenses
   const filteredOtherExpenses = useMemo(() => {
     const sorted = [...otherExpenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     if (!otherExpenseSearchTerm) return sorted;
@@ -240,28 +213,20 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
     );
   }, [otherExpenses, otherExpenseSearchTerm]);
 
-  // Handlers for Other Expenses
   const handleSaveOtherExpense = useCallback(async (expenseData: Omit<OtherExpense, 'id'> | OtherExpense) => {
     try {
-        if ('id' in expenseData && otherExpenseToEdit) {
-            await onUpdateOtherExpense(expenseData as OtherExpense);
-        } else {
-            await onAddOtherExpense(expenseData as Omit<OtherExpense, 'id'>);
-        }
+        if ('id' in expenseData && otherExpenseToEdit) await onUpdateOtherExpense(expenseData as OtherExpense);
+        else await onAddOtherExpense(expenseData as Omit<OtherExpense, 'id'>);
         setIsOtherExpenseFormOpen(false);
         setOtherExpenseToEdit(null);
     } catch (e) {
-        const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
-        alert(`Error saving expense:\n${errorMessage}`);
+        alert(`Error saving expense:\n${e instanceof Error ? e.message : "Unknown error"}`);
     }
   }, [otherExpenseToEdit, onAddOtherExpense, onUpdateOtherExpense]);
   
-    // Handlers for Timber
     const requestTimberSort = (key: TimberSortableKeys) => {
         let direction: 'ascending' | 'descending' = 'ascending';
-        if (timberSortConfig.key === key && timberSortConfig.direction === 'ascending') {
-            direction = 'descending';
-        }
+        if (timberSortConfig.key === key && timberSortConfig.direction === 'ascending') direction = 'descending';
         setTimberSortConfig({ key, direction });
     };
     
@@ -272,64 +237,68 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
           : <ChevronDownIcon className="w-4 h-4 ml-1" />;
     };
 
-    // Memoized data for Timber Expenses with Allocation
     const enrichedTimberExpenses = useMemo(() => {
-        // 1. Group expenses by supplier
         const expensesBySupplier: Record<string, TimberExpense[]> = {};
         timberExpenses.forEach(e => {
             if (!expensesBySupplier[e.supplierName]) expensesBySupplier[e.supplierName] = [];
             expensesBySupplier[e.supplierName].push(e);
         });
 
-        // 2. Group payments by supplier
-        const paymentsBySupplier: Record<string, number> = {};
+        const paymentsBySupplier: Record<string, SupplierPayment[]> = {};
         supplierPayments.forEach(p => {
-            paymentsBySupplier[p.supplierName] = (paymentsBySupplier[p.supplierName] || 0) + p.amount;
+            if (!paymentsBySupplier[p.supplierName]) paymentsBySupplier[p.supplierName] = [];
+            paymentsBySupplier[p.supplierName].push(p);
+        });
+        Object.keys(paymentsBySupplier).forEach(supplier => {
+            paymentsBySupplier[supplier].sort((a, b) => a.date.localeCompare(b.date));
         });
 
-        const enriched: (TimberExpense & { paidAmount: number; balanceAmount: number })[] = [];
+        const enriched: (TimberExpense & { paidAmount: number; balanceAmount: number; paidDate: string })[] = [];
         
         Object.keys(expensesBySupplier).forEach(supplier => {
-            // Sort by Date ASC for FIFO allocation
-            const supplierExpenses = [...expensesBySupplier[supplier]].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-            
-            // 3. Get Master Opening Balance for the supplier from purchaseShops Master data
+            const supplierExpenses = [...expensesBySupplier[supplier]].sort((a, b) => a.date.localeCompare(b.date));
             const supplierMaster = purchaseShops.find(s => s.name === supplier);
             const masterOpeningBalance = supplierMaster ? (Number(supplierMaster.openingBalance) || 0) : 0;
 
-            let totalPaid = paymentsBySupplier[supplier] || 0;
+            const payments = paymentsBySupplier[supplier] || [];
+            let currentPaymentIdx = 0;
+            let currentPaymentRemaining = payments.length > 0 ? payments[0].amount : 0;
 
             supplierExpenses.forEach((exp, index) => {
-                // LIABILITY: 
-                // We add the Master Opening Balance liability to the FIRST (oldest) transaction row 
-                // so the total supplier debt is correctly accounted for exactly once in the list.
                 let totalRowLiability = (Number(exp.amount) || 0);
-                if (index === 0) {
-                    totalRowLiability += masterOpeningBalance;
-                }
+                if (index === 0) totalRowLiability += masterOpeningBalance;
 
-                const paidForThis = Math.min(totalRowLiability, totalPaid);
-                totalPaid = Math.max(0, totalPaid - paidForThis);
+                let paidForThis = 0;
+                let latestDate = '';
+
+                while (totalRowLiability > 0 && currentPaymentIdx < payments.length) {
+                    const amountToTake = Math.min(totalRowLiability, currentPaymentRemaining);
+                    paidForThis += amountToTake;
+                    totalRowLiability -= amountToTake;
+                    currentPaymentRemaining -= amountToTake;
+                    if (amountToTake > 0) latestDate = payments[currentPaymentIdx].date;
+
+                    if (currentPaymentRemaining <= 0) {
+                        currentPaymentIdx++;
+                        if (currentPaymentIdx < payments.length) currentPaymentRemaining = payments[currentPaymentIdx].amount;
+                    }
+                }
                 
                 enriched.push({
                     ...exp,
                     paidAmount: paidForThis,
-                    balanceAmount: totalRowLiability - paidForThis
+                    balanceAmount: (index === 0 ? (Number(exp.amount) || 0) + masterOpeningBalance : (Number(exp.amount) || 0)) - paidForThis,
+                    paidDate: latestDate
                 });
             });
         });
         
-        // Handle any expenses that might have no supplier name (should be rare due to validation)
         timberExpenses.forEach(e => {
-            if (!e.supplierName) {
-                enriched.push({ ...e, paidAmount: 0, balanceAmount: Number(e.amount) || 0 });
-            }
+            if (!e.supplierName) enriched.push({ ...e, paidAmount: 0, balanceAmount: Number(e.amount) || 0, paidDate: '' });
         });
-
         return enriched;
     }, [timberExpenses, supplierPayments, purchaseShops]);
 
-    // Memoized data for Timber Expenses
     const filteredTimberExpenses = useMemo(() => {
         let filteredData = [...enrichedTimberExpenses];
         if (timberSearchTerm) {
@@ -343,15 +312,13 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
             filteredData.sort((a, b) => {
                 let aValue: any;
                 let bValue: any;
-
-                if (timberSortConfig.key === 'dueDate') {
+                if ((timberSortConfig.key as any) === 'dueDate') {
                     aValue = getDueDate(a)?.getTime() ?? (timberSortConfig.direction === 'ascending' ? Infinity : -Infinity);
                     bValue = getDueDate(b)?.getTime() ?? (timberSortConfig.direction === 'ascending' ? Infinity : -Infinity);
                 } else {
                     aValue = a[timberSortConfig.key as Exclude<TimberSortableKeys, 'dueDate'>];
                     bValue = b[timberSortConfig.key as Exclude<TimberSortableKeys, 'dueDate'>];
                 }
-
                 if (aValue < bValue) return timberSortConfig.direction === 'ascending' ? -1 : 1;
                 if (aValue > bValue) return timberSortConfig.direction === 'ascending' ? 1 : -1;
                 return 0;
@@ -360,19 +327,14 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
         return filteredData;
   }, [enrichedTimberExpenses, timberSearchTerm, timberSortConfig, getDueDate]);
 
-  // Handlers for Timber Expenses
   const handleSaveTimberExpense = useCallback(async (expenseData: Omit<TimberExpense, 'id'> | TimberExpense) => {
     try {
-        if ('id' in expenseData && timberToEdit) {
-            await onUpdateTimberExpense(expenseData as TimberExpense);
-        } else {
-            await onAddTimberExpense(expenseData as Omit<TimberExpense, 'id'>);
-        }
+        if ('id' in expenseData && timberToEdit) await onUpdateTimberExpense(expenseData as TimberExpense);
+        else await onAddTimberExpense(expenseData as Omit<TimberExpense, 'id'>);
         setIsTimberFormOpen(false);
         setTimberToEdit(null);
     } catch (e) {
-        const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
-        alert(`Error saving timber expense:\n${errorMessage}`);
+        alert(`Error saving timber expense:\n${e instanceof Error ? e.message : "Unknown error"}`);
     }
   }, [timberToEdit, onAddTimberExpense, onUpdateTimberExpense]);
 
@@ -382,11 +344,9 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
           setIsPaymentFormOpen(false);
           alert('Payment recorded successfully!');
       } catch (e) {
-          const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
-          alert(`Error saving payment:\n${errorMessage}`);
+          alert(`Error saving payment:\n${e instanceof Error ? e.message : "Unknown error"}`);
       }
   }, [onAddSupplierPayment]);
-
 
   const tabButtonClasses = (tabName: 'purchases' | 'advances' | 'other' | 'timber') => 
     `whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm ${
@@ -460,7 +420,6 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
                                 const dueDate = getDueDate(order);
                                 const daysUntilDue = dueDate ? Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : null;
                                 const isOverdue = daysUntilDue !== null && daysUntilDue < 0 && order.status !== 'Paid';
-                                
                                 return (
                                 <tr key={order.poNumber} className="bg-white border-b hover:bg-secondary-50">
                                     <th scope="row" className="px-6 py-4 font-medium text-secondary-900 whitespace-nowrap">{order.poNumber}</th>
@@ -578,7 +537,6 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
                                 const dueDate = getDueDate(expense);
                                 const daysUntilDue = dueDate ? Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : null;
                                 const isOverdue = daysUntilDue !== null && daysUntilDue < 0 && expense.paymentStatus !== 'Paid';
-
                                 return (
                                     <tr key={expense.id} className="bg-white border-b hover:bg-secondary-50">
                                         <td className="px-6 py-4">{formatDateForDisplay(expense.date)}</td>
@@ -643,17 +601,15 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
                                 <th scope="col" className="px-6 py-3 cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('supplierName')}>
                                     <div className="flex items-center">Supplier {getTimberSortIndicator('supplierName')}</div>
                                 </th>
-                              
-                                <th scope="col" className="px-6 py-3 cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('dueDate')}>
-                                    <div className="flex items-center">Due Date {getTimberSortIndicator('dueDate')}</div>
-                                </th>
-                                <th scope="col" className="px-6 py-3 text-center">CFT</th>
                                 <th scope="col" className="px-6 py-3 text-center">RATE</th>
                                 <th scope="col" className="px-6 py-3 text-right cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('amount')}>
                                     <div className="flex items-center justify-end">Amount {getTimberSortIndicator('amount')}</div>
                                 </th>
                                 <th scope="col" className="px-6 py-3 text-right cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('paidAmount')}>
-                                    <div className="flex items-center justify-end">Paid {getTimberSortIndicator('paidAmount')}</div>
+                                    <div className="flex items-center justify-end">Paid Amt {getTimberSortIndicator('paidAmount')}</div>
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-center cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('paidDate')}>
+                                    <div className="flex items-center justify-center">Paid Date {getTimberSortIndicator('paidDate')}</div>
                                 </th>
                                 <th scope="col" className="px-6 py-3 text-right cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('balanceAmount')}>
                                     <div className="flex items-center justify-end">Balance {getTimberSortIndicator('balanceAmount')}</div>
@@ -663,28 +619,15 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
                         </thead>
                         <tbody>
                             {filteredTimberExpenses.map((expense) => {
-                                const dueDate = getDueDate(expense);
-                                const daysUntilDue = dueDate ? Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : null;
-                                const isOverdue = daysUntilDue !== null && daysUntilDue < 0 && expense.balanceAmount > 0;
                                 const isPaid = expense.balanceAmount <= 0;
-
                                 return (
                                     <tr key={expense.id} className="bg-white border-b hover:bg-secondary-50">
                                         <td className="px-6 py-4 whitespace-nowrap">{formatDateForDisplay(expense.date)}</td>
                                         <td className="px-6 py-4 font-medium text-secondary-900">{expense.supplierName}</td>
-                                      
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div>{dueDate ? formatDateForDisplay(toYMDString(dueDate)) : '-'}</div>
-                                            {daysUntilDue !== null && !isPaid && (
-                                                <div className={`text-xs mt-0.5 ${isOverdue ? 'text-danger-600 font-medium' : 'text-secondary-500'}`}>
-                                                    {isOverdue ? `Due in ${Math.abs(daysUntilDue)} day(s)` : `Due in ${daysUntilDue} day(s)`}
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 text-center">{expense.cft.toFixed(2)}</td>
                                         <td className="px-6 py-4 text-center">₹{expense.rate.toFixed(2)}</td>
                                         <td className="px-6 py-4 text-right font-medium text-secondary-700">₹{expense.amount.toFixed(2)}</td>
                                         <td className="px-6 py-4 text-right font-medium text-success-600">₹{expense.paidAmount.toFixed(2)}</td>
+                                        <td className="px-6 py-4 text-center text-secondary-500 whitespace-nowrap">{expense.paidDate ? formatDateForDisplay(expense.paidDate) : '-'}</td>
                                         <td className={`px-6 py-4 text-right font-bold ${isPaid ? 'text-secondary-400' : 'text-danger-600'}`}>₹{expense.balanceAmount.toFixed(2)}</td>
                                         <td className="px-6 py-4 text-center">
                                             <div className="flex items-center justify-center gap-4">
