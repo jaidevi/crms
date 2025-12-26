@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { CalendarIcon, SearchIcon, PrintIcon, ChevronDownIcon, DownloadIcon } from './Icons';
 import DatePicker from './DatePicker';
-import type { Employee, AttendanceRecord, Invoice, Client, PurchaseOrder, PurchaseShop, PaymentReceived, TimberExpense, SupplierPayment, OtherExpense, ExpenseCategory } from '../types';
+import type { Employee, AttendanceRecord, Invoice, Client, PurchaseOrder, PurchaseShop, PaymentReceived, TimberExpense, SupplierPayment, OtherExpense, ExpenseCategory, DeliveryChallan } from '../types';
 import * as XLSX from 'xlsx';
 
 interface ReportsScreenProps {
@@ -17,6 +17,7 @@ interface ReportsScreenProps {
     supplierPayments: SupplierPayment[];
     otherExpenses: OtherExpense[];
     expenseCategories: ExpenseCategory[];
+    deliveryChallans: DeliveryChallan[];
 }
 
 const formatDateForDisplay = (isoDate: string) => {
@@ -38,7 +39,7 @@ const ROWS_PER_PAGE = 22;
 const ReportsScreen: React.FC<ReportsScreenProps> = ({ 
     employees, attendanceRecords, invoices, clients, purchaseOrders, 
     purchaseShops, paymentsReceived, timberExpenses, supplierPayments,
-    otherExpenses, expenseCategories
+    otherExpenses, expenseCategories, deliveryChallans
 }) => {
     const today = new Date().toISOString().split('T')[0];
     const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
@@ -46,7 +47,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
     const [startDate, setStartDate] = useState(firstDayOfMonth);
     const [endDate, setEndDate] = useState(today);
     const [selectedEntityId, setSelectedEntityId] = useState('all');
-    const [reportType, setReportType] = useState<'attendance' | 'invoice' | 'purchase' | 'payment_received' | 'timber' | 'other_expense'>('attendance');
+    const [reportType, setReportType] = useState<'attendance' | 'invoice' | 'purchase' | 'payment_received' | 'timber' | 'other_expense' | 'process'>('attendance');
 
     const [isStartDateOpen, setIsStartDateOpen] = useState(false);
     const [isEndDateOpen, setIsEndDateOpen] = useState(false);
@@ -355,6 +356,28 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
         };
     }, [paymentReceivedReportData]);
 
+    // Process Wise Report Data
+    const processReportData = useMemo(() => {
+        if (reportType !== 'process' || !startDate || !endDate) return [];
+        return deliveryChallans.filter(c => {
+            const isDateInRange = c.date >= startDate && c.date <= endDate;
+            let isClientMatch = true;
+            if (selectedEntityId !== 'all') {
+                const selectedClient = clients.find(cl => cl.id === selectedEntityId);
+                isClientMatch = selectedClient ? c.partyName.includes(selectedClient.name) : false;
+            }
+            return isDateInRange && isClientMatch;
+        }).sort((a, b) => a.date.localeCompare(b.date));
+    }, [deliveryChallans, startDate, endDate, selectedEntityId, clients, reportType]);
+
+    const processSummary = useMemo(() => {
+        return {
+            totalPcs: processReportData.reduce((sum, c) => sum + (c.pcs || 0), 0),
+            totalMeters: processReportData.reduce((sum, c) => sum + (c.mtr || 0), 0),
+            totalJobs: processReportData.length
+        };
+    }, [processReportData]);
+
     const handlePrint = () => { window.print(); };
 
     const hasData = useMemo(() => {
@@ -364,8 +387,9 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
         if (reportType === 'payment_received') return paymentReceivedReportData.length > 0;
         if (reportType === 'timber') return timberReportData.length > 0;
         if (reportType === 'other_expense') return otherExpenseReportData.length > 0;
+        if (reportType === 'process') return processReportData.length > 0;
         return false;
-    }, [reportType, attendanceReportData, invoiceReportData, purchaseReportData, paymentReceivedReportData, timberReportData, otherExpenseReportData]);
+    }, [reportType, attendanceReportData, invoiceReportData, purchaseReportData, paymentReceivedReportData, timberReportData, otherExpenseReportData, processReportData]);
 
     const handleDownloadExcel = () => {
         if (!hasData) return;
@@ -397,6 +421,10 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
             sheetName = "Expenses";
             fileName = `Expenses_Report_${startDate}_${endDate}.xlsx`;
             data = otherExpenseReportData.map((e, idx) => ({ 'S.NO': idx + 1, 'Date': e.date, 'Category': e.itemName, 'Status': e.paymentStatus, 'Mode': e.paymentMode, 'Amount': e.amount }));
+        } else if (reportType === 'process') {
+            sheetName = "Process";
+            fileName = `Process_Report_${startDate}_${endDate}.xlsx`;
+            data = processReportData.map((c, idx) => ({ 'S.NO': idx + 1, 'Date': c.date, 'Challan #': c.challanNumber, 'Party': c.partyName, 'Process': c.process.join(', '), 'Design #': c.designNo, 'Pcs': c.pcs, 'Meters': c.mtr }));
         }
         const ws = XLSX.utils.json_to_sheet(data);
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
@@ -431,6 +459,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                             <option value="payment_received">Payment Received Report</option>
                             <option value="timber">Timber Report</option>
                             <option value="other_expense">Other Expenses Report</option>
+                            <option value="process">Process Wise Report</option>
                         </select>
                     </div>
                     <div>
@@ -478,6 +507,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                          reportType === 'purchase' ? 'Purchase Report' : 
                          reportType === 'timber' ? 'Timber Report' :
                          reportType === 'other_expense' ? 'Other Expenses Report' :
+                         reportType === 'process' ? 'Process Wise Report' :
                          'Payment Received Report'}
                     </h2>
                     <p className="text-center text-secondary-500 text-sm mt-1">Period: {formatDateForDisplay(startDate)} to {formatDateForDisplay(endDate)}</p>
@@ -784,8 +814,8 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                                         <td className="px-3 py-1.5 border text-center">{index + 1}</td>
                                         <td className="px-3 py-1.5 border">{formatDateForDisplay(p.paymentDate)}</td>
                                         <td className="px-3 py-1.5 border">{p.clientName}</td>
-                                        <td className="px-3 py-1.5 border">{p.payment_mode}</td>
-                                        <td className="px-3 py-1.5 border">{p.reference_number || '-'}</td>
+                                        <td className="px-3 py-1.5 border">{p.paymentMode}</td>
+                                        <td className="px-3 py-1.5 border">{p.referenceNumber || '-'}</td>
                                         <td className="px-3 py-1.5 border text-right font-bold">₹{numberFormat(p.amount)}</td>
                                     </tr>
                                 ))}
@@ -798,6 +828,66 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                             </tfoot>
                         </table>
                     </div>
+                )}
+
+                {reportType === 'process' && (
+                    <>
+                        <div className="flex gap-2 mb-8 no-print">
+                            <div className="flex-1 bg-indigo-50 p-2 rounded border border-indigo-100 text-center">
+                                <p className="text-[10px] text-indigo-600 font-bold uppercase">Total Jobs</p>
+                                <p className="text-lg font-bold text-indigo-800">{processSummary.totalJobs}</p>
+                            </div>
+                            <div className="flex-1 bg-primary-50 p-2 rounded border border-primary-100 text-center">
+                                <p className="text-[10px] text-primary-600 font-bold uppercase">Total Pcs</p>
+                                <p className="text-lg font-bold text-primary-800">{processSummary.totalPcs}</p>
+                            </div>
+                            <div className="flex-1 bg-success-50 p-2 rounded border border-success-100 text-center">
+                                <p className="text-[10px] text-success-600 font-bold uppercase">Total Meters</p>
+                                <p className="text-lg font-bold text-success-800">{processSummary.totalMeters.toFixed(2)}</p>
+                            </div>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-[11px] text-left border-collapse">
+                                <thead className="bg-secondary-100 uppercase">
+                                    <tr>
+                                        <th className="px-3 py-2 border w-10 text-center font-bold">S.NO</th>
+                                        <th className="px-3 py-2 border font-bold">DATE</th>
+                                        <th className="px-3 py-2 border font-bold">CHALLAN #</th>
+                                        <th className="px-3 py-2 border font-bold">PARTY</th>
+                                        <th className="px-3 py-2 border font-bold">PROCESS</th>
+                                        <th className="px-3 py-2 border font-bold text-center">DESIGN #</th>
+                                        <th className="px-3 py-2 text-right font-bold">PCS</th>
+                                        <th className="px-3 py-2 text-right font-bold">METERS</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {processReportData.map((c, index) => (
+                                        <tr key={c.id} className="border-b hover:bg-secondary-50 transition-colors">
+                                            <td className="px-3 py-1.5 border text-center">{index + 1}</td>
+                                            <td className="px-3 py-1.5 border whitespace-nowrap">{formatDateForDisplay(c.date)}</td>
+                                            <td className="px-3 py-1.5 border font-medium text-secondary-900">{c.challanNumber}</td>
+                                            <td className="px-3 py-1.5 border">{c.partyName}</td>
+                                            <td className="px-3 py-1.5 border text-secondary-600 italic">{c.process.join(', ')}</td>
+                                            <td className="px-3 py-1.5 border text-center">{c.designNo || '-'}</td>
+                                            <td className="px-3 py-1.5 border text-right">{c.pcs}</td>
+                                            <td className="px-3 py-1.5 border text-right font-medium">{c.mtr.toFixed(2)}</td>
+                                        </tr>
+                                    ))}
+                                    {processReportData.length === 0 && (
+                                        <tr><td colSpan={8} className="px-3 py-8 text-center text-secondary-500 italic">No process records found for the selected criteria.</td></tr>
+                                    )}
+                                </tbody>
+                                <tfoot className="bg-secondary-50 font-bold">
+                                    <tr>
+                                        <th colSpan={6} className="px-3 py-2 border text-right uppercase">Grand Total:</th>
+                                        <td className="px-3 py-2 border text-right">{processSummary.totalPcs}</td>
+                                        <td className="px-3 py-2 border text-right text-primary-700">{processSummary.totalMeters.toFixed(2)}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </>
                 )}
             </div>
         </div>
