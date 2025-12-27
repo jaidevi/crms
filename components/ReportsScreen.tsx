@@ -398,7 +398,8 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
         } else if (reportType === 'payment_received') {
             sheetName = "Payments";
             fileName = `Payment_Received_Report_${startDate}_${endDate}.xlsx`;
-            data = paymentReceivedReportData.map((p, idx) => ({ 'S.NO': idx + 1, 'Date': p.paymentDate, 'Client Name': p.clientName, 'Opening Balance': p.openingBalance, 'Amount Received': p.amount, 'Payment Mode': p.payment_mode, 'Reference Number': p.reference_number }));
+            /* FIX: Changed p.payment_mode to p.paymentMode and p.reference_number to p.referenceNumber */
+            data = paymentReceivedReportData.map((p, idx) => ({ 'S.NO': idx + 1, 'Date': p.paymentDate, 'Client Name': p.clientName, 'Opening Balance': p.openingBalance, 'Amount Received': p.amount, 'Payment Mode': p.paymentMode, 'Reference Number': p.referenceNumber }));
         } else if (reportType === 'timber') {
             sheetName = "Timber";
             fileName = `Timber_Report_${startDate}_${endDate}.xlsx`;
@@ -700,7 +701,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                             </div>
                             <div className="flex-1 bg-success-50 p-2 rounded border border-success-100 text-center">
                                 <p className="text-[10px] text-success-600 font-bold uppercase">Total Paid</p>
-                                <p className="text-lg font-bold text-secondary-800">₹{numberFormat(otherExpenseSummary.paidAmount)}</p>
+                                <p className="text-lg font-bold text-success-800">₹{numberFormat(otherExpenseSummary.paidAmount)}</p>
                             </div>
                             <div className="flex-1 bg-danger-50 p-2 rounded border border-danger-100 text-center">
                                 <p className="text-[10px] text-danger-600 font-bold uppercase">Pending Bills</p>

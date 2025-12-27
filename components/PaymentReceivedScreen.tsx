@@ -1,8 +1,9 @@
+
 import React, { useState, useMemo } from 'react';
 import PaymentReceivedForm from './PaymentReceivedForm';
 import ConfirmationModal from './ConfirmationModal';
 import { PlusIcon, SearchIcon, EditIcon, TrashIcon, CameraIcon } from './Icons';
-import type { PaymentReceived, Client } from '../types';
+import type { PaymentReceived, Client, Invoice } from '../types';
 
 interface PaymentReceivedScreenProps {
     payments: PaymentReceived[];
@@ -11,6 +12,7 @@ interface PaymentReceivedScreenProps {
     onDeletePayment: (id: string) => void;
     clients: Client[];
     onAddClient: (newClient: Omit<Client, 'id'>) => void;
+    invoices: Invoice[];
 }
 
 const formatDateForDisplay = (isoDate: string) => {
@@ -19,7 +21,7 @@ const formatDateForDisplay = (isoDate: string) => {
     return `${day}-${month}-${year}`;
 };
 
-const PaymentReceivedScreen: React.FC<PaymentReceivedScreenProps> = ({ payments, onAddPayment, onUpdatePayment, onDeletePayment, clients, onAddClient }) => {
+const PaymentReceivedScreen: React.FC<PaymentReceivedScreenProps> = ({ payments, onAddPayment, onUpdatePayment, onDeletePayment, clients, onAddClient, invoices }) => {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [paymentToEdit, setPaymentToEdit] = useState<PaymentReceived | null>(null);
     const [paymentToDelete, setPaymentToDelete] = useState<PaymentReceived | null>(null);
@@ -82,6 +84,7 @@ const PaymentReceivedScreen: React.FC<PaymentReceivedScreenProps> = ({ payments,
                     clients={clients}
                     onAddClient={onAddClient}
                     paymentToEdit={paymentToEdit}
+                    invoices={invoices}
                 />
             )}
             {paymentToDelete && (

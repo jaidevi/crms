@@ -354,6 +354,54 @@ export const App: React.FC = () => {
     }
   };
 
+  // Payment Received Handlers (Fix for reported issue)
+  const handleAddPaymentReceived = async (payment: Omit<PaymentReceived, 'id'>) => {
+      const { data, error } = await supabase.from('payments_received').insert([{
+          client_name: payment.clientName,
+          payment_date: payment.paymentDate,
+          amount: payment.amount,
+          opening_balance: payment.openingBalance,
+          payment_mode: payment.paymentMode,
+          reference_number: payment.referenceNumber,
+          notes: payment.notes,
+          image: payment.image
+      }]).select();
+
+      if (!error && data) {
+          setPaymentsReceived(prev => [...prev, { ...payment, id: data[0].id }]);
+      } else if (error) {
+          alert("Error saving payment: " + error.message);
+      }
+  };
+
+  const handleUpdatePaymentReceived = async (payment: PaymentReceived) => {
+      const { error } = await supabase.from('payments_received').update({
+          client_name: payment.clientName,
+          payment_date: payment.paymentDate,
+          amount: payment.amount,
+          opening_balance: payment.openingBalance,
+          payment_mode: payment.paymentMode,
+          reference_number: payment.referenceNumber,
+          notes: payment.notes,
+          image: payment.image
+      }).eq('id', payment.id);
+
+      if (!error) {
+          setPaymentsReceived(prev => prev.map(p => p.id === payment.id ? payment : p));
+      } else {
+          alert("Error updating payment: " + error.message);
+      }
+  };
+
+  const handleDeletePaymentReceived = async (id: string) => {
+      const { error } = await supabase.from('payments_received').delete().eq('id', id);
+      if (!error) {
+          setPaymentsReceived(prev => prev.filter(p => p.id !== id));
+      } else {
+          alert("Error deleting payment: " + error.message);
+      }
+  };
+
   const handleAddOtherExpense = async (newExpense: Omit<OtherExpense, 'id'>) => {
       const { data, error } = await supabase.from('other_expenses').insert([{
           date: newExpense.date,
@@ -436,7 +484,7 @@ export const App: React.FC = () => {
       bank_account_number: details.bankAccountNumber,
       bank_ifsc_code: details.bankIfscCode,
       logo_url: details.logoUrl,
-      reportNotificationEmail: details.reportNotificationEmail
+      report_notification_email: details.reportNotificationEmail
     });
     if (!error) setCompanyDetails(details);
     else alert("Error updating company details: " + error.message);
@@ -774,7 +822,15 @@ export const App: React.FC = () => {
         case 'Invoices':
             return <InvoicesScreen clients={clients} deliveryChallans={deliveryChallans} processTypes={processTypes} onAddInvoice={handleAddInvoice} onUpdateInvoice={handleUpdateInvoice} invoiceNumberConfig={invoiceNumberConfig} ngstInvoiceNumberConfig={ngstInvoiceNumberConfig} invoices={invoices} companyDetails={companyDetails} />;
         case 'Payment Received':
-            return <PaymentReceivedScreen payments={paymentsReceived} onAddPayment={() => {}} onUpdatePayment={() => {}} onDeletePayment={() => {}} clients={clients} onAddClient={handleAddClient} />;
+            return <PaymentReceivedScreen 
+                payments={paymentsReceived} 
+                onAddPayment={handleAddPaymentReceived} 
+                onUpdatePayment={handleUpdatePaymentReceived} 
+                onDeletePayment={handleDeletePaymentReceived} 
+                clients={clients} 
+                onAddClient={handleAddClient} 
+                invoices={invoices}
+            />;
         case 'Attendance':
             return <AttendanceScreen employees={employees} attendanceRecords={attendanceRecords} onSave={handleSaveAttendance} />;
         case 'Salary & Payslips':
