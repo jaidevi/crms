@@ -138,7 +138,7 @@ export const App: React.FC = () => {
                     phone: data.phone || '',
                     email: data.email || '',
                     gstin: data.gstin || '',
-                    hsn_sac: data.hsn_sac || '998821',
+                    hsnSac: data.hsn_sac || '998821',
                     bankName: data.bank_name || '',
                     bankAccountNumber: data.bank_account_number || '',
                     bankIfscCode: data.bank_ifsc_code || '',
@@ -198,7 +198,7 @@ export const App: React.FC = () => {
             })) : []
         }))),
         fetchTable('payments_received', setPaymentsReceived, (data: any[]) => data.map(d => ({
-            id: d.id, clientName: d.client_name, paymentDate: d.payment_date, amount: d.amount || 0, opening_balance: d.opening_balance || 0, payment_mode: d.payment_mode, reference_number: d.reference_number, notes: d.notes, image: d.image
+            id: d.id, clientName: d.client_name, paymentDate: d.payment_date, amount: d.amount || 0, openingBalance: d.opening_balance || 0, paymentMode: d.payment_mode, referenceNumber: d.reference_number, notes: d.notes, image: d.image
         }))),
         fetchTable('employee_advances', setAdvances, (data: any[]) => data.map(d => ({
             id: d.id, employeeId: d.employee_id, date: d.date, amount: d.amount || 0, paidAmount: d.paid_amount || 0, notes: d.notes
@@ -249,12 +249,10 @@ export const App: React.FC = () => {
 
       if (error) throw error;
       
-      if (data) {
-          // Refresh local state
-          await fetchTable('attendance', setAttendanceRecords, (data: any[]) => data.map(d => ({
-              id: d.id, employee_id: d.employee_id, date: d.date, morningStatus: d.morning_status || 'Present', eveningStatus: d.evening_status || 'Present', morningOvertimeHours: d.morning_overtime_hours || 0, eveningOvertimeHours: d.evening_overtime_hours || 0, metersProduced: d.meters_produced || 0, createdAt: d.created_at, updatedAt: d.updated_at
-          })));
-      }
+      // Force immediate re-fetch to sync state
+      await fetchTable('attendance', setAttendanceRecords, (data: any[]) => data.map(d => ({
+          id: d.id, employee_id: d.employee_id, date: d.date, morningStatus: d.morning_status || 'Present', eveningStatus: d.evening_status || 'Present', morningOvertimeHours: d.morning_overtime_hours || 0, eveningOvertimeHours: d.evening_overtime_hours || 0, metersProduced: d.meters_produced || 0, createdAt: d.created_at, updatedAt: d.updated_at
+      })));
   };
 
   // Timber Expense Handlers
@@ -755,7 +753,7 @@ export const App: React.FC = () => {
         case 'Salary & Payslips':
             return <SalaryScreen employees={employees} attendanceRecords={attendanceRecords} onUpdateEmployee={handleUpdateEmployee} advances={advances} onSavePayslip={async () => {}} onDeletePayslip={async () => {}} companyDetails={companyDetails} payslips={payslips} />;
         case 'Reports':
-            return <ReportsScreen employees={employees} attendanceRecords={attendanceRecords} invoices={invoices} clients={clients} purchaseOrders={purchaseOrders} purchaseShops={purchaseShops} paymentsReceived={paymentsReceived} timberExpenses={timberExpenses} supplierPayments={supplierPayments} otherExpenses={otherExpenses} expenseCategories={expenseCategories} />;
+            return <ReportsScreen employees={employees} attendanceRecords={attendanceRecords} invoices={invoices} clients={clients} purchaseOrders={purchaseOrders} purchaseShops={purchaseShops} paymentsReceived={paymentsReceived} timberExpenses={timberExpenses} supplierPayments={supplierPayments} otherExpenses={otherExpenses} expenseCategories={expenseCategories} deliveryChallans={deliveryChallans} />;
         case 'User Admin':
             return <UserAdminScreen companyDetails={companyDetails} onUpdate={handleUpdateCompanyDetails} />;
         case 'Add Client':

@@ -147,7 +147,7 @@ const wasEdited = (createdAt?: string, updatedAt?: string): boolean => {
 const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ employees, attendanceRecords, onSave }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [localAttendance, setLocalAttendance] = useState<Map<string, LocalAttendance>>(new Map());
-    const [hasChanges, setHasChanges] = useState(false);
+    const [modifiedKeys, setModifiedKeys] = useState<Set<string>>(new Set());
     const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
     const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
     const [editingDate, setEditingDate] = useState<string | null>(null);
@@ -166,8 +166,8 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ employees, attendan
             if (recYear === year && (recMonth - 1) === month) {
                 const key = `${rec.employee_id}|${rec.date}`;
                 populatedMap.set(key, { 
-                    morningStatus: rec.morningStatus || 'Present', // Ensure fallback
-                    eveningStatus: rec.eveningStatus || 'Present', // Ensure fallback
+                    morningStatus: rec.morningStatus || 'Present', 
+                    eveningStatus: rec.eveningStatus || 'Present',
                     overtimeHours: (rec.morningOvertimeHours || 0) + (rec.eveningOvertimeHours || 0),
                     metersProduced: rec.metersProduced || 0,
                     createdAt: rec.createdAt,
@@ -196,7 +196,7 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ employees, attendan
         });
 
         setLocalAttendance(populatedMap);
-        setHasChanges(false); 
+        setModifiedKeys(new Set()); 
         if (saveState !== 'idle') {
             setSaveState('idle');
         }
@@ -231,11 +231,11 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ employees, attendan
     }, [daysInMonth, year, month]);
 
     const navigateToDate = (newDate: Date) => {
-        if (hasChanges && !window.confirm("You have unsaved changes. Are you sure you want to discard them?")) {
+        if (modifiedKeys.size > 0 && !window.confirm("You have unsaved changes. Are you sure you want to discard them?")) {
             return;
         }
         setCurrentDate(newDate);
-        setHasChanges(false);
+        setModifiedKeys(new Set());
         setSaveState('idle');
         setEditingDate(null);
     };
@@ -269,19 +269,29 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ employees, attendan
             newMap.set(key, updatedRecord);
             return newMap;
         });
-        setHasChanges(true);
+        setModifiedKeys(prev => {
+            const next = new Set(prev);
+            next.add(key);
+            return next;
+        });
     }, [year, month, localAttendance]);
     
     const handleSave = async () => {
+        if (modifiedKeys.size === 0) return;
+        
         setSaveState('saving');
         const recordsToSave: Omit<AttendanceRecord, 'id'>[] = [];
-        localAttendance.forEach((value, key) => {
+        
+        modifiedKeys.forEach(key => {
+            const value = localAttendance.get(key);
+            if (!value) return;
+            
             const [employee_id, date] = key.split('|');
             recordsToSave.push({
                 employee_id,
                 date,
-                morningStatus: value.morningStatus || 'Present', // Ensure fallback
-                eveningStatus: value.eveningStatus || 'Present', // Ensure fallback
+                morningStatus: value.morningStatus,
+                eveningStatus: value.eveningStatus,
                 morningOvertimeHours: 0,
                 eveningOvertimeHours: value.overtimeHours,
                 metersProduced: value.metersProduced,
@@ -289,16 +299,17 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ employees, attendan
                 updatedAt: value.updatedAt || '',
             });
         });
+
         try {
             await onSave(recordsToSave);
             setSaveState('saved');
-            setHasChanges(false); 
+            setModifiedKeys(new Set()); 
             setEditingDate(null);
             setTimeout(() => setSaveState('idle'), 2000);
         } catch (error) {
             console.error("Failed to save attendance:", error);
             setSaveState('idle');
-            const errorMessage = (error instanceof Error) ? error.message : "An unknown error occurred. Check the console for details.";
+            const errorMessage = (error instanceof Error) ? error.message : "An unknown error occurred.";
             alert(`Failed to save attendance records. ${errorMessage}`);
         }
     };
@@ -336,12 +347,12 @@ const AttendanceScreen: React.FC<AttendanceScreenProps> = ({ employees, attendan
                 </div>
                 <button 
                     onClick={handleSave}
-                    disabled={!hasChanges || saveState !== 'idle'}
+                    disabled={modifiedKeys.size === 0 || saveState !== 'idle'}
                     className="px-4 py-2 bg-primary-600 text-white rounded-md text-sm font-semibold hover:bg-primary-700 disabled:bg-secondary-400 disabled:cursor-not-allowed flex items-center justify-center w-36 transition-colors"
                 >
                     {saveState === 'saving' && <><SpinnerIcon className="w-5 h-5 mr-2" /> Saving...</>}
                     {saveState === 'saved' && <><CheckIcon className="w-5 h-5 mr-2" /> Saved!</>}
-                    {saveState === 'idle' && 'Save Changes'}
+                    {saveState === 'idle' && (modifiedKeys.size > 0 ? `Save ${modifiedKeys.size} Changes` : 'Save Changes')}
                 </button>
             </div>
             <div className="overflow-x-auto">

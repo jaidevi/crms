@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { CalendarIcon, SearchIcon, PrintIcon, ChevronDownIcon, DownloadIcon } from './Icons';
 import DatePicker from './DatePicker';
-import type { Employee, AttendanceRecord, Invoice, Client, PurchaseOrder, PurchaseShop, PaymentReceived, TimberExpense, SupplierPayment, OtherExpense, ExpenseCategory } from '../types';
+import type { Employee, AttendanceRecord, Invoice, Client, PurchaseOrder, PurchaseShop, PaymentReceived, TimberExpense, SupplierPayment, OtherExpense, ExpenseCategory, DeliveryChallan } from '../types';
 import * as XLSX from 'xlsx';
 
 interface ReportsScreenProps {
@@ -17,6 +17,7 @@ interface ReportsScreenProps {
     supplierPayments: SupplierPayment[];
     otherExpenses: OtherExpense[];
     expenseCategories: ExpenseCategory[];
+    deliveryChallans: DeliveryChallan[];
 }
 
 const formatDateForDisplay = (isoDate: string) => {
@@ -38,7 +39,7 @@ const ROWS_PER_PAGE = 22;
 const ReportsScreen: React.FC<ReportsScreenProps> = ({ 
     employees, attendanceRecords, invoices, clients, purchaseOrders, 
     purchaseShops, paymentsReceived, timberExpenses, supplierPayments,
-    otherExpenses, expenseCategories
+    otherExpenses, expenseCategories, deliveryChallans
 }) => {
     const today = new Date().toISOString().split('T')[0];
     const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
@@ -46,7 +47,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
     const [startDate, setStartDate] = useState(firstDayOfMonth);
     const [endDate, setEndDate] = useState(today);
     const [selectedEntityId, setSelectedEntityId] = useState('all');
-    const [reportType, setReportType] = useState<'attendance' | 'invoice' | 'purchase' | 'payment_received' | 'timber' | 'other_expense'>('attendance');
+    const [reportType, setReportType] = useState<'attendance' | 'invoice' | 'purchase' | 'payment_received' | 'timber' | 'other_expense' | 'process'>('attendance');
 
     const [isStartDateOpen, setIsStartDateOpen] = useState(false);
     const [isEndDateOpen, setIsEndDateOpen] = useState(false);
@@ -191,7 +192,6 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
         };
     }, [purchaseReportData]);
 
-    // Combined Detailed Timber Report Logic - Full Ledger with explicit Paid columns
     const timberReportData = useMemo(() => {
         if (reportType !== 'timber' || !startDate || !endDate) return [];
         
@@ -212,7 +212,6 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
         }[] = [];
 
         selectedSuppliers.forEach(supplier => {
-            // 1. Calculate historical OB as of startDate
             const supplierMaster = purchaseShops.find(s => s.name === supplier);
             const masterOpeningBalance = supplierMaster ? (Number(supplierMaster.openingBalance) || 0) : 0;
             
@@ -226,7 +225,6 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
             
             const periodStartingBalance = masterOpeningBalance + expensesBefore - paymentsBefore;
 
-            // 2. Collect current period Expenses
             const periodExpenses = timberExpenses
                 .filter(e => e.supplierName === supplier && e.date >= startDate && e.date <= endDate)
                 .map(e => ({
@@ -237,10 +235,9 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                     amount: Number(e.amount) || 0,
                     paidAmount: 0,
                     paidDate: '',
-                    balance: 0 // placeholder
+                    balance: 0 
                 }));
 
-            // 3. Collect current period Payments from database
             const periodPayments = supplierPayments
                 .filter(p => p.supplierName === supplier && p.date >= startDate && p.date <= endDate)
                 .map(p => ({
@@ -251,21 +248,18 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                     amount: 0,
                     paidAmount: Number(p.amount) || 0,
                     paidDate: p.date,
-                    balance: 0 // placeholder
+                    balance: 0 
                 }));
 
-            // 4. Combine and Sort for this supplier
             const supplierRows = [
                 ...periodExpenses,
                 ...periodPayments
             ].sort((a, b) => {
                 const dateComp = a.date.localeCompare(b.date);
                 if (dateComp !== 0) return dateComp;
-                // Purchases before payments on same day
                 return a.amount > 0 ? -1 : 1;
             });
 
-            // Add OB row at start
             if (periodStartingBalance !== 0 || supplierRows.length > 0) {
                 ledgerRows.push({
                     id: `OB-${supplier}`,
@@ -280,7 +274,6 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                 });
             }
 
-            // 5. Calculate Running Balance
             let currentBal = periodStartingBalance;
             supplierRows.forEach(row => {
                 currentBal = currentBal + row.amount - row.paidAmount;
@@ -288,7 +281,6 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
             });
         });
 
-        // Final sort if multiple suppliers are selected (chronological)
         return ledgerRows.sort((a, b) => {
             const dateComp = a.date.localeCompare(b.date);
             if (dateComp !== 0) return dateComp;
@@ -355,6 +347,23 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
         };
     }, [paymentReceivedReportData]);
 
+    const processReportData = useMemo(() => {
+        if (reportType !== 'process' || !startDate || !endDate) return [];
+        
+        const totals: Record<string, { process: string, pcs: number, mtr: number }> = {};
+        
+        deliveryChallans.filter(c => c.date >= startDate && c.date <= endDate).forEach(c => {
+            const pList = (c.splitProcess && c.splitProcess.length > 0) ? c.splitProcess : c.process;
+            pList.forEach(p => {
+                if (!totals[p]) totals[p] = { process: p, pcs: 0, mtr: 0 };
+                totals[p].pcs += c.pcs;
+                totals[p].mtr += (c.finalMeter && c.finalMeter > 0) ? c.finalMeter : c.mtr;
+            });
+        });
+        
+        return Object.values(totals).sort((a, b) => b.mtr - a.mtr);
+    }, [deliveryChallans, startDate, endDate, reportType]);
+
     const handlePrint = () => { window.print(); };
 
     const hasData = useMemo(() => {
@@ -364,8 +373,9 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
         if (reportType === 'payment_received') return paymentReceivedReportData.length > 0;
         if (reportType === 'timber') return timberReportData.length > 0;
         if (reportType === 'other_expense') return otherExpenseReportData.length > 0;
+        if (reportType === 'process') return processReportData.length > 0;
         return false;
-    }, [reportType, attendanceReportData, invoiceReportData, purchaseReportData, paymentReceivedReportData, timberReportData, otherExpenseReportData]);
+    }, [reportType, attendanceReportData, invoiceReportData, purchaseReportData, paymentReceivedReportData, timberReportData, otherExpenseReportData, processReportData]);
 
     const handleDownloadExcel = () => {
         if (!hasData) return;
@@ -397,6 +407,10 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
             sheetName = "Expenses";
             fileName = `Expenses_Report_${startDate}_${endDate}.xlsx`;
             data = otherExpenseReportData.map((e, idx) => ({ 'S.NO': idx + 1, 'Date': e.date, 'Category': e.itemName, 'Status': e.paymentStatus, 'Mode': e.paymentMode, 'Amount': e.amount }));
+        } else if (reportType === 'process') {
+            sheetName = "Process";
+            fileName = `Process_Wise_Report_${startDate}_${endDate}.xlsx`;
+            data = processReportData.map((p, idx) => ({ 'S.NO': idx + 1, 'Process': p.process, 'Total Pcs': p.pcs, 'Total Meters': p.mtr }));
         }
         const ws = XLSX.utils.json_to_sheet(data);
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
@@ -431,6 +445,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                             <option value="payment_received">Payment Received Report</option>
                             <option value="timber">Timber Report</option>
                             <option value="other_expense">Other Expenses Report</option>
+                            <option value="process">Process Wise Report</option>
                         </select>
                     </div>
                     <div>
@@ -459,8 +474,8 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                              (reportType === 'purchase' || reportType === 'timber') ? 'Shop / Supplier' : 
                              reportType === 'other_expense' ? 'Expense Category' : 'Client'}
                         </label>
-                        <select value={selectedEntityId} onChange={(e) => setSelectedEntityId(e.target.value)} className="block w-full px-3 py-2.5 text-sm rounded-md border-secondary-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
-                            <option value="all">All {reportType === 'attendance' ? 'Employees' : (reportType === 'purchase' || reportType === 'timber' ? 'Shops' : (reportType === 'other_expense' ? 'Categories' : 'Clients'))}</option>
+                        <select value={selectedEntityId} onChange={(e) => setSelectedEntityId(e.target.value)} disabled={reportType === 'process'} className="block w-full px-3 py-2.5 text-sm rounded-md border-secondary-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 disabled:bg-secondary-50">
+                            <option value="all">All {reportType === 'attendance' ? 'Employees' : (reportType === 'purchase' || reportType === 'timber' ? 'Shops' : (reportType === 'other_expense' ? 'Categories' : (reportType === 'process' ? 'Processes' : 'Clients')))}</option>
                             {reportType === 'attendance' ? sortedEmployees.map(emp => (<option key={emp.id} value={emp.id}>{emp.name}</option>)) : 
                              (reportType === 'purchase' || reportType === 'timber') ? sortedShops.map(shop => (<option key={shop.id} value={shop.id}>{shop.name}</option>)) : 
                              reportType === 'other_expense' ? sortedCategories.map(cat => (<option key={cat.id} value={cat.id}>{cat.name}</option>)) :
@@ -478,10 +493,48 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                          reportType === 'purchase' ? 'Purchase Report' : 
                          reportType === 'timber' ? 'Timber Report' :
                          reportType === 'other_expense' ? 'Other Expenses Report' :
+                         reportType === 'process' ? 'Process Wise Production Report' :
                          'Payment Received Report'}
                     </h2>
                     <p className="text-center text-secondary-500 text-sm mt-1">Period: {formatDateForDisplay(startDate)} to {formatDateForDisplay(endDate)}</p>
                 </div>
+
+                {reportType === 'process' && (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-[11px] text-left border-collapse">
+                            <thead className="bg-secondary-100 uppercase">
+                                <tr>
+                                    <th className="px-3 py-2 border w-10 text-center font-bold">S.NO</th>
+                                    <th className="px-3 py-2 border font-bold">PROCESS NAME</th>
+                                    <th className="px-3 py-2 text-right font-bold">TOTAL PCS</th>
+                                    <th className="px-3 py-2 text-right font-bold">TOTAL METERS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {processReportData.map((p, idx) => (
+                                    <tr key={idx} className="border-b hover:bg-secondary-50 transition-colors">
+                                        <td className="px-3 py-2 border text-center">{idx + 1}</td>
+                                        <td className="px-3 py-2 border font-medium uppercase text-secondary-900">{p.process}</td>
+                                        <td className="px-3 py-2 border text-right">{p.pcs}</td>
+                                        <td className="px-3 py-2 border text-right font-bold text-primary-700">{p.mtr.toFixed(2)}</td>
+                                    </tr>
+                                ))}
+                                {processReportData.length === 0 && (
+                                    <tr><td colSpan={4} className="px-3 py-8 text-center text-secondary-500 italic">No production data found for the selected range.</td></tr>
+                                )}
+                            </tbody>
+                            <tfoot className="bg-secondary-50 font-bold">
+                                <tr>
+                                    <td colSpan={2} className="px-3 py-2 border text-right uppercase">Total Production:</td>
+                                    <td className="px-3 py-2 border text-right">{processReportData.reduce((sum, p) => sum + p.pcs, 0)}</td>
+                                    <td className="px-3 py-2 border text-right">
+                                        {processReportData.reduce((sum, p) => sum + p.mtr, 0).toFixed(2)} mtr
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                )}
 
                 {reportType === 'attendance' && (
                     <>
@@ -602,9 +655,8 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                                         <th className="px-3 py-2 border font-bold">DATE</th>
                                         <th className="px-3 py-2 border font-bold">SUPPLIER</th>
                                         <th className="px-3 py-2 border font-bold">DESCRIPTION</th>
-                                        <th className="px-3 py-2 text-right font-bold">AMOUNT</th>
-                                        <th className="px-3 py-2 text-right font-bold">PAID AMT</th>
-                                        <th className="px-3 py-2 text-center font-bold">PAID DATE</th>
+                                        <th className="px-3 py-2 text-right font-bold">DEBIT (PUR)</th>
+                                        <th className="px-3 py-2 text-right font-bold">CREDIT (PAY)</th>
                                         <th className="px-3 py-2 text-right font-bold">BALANCE</th>
                                     </tr>
                                 </thead>
@@ -617,14 +669,13 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                                             <td className="px-3 py-1.5 border text-secondary-600">{r.description}</td>
                                             <td className="px-3 py-1.5 border text-right font-medium text-secondary-800">{r.amount > 0 ? `₹${numberFormat(r.amount)}` : ''}</td>
                                             <td className="px-3 py-1.5 border text-right font-bold text-success-700">{r.paidAmount > 0 ? `₹${numberFormat(r.paidAmount)}` : ''}</td>
-                                            <td className="px-3 py-1.5 border text-center text-secondary-500">{r.paidDate ? formatDateForDisplay(r.paidDate) : '-'}</td>
                                             <td className={`px-3 py-1.5 border text-right font-bold ${r.balance > 0 ? 'text-danger-600' : 'text-success-600'}`}>
                                                 ₹{numberFormat(Math.abs(r.balance))} {r.balance > 0 ? 'DR' : (r.balance < 0 ? 'CR' : '')}
                                             </td>
                                         </tr>
                                     ))}
                                     {timberReportData.length === 0 && (
-                                        <tr><td colSpan={8} className="px-3 py-8 text-center text-secondary-500 italic">No data found for the selected range and supplier.</td></tr>
+                                        <tr><td colSpan={7} className="px-3 py-8 text-center text-secondary-500 italic">No data found for the selected range and supplier.</td></tr>
                                     )}
                                 </tbody>
                                 <tfoot className="bg-secondary-50 font-bold">
@@ -632,7 +683,6 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                                         <td colSpan={4} className="px-3 py-2 border text-right uppercase">Period Totals & Final Balance:</td>
                                         <td className="px-3 py-2 border text-right">₹{numberFormat(timberSummary.totalPurchases)}</td>
                                         <td className="px-3 py-2 border text-right text-success-700">₹{numberFormat(timberSummary.totalPayments)}</td>
-                                        <td className="px-3 py-2 border"></td>
                                         <td className="px-3 py-2 border text-right text-danger-700 font-extrabold text-xs">₹{numberFormat(timberSummary.totalOutstanding)}</td>
                                     </tr>
                                 </tfoot>
@@ -784,8 +834,8 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                                         <td className="px-3 py-1.5 border text-center">{index + 1}</td>
                                         <td className="px-3 py-1.5 border">{formatDateForDisplay(p.paymentDate)}</td>
                                         <td className="px-3 py-1.5 border">{p.clientName}</td>
-                                        <td className="px-3 py-1.5 border">{p.payment_mode}</td>
-                                        <td className="px-3 py-1.5 border">{p.reference_number || '-'}</td>
+                                        <td className="px-3 py-1.5 border">{p.paymentMode}</td>
+                                        <td className="px-3 py-1.5 border">{p.referenceNumber || '-'}</td>
                                         <td className="px-3 py-1.5 border text-right font-bold">₹{numberFormat(p.amount)}</td>
                                     </tr>
                                 ))}
