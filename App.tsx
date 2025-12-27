@@ -304,7 +304,7 @@ export const App: React.FC = () => {
     else alert("Error deleting timber expense: " + error.message);
   };
 
-  // Supplier Payment Handler
+  // Supplier Payment Handlers
   const handleAddSupplierPayment = async (payment: Omit<SupplierPayment, 'id'>) => {
     const { data, error } = await supabase.from('supplier_payments').insert([{
         payment_number: payment.paymentNumber,
@@ -324,6 +324,32 @@ export const App: React.FC = () => {
         await supabase.from('numbering_configs').update({ next_number: nextNum }).eq('id', 'supplier_payment');
         setSupplierPaymentConfig(prev => ({ ...prev, nextNumber: nextNum }));
     } else if (error) {
+        throw error;
+    }
+  };
+
+  const handleUpdateSupplierPayment = async (payment: SupplierPayment) => {
+    const { error } = await supabase.from('supplier_payments').update({
+        date: payment.date,
+        supplier_name: payment.supplierName,
+        amount: payment.amount,
+        payment_mode: payment.paymentMode,
+        reference_id: payment.referenceId,
+        image: payment.image
+    }).eq('id', payment.id);
+
+    if (!error) {
+        setSupplierPayments(prev => prev.map(p => p.id === payment.id ? payment : p));
+    } else {
+        throw error;
+    }
+  };
+
+  const handleDeleteSupplierPayment = async (id: string) => {
+    const { error } = await supabase.from('supplier_payments').delete().eq('id', id);
+    if (!error) {
+        setSupplierPayments(prev => prev.filter(p => p.id !== id));
+    } else {
         throw error;
     }
   };
@@ -410,7 +436,7 @@ export const App: React.FC = () => {
       bank_account_number: details.bankAccountNumber,
       bank_ifsc_code: details.bankIfscCode,
       logo_url: details.logoUrl,
-      report_notification_email: details.reportNotificationEmail
+      reportNotificationEmail: details.reportNotificationEmail
     });
     if (!error) setCompanyDetails(details);
     else alert("Error updating company details: " + error.message);
@@ -739,6 +765,7 @@ export const App: React.FC = () => {
                 expenseCategories={expenseCategories} onAddExpenseCategory={handleAddExpenseCategory}
                 timberExpenses={timberExpenses} onAddTimberExpense={handleAddTimberExpense} onUpdateTimberExpense={handleUpdateTimberExpense} onDeleteTimberExpense={handleDeleteTimberExpense}
                 supplierPayments={supplierPayments} supplierPaymentConfig={supplierPaymentConfig} onAddSupplierPayment={handleAddSupplierPayment}
+                onUpdateSupplierPayment={handleUpdateSupplierPayment} onDeleteSupplierPayment={handleDeleteSupplierPayment}
             />;
         case 'Delivery Challans':
             return <DeliveryChallanScreen deliveryChallans={deliveryChallans} onAddChallan={handleAddChallan} onUpdateChallan={handleUpdateChallan} onDeleteChallan={handleDeleteChallan} clients={clients} onAddClient={handleAddClient} purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} processTypes={processTypes} onAddProcessType={handleAddProcessType} deliveryChallanNumberConfig={deliveryChallanNumberConfig} invoices={invoices} onDeleteInvoice={handleDeleteInvoice} companyDetails={companyDetails} employees={employees} onAddEmployee={handleAddEmployee} />;

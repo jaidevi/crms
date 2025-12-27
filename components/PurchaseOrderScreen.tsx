@@ -5,7 +5,7 @@ import EmployeeAdvanceForm from './EmployeeAdvanceForm';
 import OtherExpenseForm from './OtherExpenseForm';
 import TimberExpenseForm from './TimberExpenseForm';
 import TimberPaymentForm from './TimberPaymentForm';
-import { PlusIcon, SearchIcon, TrashIcon, ChevronUpIcon, ChevronDownIcon, EditIcon, WalletIcon } from './Icons';
+import { PlusIcon, SearchIcon, TrashIcon, ChevronUpIcon, ChevronDownIcon, EditIcon, WalletIcon, CameraIcon } from './Icons';
 import type { PurchaseOrder, PurchaseShop, PONumberConfig, MasterItem, Employee, EmployeeAdvance, OtherExpense, ExpenseCategory, TimberExpense, SupplierPayment, SupplierPaymentNumberConfig } from '../types';
 import ConfirmationModal from './ConfirmationModal';
 
@@ -39,6 +39,8 @@ interface PurchaseOrderScreenProps {
   supplierPayments: SupplierPayment[];
   supplierPaymentConfig: SupplierPaymentNumberConfig;
   onAddSupplierPayment: (payment: Omit<SupplierPayment, 'id'>) => Promise<void>;
+  onUpdateSupplierPayment: (payment: SupplierPayment) => Promise<void>;
+  onDeleteSupplierPayment: (id: string) => Promise<void>;
 }
 
 const toYMDString = (date: Date): string => {
@@ -89,9 +91,10 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
   otherExpenses, onAddOtherExpense, onUpdateOtherExpense, onDeleteOtherExpense,
   expenseCategories, onAddExpenseCategory,
   timberExpenses, onAddTimberExpense, onUpdateTimberExpense, onDeleteTimberExpense,
-  supplierPayments, supplierPaymentConfig, onAddSupplierPayment
+  supplierPayments, supplierPaymentConfig, onAddSupplierPayment, onUpdateSupplierPayment, onDeleteSupplierPayment
 }) => {
   const [activeTab, setActiveTab] = useState<'purchases' | 'advances' | 'other' | 'timber'>('purchases');
+  const [timberSubTab, setTimberSubTab] = useState<'loads' | 'payments'>('loads');
 
   const [showPOForm, setShowPOForm] = useState(false);
   const [poSearchTerm, setPoSearchTerm] = useState('');
@@ -114,7 +117,10 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
   const [timberSortConfig, setTimberSortConfig] = useState<TimberSortConfig>({ key: 'date', direction: 'descending' });
   const [timberToDelete, setTimberToDelete] = useState<TimberExpense | null>(null);
   const [timberSearchTerm, setTimberSearchTerm] = useState('');
+  
   const [isPaymentFormOpen, setIsPaymentFormOpen] = useState(false);
+  const [paymentToEdit, setPaymentToEdit] = useState<SupplierPayment | null>(null);
+  const [paymentToDelete, setPaymentToDelete] = useState<SupplierPayment | null>(null);
 
   const getDueDate = useCallback((item: PurchaseOrder | OtherExpense | TimberExpense): Date | null => {
       const itemDate = 'poDate' in item ? item.poDate : item.date;
@@ -338,21 +344,39 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
     }
   }, [timberToEdit, onAddTimberExpense, onUpdateTimberExpense]);
 
-  const handleSavePayment = useCallback(async (payment: Omit<SupplierPayment, 'id'>) => {
+  const handleSavePayment = useCallback(async (paymentData: Omit<SupplierPayment, 'id'> | SupplierPayment) => {
       try {
-          await onAddSupplierPayment(payment);
+          if ('id' in paymentData && paymentToEdit) {
+              await onUpdateSupplierPayment(paymentData as SupplierPayment);
+          } else {
+              await onAddSupplierPayment(paymentData as Omit<SupplierPayment, 'id'>);
+          }
           setIsPaymentFormOpen(false);
-          alert('Payment recorded successfully!');
+          setPaymentToEdit(null);
       } catch (e) {
           alert(`Error saving payment:\n${e instanceof Error ? e.message : "Unknown error"}`);
       }
-  }, [onAddSupplierPayment]);
+  }, [onAddSupplierPayment, onUpdateSupplierPayment, paymentToEdit]);
+
+  const filteredPayments = useMemo(() => {
+    let sorted = [...supplierPayments].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    if (!timberSearchTerm) return sorted;
+    const term = timberSearchTerm.toLowerCase();
+    return sorted.filter(p => p.supplierName.toLowerCase().includes(term) || p.paymentNumber.toLowerCase().includes(term));
+  }, [supplierPayments, timberSearchTerm]);
 
   const tabButtonClasses = (tabName: 'purchases' | 'advances' | 'other' | 'timber') => 
     `whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm ${
         activeTab === tabName 
         ? 'border-primary-500 text-primary-600' 
         : 'border-transparent text-secondary-500 hover:text-secondary-700 hover:border-secondary-300'
+    }`;
+
+  const timberSubTabClasses = (subTab: 'loads' | 'payments') =>
+    `whitespace-nowrap py-2 px-4 rounded-md text-xs font-semibold transition-colors ${
+        timberSubTab === subTab
+        ? 'bg-primary-600 text-white shadow-sm'
+        : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'
     }`;
 
   return (
@@ -365,8 +389,9 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
         {expenseToDelete && <ConfirmationModal isOpen={!!expenseToDelete} onClose={() => setExpenseToDelete(null)} onConfirm={() => { if (expenseToDelete) { onDeleteOtherExpense(expenseToDelete.id); setExpenseToDelete(null); } }} title="Delete Expense" message={`Are you sure you want to delete this expense for ${expenseToDelete.itemName} of ₹${expenseToDelete.amount}?`} />}
         {isTimberFormOpen && <TimberExpenseForm onClose={() => setIsTimberFormOpen(false)} onSave={handleSaveTimberExpense} expenseToEdit={timberToEdit} suppliers={purchaseShops} onAddSupplier={onAddPurchaseShop} bankNames={bankNames} onAddBankName={onAddBankName} />}
         {timberToDelete && <ConfirmationModal isOpen={!!timberToDelete} onClose={() => setTimberToDelete(null)} onConfirm={() => { if (timberToDelete) { onDeleteTimberExpense(timberToDelete.id); setTimberToDelete(null); } }} title="Delete Timber Expense" message={`Are you sure you want to delete this timber expense from ${timberToDelete.supplierName} of ₹${timberToDelete.amount}?`} />}
-        {isPaymentFormOpen && <TimberPaymentForm onClose={() => setIsPaymentFormOpen(false)} onSave={handleSavePayment} suppliers={purchaseShops} paymentConfig={supplierPaymentConfig} timberExpenses={timberExpenses} supplierPayments={supplierPayments} />}
-        
+        {isPaymentFormOpen && <TimberPaymentForm onClose={() => { setIsPaymentFormOpen(false); setPaymentToEdit(null); }} onSave={handleSavePayment} suppliers={purchaseShops} paymentConfig={supplierPaymentConfig} timberExpenses={timberExpenses} supplierPayments={supplierPayments} paymentToEdit={paymentToEdit} />}
+        {paymentToDelete && <ConfirmationModal isOpen={!!paymentToDelete} onClose={() => setPaymentToDelete(null)} onConfirm={() => { if (paymentToDelete) { onDeleteSupplierPayment(paymentToDelete.id); setPaymentToDelete(null); } }} title="Delete Supplier Payment" message={`Are you sure you want to delete payment ${paymentToDelete.paymentNumber} for ${paymentToDelete.supplierName}?`} />}
+
         <div className="p-5 border-b border-secondary-200">
             <h1 className="text-2xl font-bold text-secondary-800">Expenses</h1>
             <p className="text-secondary-500 mt-1">Track company expenses from purchase orders, employee advances, and other sources.</p>
@@ -578,70 +603,121 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
         {activeTab === 'timber' && (
              <div className="p-5 space-y-5">
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-2 p-1 bg-secondary-50 rounded-lg">
+                        <button onClick={() => setTimberSubTab('loads')} className={timberSubTabClasses('loads')}>Timber Loads</button>
+                        <button onClick={() => setTimberSubTab('payments')} className={timberSubTabClasses('payments')}>Payment History</button>
+                    </div>
                     <div className="relative flex-grow w-full md:w-auto">
                         <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary-400" />
-                        <input type="text" placeholder="Search by supplier or notes..." value={timberSearchTerm} onChange={(e) => setTimberSearchTerm(e.target.value)} className="w-full md:w-64 pl-10 pr-4 py-2.5 text-sm border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                        <input type="text" placeholder="Search by supplier or notes..." value={timberSearchTerm} onChange={(e) => setTimberSearchTerm(e.target.value)} className="w-full md:w-64 pl-10 pr-4 py-2 text-sm border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500" />
                     </div>
                     <div className="flex items-center gap-2">
                         <button onClick={() => { setTimberToEdit(null); setIsTimberFormOpen(true); }} className="flex items-center justify-center bg-primary-600 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-primary-700 w-full md:w-auto">
-                            <PlusIcon className="w-5 h-5 mr-2" />New Timber Entry
+                            <PlusIcon className="w-5 h-5 mr-2" />New Timber Load
                         </button>
-                         <button onClick={() => { setIsPaymentFormOpen(true); }} className="flex items-center justify-center bg-success-600 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-success-700 w-full md:w-auto">
-                            <WalletIcon className="w-5 h-5 mr-2" />Pay
+                         <button onClick={() => { setPaymentToEdit(null); setIsPaymentFormOpen(true); }} className="flex items-center justify-center bg-success-600 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-success-700 w-full md:w-auto">
+                            <WalletIcon className="w-5 h-5 mr-2" />Record Payment
                         </button>
                     </div>
                 </div>
-                <div className="overflow-x-auto border rounded-lg">
-                    <table className="w-full text-sm text-left text-secondary-500">
-                        <thead className="text-xs text-secondary-700 uppercase bg-secondary-50">
-                            <tr>
-                                <th scope="col" className="px-6 py-3 cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('date')}>
-                                    <div className="flex items-center">Date {getTimberSortIndicator('date')}</div>
-                                </th>
-                                <th scope="col" className="px-6 py-3 cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('supplierName')}>
-                                    <div className="flex items-center">Supplier {getTimberSortIndicator('supplierName')}</div>
-                                </th>
-                                <th scope="col" className="px-6 py-3 text-center">RATE</th>
-                                <th scope="col" className="px-6 py-3 text-right cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('amount')}>
-                                    <div className="flex items-center justify-end">Amount {getTimberSortIndicator('amount')}</div>
-                                </th>
-                                <th scope="col" className="px-6 py-3 text-right cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('paidAmount')}>
-                                    <div className="flex items-center justify-end">Paid Amt {getTimberSortIndicator('paidAmount')}</div>
-                                </th>
-                                <th scope="col" className="px-6 py-3 text-center cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('paidDate')}>
-                                    <div className="flex items-center justify-center">Paid Date {getTimberSortIndicator('paidDate')}</div>
-                                </th>
-                                <th scope="col" className="px-6 py-3 text-right cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('balanceAmount')}>
-                                    <div className="flex items-center justify-end">Balance {getTimberSortIndicator('balanceAmount')}</div>
-                                </th>
-                                <th scope="col" className="px-6 py-3 text-center">ACTIONS</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredTimberExpenses.map((expense) => {
-                                const isPaid = expense.balanceAmount <= 0;
-                                return (
-                                    <tr key={expense.id} className="bg-white border-b hover:bg-secondary-50">
-                                        <td className="px-6 py-4 whitespace-nowrap">{formatDateForDisplay(expense.date)}</td>
-                                        <td className="px-6 py-4 font-medium text-secondary-900">{expense.supplierName}</td>
-                                        <td className="px-6 py-4 text-center">₹{expense.rate.toFixed(2)}</td>
-                                        <td className="px-6 py-4 text-right font-medium text-secondary-700">₹{expense.amount.toFixed(2)}</td>
-                                        <td className="px-6 py-4 text-right font-medium text-success-600">₹{expense.paidAmount.toFixed(2)}</td>
-                                        <td className="px-6 py-4 text-center text-secondary-500 whitespace-nowrap">{expense.paidDate ? formatDateForDisplay(expense.paidDate) : '-'}</td>
-                                        <td className={`px-6 py-4 text-right font-bold ${isPaid ? 'text-secondary-400' : 'text-danger-600'}`}>₹{expense.balanceAmount.toFixed(2)}</td>
+
+                {timberSubTab === 'loads' ? (
+                    <div className="overflow-x-auto border rounded-lg">
+                        <table className="w-full text-sm text-left text-secondary-500">
+                            <thead className="text-xs text-secondary-700 uppercase bg-secondary-50">
+                                <tr>
+                                    <th scope="col" className="px-6 py-3 cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('date')}>
+                                        <div className="flex items-center">Date {getTimberSortIndicator('date')}</div>
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('supplierName')}>
+                                        <div className="flex items-center">Supplier {getTimberSortIndicator('supplierName')}</div>
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-center">RATE</th>
+                                    <th scope="col" className="px-6 py-3 text-right cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('amount')}>
+                                        <div className="flex items-center justify-end">Amount {getTimberSortIndicator('amount')}</div>
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-right cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('paidAmount')}>
+                                        <div className="flex items-center justify-end">Paid Amt {getTimberSortIndicator('paidAmount')}</div>
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-center cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('paidDate')}>
+                                        <div className="flex items-center justify-center">Paid Date {getTimberSortIndicator('paidDate')}</div>
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-right cursor-pointer hover:bg-secondary-100" onClick={() => requestTimberSort('balanceAmount')}>
+                                        <div className="flex items-center justify-end">Balance {getTimberSortIndicator('balanceAmount')}</div>
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-center">ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredTimberExpenses.map((expense) => {
+                                    const isPaid = expense.balanceAmount <= 0;
+                                    return (
+                                        <tr key={expense.id} className="bg-white border-b hover:bg-secondary-50">
+                                            <td className="px-6 py-4 whitespace-nowrap">{formatDateForDisplay(expense.date)}</td>
+                                            <td className="px-6 py-4 font-medium text-secondary-900">{expense.supplierName}</td>
+                                            <td className="px-6 py-4 text-center">₹{expense.rate.toFixed(2)}</td>
+                                            <td className="px-6 py-4 text-right font-medium text-secondary-700">₹{expense.amount.toFixed(2)}</td>
+                                            <td className="px-6 py-4 text-right font-medium text-success-600">₹{expense.paidAmount.toFixed(2)}</td>
+                                            <td className="px-6 py-4 text-center text-secondary-500 whitespace-nowrap">{expense.paidDate ? formatDateForDisplay(expense.paidDate) : '-'}</td>
+                                            <td className={`px-6 py-4 text-right font-bold ${isPaid ? 'text-secondary-400' : 'text-danger-600'}`}>₹{expense.balanceAmount.toFixed(2)}</td>
+                                            <td className="px-6 py-4 text-center">
+                                                <div className="flex items-center justify-center gap-4">
+                                                    <button onClick={() => { setTimberToEdit(expense); setIsTimberFormOpen(true); }} className="p-1 text-secondary-400 hover:text-primary-500 rounded-full hover:bg-primary-50" aria-label="Edit expense"><EditIcon className="w-5 h-5" /></button>
+                                                    <button onClick={() => setTimberToDelete(expense)} className="p-1 text-secondary-400 hover:text-danger-500 rounded-full hover:bg-danger-50" aria-label="Delete expense"><TrashIcon className="w-5 h-5" /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                        {filteredTimberExpenses.length === 0 && <div className="text-center p-8 text-secondary-500">No timber loads found.</div>}
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto border rounded-lg">
+                        <table className="w-full text-sm text-left text-secondary-500">
+                            <thead className="text-xs text-secondary-700 uppercase bg-secondary-50">
+                                <tr>
+                                    <th scope="col" className="px-6 py-3">Voucher No</th>
+                                    <th scope="col" className="px-6 py-3">Date</th>
+                                    <th scope="col" className="px-6 py-3">Supplier Name</th>
+                                    <th scope="col" className="px-6 py-3">Mode</th>
+                                    <th scope="col" className="px-6 py-3 text-right">Paid Amount</th>
+                                    <th scope="col" className="px-6 py-3 text-center">Proof</th>
+                                    <th scope="col" className="px-6 py-3 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredPayments.map((payment) => (
+                                    <tr key={payment.id} className="bg-white border-b hover:bg-secondary-50">
+                                        <th scope="row" className="px-6 py-4 font-medium text-secondary-900">{payment.paymentNumber}</th>
+                                        <td className="px-6 py-4 whitespace-nowrap">{formatDateForDisplay(payment.date)}</td>
+                                        <td className="px-6 py-4 font-medium">{payment.supplierName}</td>
+                                        <td className="px-6 py-4">{payment.paymentMode}</td>
+                                        <td className="px-6 py-4 text-right font-bold text-success-600">₹{payment.amount.toFixed(2)}</td>
+                                        <td className="px-6 py-4 text-center">
+                                            {payment.image ? (
+                                                <div className="relative group inline-block">
+                                                    <CameraIcon className="w-5 h-5 text-blue-500 mx-auto cursor-help" />
+                                                    <div className="absolute z-20 hidden group-hover:block bg-white border rounded shadow-lg p-2 mt-2 right-0">
+                                                        <img src={payment.image} alt="Proof" className="max-w-xs max-h-48 object-contain" />
+                                                    </div>
+                                                </div>
+                                            ) : '-'}
+                                        </td>
                                         <td className="px-6 py-4 text-center">
                                             <div className="flex items-center justify-center gap-4">
-                                                <button onClick={() => { setTimberToEdit(expense); setIsTimberFormOpen(true); }} className="p-1 text-secondary-400 hover:text-primary-500 rounded-full hover:bg-primary-50" aria-label="Edit expense"><EditIcon className="w-5 h-5" /></button>
-                                                <button onClick={() => setTimberToDelete(expense)} className="p-1 text-secondary-400 hover:text-danger-500 rounded-full hover:bg-danger-50" aria-label="Delete expense"><TrashIcon className="w-5 h-5" /></button>
+                                                <button onClick={() => { setPaymentToEdit(payment); setIsPaymentFormOpen(true); }} className="p-1 text-secondary-400 hover:text-primary-500 rounded-full hover:bg-primary-50" aria-label="Edit payment"><EditIcon className="w-5 h-5" /></button>
+                                                <button onClick={() => setPaymentToDelete(payment)} className="p-1 text-secondary-400 hover:text-danger-500 rounded-full hover:bg-danger-50" aria-label="Delete payment"><TrashIcon className="w-5 h-5" /></button>
                                             </div>
                                         </td>
                                     </tr>
-                                )
-                            })}
-                        </tbody>
-                    </table>
-                    {filteredTimberExpenses.length === 0 && <div className="text-center p-8 text-secondary-500">No timber expenses found.</div>}
-                </div>
+                                ))}
+                            </tbody>
+                        </table>
+                        {filteredPayments.length === 0 && <div className="text-center p-8 text-secondary-500">No payment records found.</div>}
+                    </div>
+                )}
             </div>
         )}
     </div>

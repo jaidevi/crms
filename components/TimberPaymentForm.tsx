@@ -6,11 +6,12 @@ import type { SupplierPayment, PurchaseShop, SupplierPaymentNumberConfig, Paymen
 
 interface TimberPaymentFormProps {
     onClose: () => void;
-    onSave: (payment: Omit<SupplierPayment, 'id'>) => void;
+    onSave: (payment: Omit<SupplierPayment, 'id'> | SupplierPayment) => void;
     suppliers: PurchaseShop[];
     paymentConfig: SupplierPaymentNumberConfig;
     timberExpenses: TimberExpense[];
     supplierPayments: SupplierPayment[];
+    paymentToEdit?: SupplierPayment | null;
 }
 
 const formatDateForInput = (isoDate: string) => {
@@ -19,9 +20,10 @@ const formatDateForInput = (isoDate: string) => {
     return `${day}-${month}-${year}`;
 };
 
-const TimberPaymentForm: React.FC<TimberPaymentFormProps> = ({ onClose, onSave, suppliers, paymentConfig, timberExpenses, supplierPayments }) => {
+const TimberPaymentForm: React.FC<TimberPaymentFormProps> = ({ onClose, onSave, suppliers, paymentConfig, timberExpenses, supplierPayments, paymentToEdit }) => {
+    const isEditing = !!paymentToEdit;
     const [payment, setPayment] = useState<Omit<SupplierPayment, 'id'>>({
-        paymentNumber: `${paymentConfig.prefix}${String(paymentConfig.nextNumber).padStart(4, '0')}`,
+        paymentNumber: '',
         date: new Date().toISOString().split('T')[0],
         supplierName: '',
         amount: 0,
@@ -32,6 +34,30 @@ const TimberPaymentForm: React.FC<TimberPaymentFormProps> = ({ onClose, onSave, 
     const [isDatePickerOpen, setDatePickerOpen] = useState(false);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (paymentToEdit) {
+            setPayment({
+                paymentNumber: paymentToEdit.paymentNumber,
+                date: paymentToEdit.date,
+                supplierName: paymentToEdit.supplierName,
+                amount: paymentToEdit.amount,
+                paymentMode: paymentToEdit.paymentMode,
+                referenceId: paymentToEdit.referenceId,
+                image: paymentToEdit.image,
+            });
+        } else {
+            setPayment({
+                paymentNumber: `${paymentConfig.prefix}${String(paymentConfig.nextNumber).padStart(4, '0')}`,
+                date: new Date().toISOString().split('T')[0],
+                supplierName: '',
+                amount: 0,
+                paymentMode: 'Cash',
+                referenceId: '',
+                image: '',
+            });
+        }
+    }, [paymentToEdit, paymentConfig]);
     
     // Calculate Outstanding and Balance including Master Opening Balance
     const outstandingAmount = useMemo(() => {
@@ -41,19 +67,19 @@ const TimberPaymentForm: React.FC<TimberPaymentFormProps> = ({ onClose, onSave, 
         const supplierMaster = suppliers.find(s => s.name === payment.supplierName);
         const masterOpeningBalance = supplierMaster ? (Number(supplierMaster.openingBalance) || 0) : 0;
 
-        // 2. Sum up all individual transaction amounts (ignoring row-level openingBalance to avoid multiplication)
+        // 2. Sum up all individual transaction amounts
         const totalTransactionLiability = timberExpenses
             .filter(e => e.supplierName === payment.supplierName)
             .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
             
-        // 3. Sum up all payments made to this supplier
+        // 3. Sum up all payments made to this supplier (excluding current payment if editing)
         const totalPaid = supplierPayments
-            .filter(p => p.supplierName === payment.supplierName)
+            .filter(p => p.supplierName === payment.supplierName && (isEditing ? p.id !== paymentToEdit?.id : true))
             .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
             
         // Final Outstanding = Master Opening Balance + Total Expenses - Total Payments
         return Math.max(0, masterOpeningBalance + totalTransactionLiability - totalPaid);
-    }, [payment.supplierName, timberExpenses, supplierPayments, suppliers]);
+    }, [payment.supplierName, timberExpenses, supplierPayments, suppliers, isEditing, paymentToEdit]);
 
     const balanceAmount = useMemo(() => {
         return Math.max(0, outstandingAmount - (payment.amount || 0));
@@ -97,7 +123,11 @@ const TimberPaymentForm: React.FC<TimberPaymentFormProps> = ({ onClose, onSave, 
 
     const handleSubmit = () => {
         if (validate()) {
-            onSave(payment);
+            if (isEditing && paymentToEdit) {
+                onSave({ ...payment, id: paymentToEdit.id });
+            } else {
+                onSave(payment);
+            }
             onClose();
         }
     };
@@ -109,7 +139,7 @@ const TimberPaymentForm: React.FC<TimberPaymentFormProps> = ({ onClose, onSave, 
         <div className="fixed inset-0 bg-black bg-opacity-60 z-40 flex justify-center items-start p-4 pt-20" role="dialog">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-lg animate-fade-in-down overflow-visible">
                 <div className="flex items-center justify-between p-5 border-b">
-                    <h2 className="text-xl font-bold text-gray-800">Record Supplier Payment</h2>
+                    <h2 className="text-xl font-bold text-gray-800">{isEditing ? 'Edit Supplier Payment' : 'Record Supplier Payment'}</h2>
                     <button onClick={onClose} className="p-1 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
                         <CloseIcon className="w-6 h-6" />
                     </button>
@@ -133,7 +163,7 @@ const TimberPaymentForm: React.FC<TimberPaymentFormProps> = ({ onClose, onSave, 
                         </div>
                         <div className="z-10">
                             <label className="block text-sm font-medium text-gray-700 mb-1 text-red-500">Supplier Name *</label>
-                            <select name="supplierName" value={payment.supplierName} onChange={handleChange} className={`${commonInputClasses} ${errors.supplierName ? 'border-red-500' : ''}`}>
+                            <select name="supplierName" value={payment.supplierName} onChange={handleChange} className={`${commonInputClasses} ${errors.supplierName ? 'border-red-500' : ''}`} disabled={isEditing}>
                                 <option value="">Select Supplier</option>
                                 {suppliers.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
                             </select>
@@ -199,7 +229,9 @@ const TimberPaymentForm: React.FC<TimberPaymentFormProps> = ({ onClose, onSave, 
                 </div>
                 <div className="flex items-center justify-end p-5 bg-gray-50 border-t space-x-3 shrink-0">
                     <button onClick={onClose} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md text-sm font-semibold hover:bg-gray-50 transition-colors">Cancel</button>
-                    <button onClick={handleSubmit} className="px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95">Save Payment</button>
+                    <button onClick={handleSubmit} className="px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95">
+                        {isEditing ? 'Update Payment' : 'Save Payment'}
+                    </button>
                 </div>
             </div>
         </div>
