@@ -148,7 +148,7 @@ export const Login: React.FC<LoginProps> = ({ onGuestMode }) => {
             <div className="w-16 h-16 bg-primary-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
               <InvoiceIcon className="w-10 h-10 text-white" />
             </div>
-            <h1 className="text-3xl font-extrabold text-secondary-900 tracking-tight">Textile ERP</h1>
+            <h1 className="text-3xl font-extrabold text-secondary-900 tracking-tight">Textiles ERP</h1>
             <p className="text-secondary-500 mt-1 text-center font-medium opacity-70 italic">Enterprise Management System</p>
           </div>
 

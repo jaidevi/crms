@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import type { Client, DeliveryChallan, ProcessType, Invoice, InvoiceNumberConfig, CompanyDetails } from '../types';
+import type { Client, DeliveryChallan, ProcessType, Invoice, InvoiceItem, InvoiceNumberConfig, CompanyDetails } from '../types';
 import { CalendarIcon, SearchIcon, ChevronDownIcon, PlusIcon, EditIcon } from './Icons';
 import DatePicker from './DatePicker';
 import InvoiceCreateScreen from './InvoiceCreateScreen';
@@ -225,12 +225,32 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
     const isAllSelected = filteredChallans.length > 0 && selectedChallanIds.size === filteredChallans.length;
 
     if (viewingStatementForClient) {
+        // Filter invoices and challans by selected dates before passing to statement
+        const statementInvoices = invoices.filter(inv => 
+            inv.clientName === viewingStatementForClient.name &&
+            (!fromDate || inv.invoiceDate >= fromDate) &&
+            (!toDate || inv.invoiceDate <= toDate)
+        );
+        
+        const statementChallans = deliveryChallans.filter(c => {
+            let partyToCompare = c.partyName;
+            if (c.isOutsourcing && c.partyName.includes('|')) {
+                const fromMatch = c.partyName.match(/FROM: (.*?)\|/);
+                if (fromMatch) partyToCompare = fromMatch[1].trim();
+            }
+            return partyToCompare === viewingStatementForClient.name &&
+            (!fromDate || c.date >= fromDate) &&
+            (!toDate || c.date <= toDate);
+        });
+
         return <ClientStatementScreen
             client={viewingStatementForClient}
-            invoices={invoices.filter(inv => inv.clientName === viewingStatementForClient.name)}
-            challans={deliveryChallans.filter(c => c.partyName === viewingStatementForClient.name)}
+            invoices={statementInvoices}
+            challans={statementChallans}
             processTypes={processTypes}
             companyDetails={companyDetails}
+            startDate={fromDate}
+            endDate={toDate}
             onBack={() => setViewingStatementForClient(null)}
         />
     }

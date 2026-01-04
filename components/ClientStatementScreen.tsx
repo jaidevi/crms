@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import type { Client, Invoice, DeliveryChallan, ProcessType, CompanyDetails } from '../types';
 import { PrintIcon, DownloadIcon, CheckIcon } from './Icons';
@@ -10,6 +11,8 @@ interface ClientStatementScreenProps {
     processTypes: ProcessType[];
     onBack: () => void;
     companyDetails: CompanyDetails;
+    startDate?: string;
+    endDate?: string;
 }
 
 const formatDate = (dateStr: string) => {
@@ -21,7 +24,7 @@ const formatDate = (dateStr: string) => {
 // Default Logo (Fallback)
 const VEL_LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTUwIj48cmVjdCB4PSI0NiIgeT0iMTAwIiB3aWR0aD0iOCIgaGVpZ2h0PSI1MCIgZmlsbD0iI2I0NTMwOSIgLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjE0OCIgcj0iNCIgZmlsbD0iI2I0NTMwOSIgLz48cGF0aCBkPSJNNDAgMTAwIFE1MCAxMTAgNjAgMTAwIiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNDIgMTA1IFE1MCAxMTUgNTggMTA1IiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNDQgMTEwIFE1MCAxMTggNTYgMTEwIiBzdHJva2U9IiNiNDUzMDkiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgLz48cGF0aCBkPSJNNTAgNSBDIDg1IDQwIDg1IDgwIDUwIDEwMCBDIDE1IDgwIDE1IDQwIDUwIDUgWiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZjk3MzE2IiBzdHJva2Utd2lkdGg9IjQiIC8+PHBhdGggZD0iTTUwIDQ1IEMgNjUgNjAgNjUgODAgNTAgOTAgQyAzNSA4MCAzNSA2MCA1MCA0NSBaIiBmaWxsPSIjMWQ0ZWQ4IiAvPjxsaW5lIHgxPSIzNSIgeTE9IjI1IiB4Mj0iNjUiIHkyPSIyNSIgc3Ryb2tlPSIjOWNhM2FmIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgLz48bGluZSB4MT0iMzIiIHkxPSIzMiIgeDI9IjY4IiB5Mj0iMzIiIHN0cm9rZT0iIzljYTNhZiIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiIC8+PGxpbmUgeDE9IjM1IiB5MT0iMzkiIHgyPSI2NSIgeTI9IjM5IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiAvPjxjaXJjbGUgY3g9IjUwIiBjeT0iMzIiIHI9IjQiIGZpbGw9IiNkYzI2MjYiIC8+PC9zdmc+";
 
-const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, invoices, challans, processTypes, onBack, companyDetails }) => {
+const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, invoices, challans, processTypes, onBack, companyDetails, startDate, endDate }) => {
     const [showDesignNo, setShowDesignNo] = useState(false);
     
     const handlePrint = () => {
@@ -54,6 +57,7 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
             [`Phone: ${companyDetails.phone}`],
             [],
             ["BILL SUMMARY"],
+            [startDate && endDate ? `Period: ${formatDate(startDate)} to ${formatDate(endDate)}` : ""],
             [],
             [`Client: ${client.name}`],
             [`Address: ${client.address}`],
@@ -106,6 +110,7 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
         ws['!merges'] = [
             { s: { r: 0, c: 0 }, e: { r: 0, c: totalCols } }, // Company Name
             { s: { r: 5, c: 0 }, e: { r: 5, c: totalCols } }, // Statement Title
+            { s: { r: 6, c: 0 }, e: { r: 6, c: totalCols } }, // Date Range
         ];
 
         // Column widths
@@ -165,7 +170,12 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
                         </div>
                      </div>
                      <div className="text-right">
-                        <h1 className="text-2xl font-bold text-gray-800 uppercase">BILL SUMMARY</h1>
+                        <h1 className="text-2xl font-bold text-gray-800 uppercase tracking-tight">BILL SUMMARY</h1>
+                        {startDate && endDate && (
+                            <p className="text-sm font-semibold text-primary-600 mt-1">
+                                Period: {formatDate(startDate)} to {formatDate(endDate)}
+                            </p>
+                        )}
                      </div>
                 </div>
 
@@ -210,11 +220,18 @@ const ClientStatementScreen: React.FC<ClientStatementScreenProps> = ({ client, i
                                         );
                                     })}
                                 </tbody>
+                                <tfoot className="bg-gray-50 font-bold">
+                                    <tr>
+                                        <td colSpan={showDesignNo ? 5 : 4} className="px-4 py-3 text-right uppercase border-t">Total</td>
+                                        <td className="px-4 py-3 text-right border-t">{sortedChallans.reduce((s, c) => s + c.pcs, 0)}</td>
+                                        <td className="px-4 py-3 text-right border-t">{sortedChallans.reduce((s, c) => s + c.mtr, 0).toFixed(2)}</td>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                     ) : (
-                         <div className="text-center p-4 border rounded-lg text-gray-500 italic">
-                            No challans found for this client.
+                         <div className="text-center p-12 border rounded-lg text-gray-500 italic bg-secondary-50">
+                            No challans found for this client in the selected date range.
                         </div>
                     )}
                 </div>

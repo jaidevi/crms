@@ -129,7 +129,8 @@ const PaymentReceivedForm: React.FC<PaymentReceivedFormProps> = ({ onClose, onSa
         setAdjustments(newAdjustments);
         
         // Update total amount received based on sum of adjustments
-        const newTotal = Object.values(newAdjustments).reduce((sum, val) => sum + (val as number), 0);
+        // FIX: Added explicit type (sum: number) to reduce callback to fix "Operator '+' cannot be applied to types 'unknown' and 'number'"
+        const newTotal = Object.values(newAdjustments).reduce((sum: number, val) => sum + (val as number), 0);
         setPayment(prev => ({ ...prev, amount: newTotal }));
     };
 
