@@ -119,6 +119,9 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                                     <span className="font-semibold">HSN/SAC:</span> {companyDetails.hsnSac}
                                 </div>
                             )}
+                            <div className="text-sm text-gray-700">
+                                <span className="font-semibold">UDYAM REGISTRATION NUMBER:</span> UDYAM-TN-20-0127621
+                            </div>
                         </div>
                      </div>
                      
@@ -204,7 +207,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, client, companyDetai
                         {/* Amount in Words */}
                         <div className="mt-4">
                             <p className="text-sm font-semibold text-gray-700">Amount in Words:</p>
-                            <p className="text-sm  font-medium text-gray-900">{numberToWords(Math.round(invoice.totalAmount))}</p>
+                            <p className="text-sm  font-medium text-gray-900">{numberToWords(Math.floor(invoice.totalAmount))}</p>
                         </div>
 
                         {/* Signature Area */}

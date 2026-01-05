@@ -347,6 +347,9 @@ const InvoiceCreateScreen: React.FC<InvoiceCreateScreenProps> = ({
                                     <span className="font-semibold">HSN/SAC:</span> {companyDetails.hsnSac}
                                 </div>
                             )}
+                            <div className="text-sm text-gray-700">
+                                <span className="font-semibold">UDYAM REGISTRATION NUMBER:</span> UDYAM-TN-20-0127621
+                            </div>
                         </div>
                      </div>
                      
