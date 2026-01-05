@@ -44,10 +44,10 @@ const formatDateForDisplay = (isoDate: string) => {
     return `${day}-${month}-${year}`;
 };
 
-const numberFormat = (num: number) => {
+const numberFormat = (num: number, minDec = 2, maxDec = 2) => {
     return new Intl.NumberFormat('en-IN', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        minimumFractionDigits: minDec,
+        maximumFractionDigits: maxDec,
     }).format(num);
 };
 
@@ -446,7 +446,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
         if (reportType === 'attendance') {
             sheetName = "Attendance";
             fileName = `Attendance_Report_${startDate}_${endDate}.xlsx`;
-            data = employeeSummaries.map((s, idx) => ({ 'S.NO': idx + 1, 'Employee Name': s.name, 'Working Days': s.workingDays, 'Meters Produced': s.meters, 'Overtime Hours': s.ot, 'Salary': s.salary }));
+            data = employeeSummaries.map((s, idx) => ({ 'S.NO': idx + 1, 'Employee Name': s.name, 'Working Days': s.workingDays, 'Meters Produced': s.meters, 'Overtime Hours': s.ot, 'Salary': Math.round(s.salary) }));
         } else if (reportType === 'invoice') {
             sheetName = "Invoices";
             fileName = `Invoice_Report_${startDate}_${endDate}.xlsx`;
@@ -674,7 +674,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                             </div>
                             <div className="flex-1 bg-indigo-50 p-2 rounded border border-indigo-100 text-center">
                                 <p className="text-[10px] text-indigo-600 font-bold uppercase">Total Salary</p>
-                                <p className="text-lg font-bold text-indigo-800">₹{numberFormat(attendanceSummary.totalSalary)}</p>
+                                <p className="text-lg font-bold text-indigo-800">₹{numberFormat(attendanceSummary.totalSalary, 0, 0)}</p>
                             </div>
                         </div>
 
@@ -697,9 +697,9 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                                                 <td className="px-3 py-1.5 border border-secondary-200 text-center">{chunkIdx * ROWS_PER_PAGE + index + 1}</td>
                                                 <td className="px-3 py-1.5 border border-secondary-200 font-medium text-secondary-900">{summary.name}</td>
                                                 <td className="px-3 py-1.5 border border-secondary-200 text-right">{summary.workingDays}</td>
-                                                <td className="px-3 py-1.5 border border-secondary-200 text-right">{summary.meters.toFixed(2)}</td>
+                                                <td className="px-3 py-1.5 border border-secondary-200 text-right">{numberFormat(summary.meters, 0, 2)}</td>
                                                 <td className="px-3 py-1.5 border border-secondary-200 text-right">{summary.ot}</td>
-                                                <td className="px-3 py-1.5 border border-secondary-200 text-right font-medium text-primary-700">₹{numberFormat(summary.salary)}</td>
+                                                <td className="px-3 py-1.5 border border-secondary-200 text-right font-medium text-primary-700">₹{numberFormat(summary.salary, 0, 0)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -707,17 +707,17 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                                         <tr>
                                             <td colSpan={2} className="px-3 py-2 border border-secondary-200 text-right italic">Page Wise Total:</td>
                                             <td className="px-3 py-2 border border-secondary-200 text-right">{chunk.totals.workingDays}</td>
-                                            <td className="px-3 py-2 border border-secondary-200 text-right">{chunk.totals.meters.toFixed(2)}</td>
+                                            <td className="px-3 py-2 border border-secondary-200 text-right">{numberFormat(chunk.totals.meters, 0, 2)}</td>
                                             <td className="px-3 py-2 border border-secondary-200 text-right">{chunk.totals.ot}</td>
-                                            <td className="px-3 py-2 border border-secondary-200 text-right">₹{numberFormat(chunk.totals.salary)}</td>
+                                            <td className="px-3 py-2 border border-secondary-200 text-right">₹{numberFormat(chunk.totals.salary, 0, 0)}</td>
                                         </tr>
                                         {chunkIdx === chunkedEmployeeSummaries.length - 1 && (
                                             <tr className="bg-primary-50 text-primary-900">
                                                 <td colSpan={2} className="px-3 py-2 border border-secondary-200 text-right uppercase">Grand Total:</td>
                                                 <td className="px-3 py-2 border border-secondary-200 text-right">{attendanceSummary.totalDaysWorked}</td>
-                                                <td className="px-3 py-2 border border-secondary-200 text-right">{attendanceSummary.totalMeters.toFixed(2)}</td>
+                                                <td className="px-3 py-2 border border-secondary-200 text-right">{numberFormat(attendanceSummary.totalMeters, 0, 2)}</td>
                                                 <td className="px-3 py-2 border border-secondary-200 text-right">{attendanceSummary.totalOvertime}</td>
-                                                <td className="px-3 py-2 border border-secondary-200 text-right">₹{numberFormat(attendanceSummary.totalSalary)}</td>
+                                                <td className="px-3 py-2 border border-secondary-200 text-right">₹{numberFormat(attendanceSummary.totalSalary, 0, 0)}</td>
                                             </tr>
                                         )}
                                     </tfoot>
@@ -797,7 +797,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                             </div>
                             <div className="flex-1 bg-success-50 p-2 rounded border border-success-100 text-center">
                                 <p className="text-[10px] text-success-600 font-bold uppercase">Total Paid</p>
-                                <p className="text-lg font-bold text-secondary-800">₹{numberFormat(otherExpenseSummary.paidAmount)}</p>
+                                <p className="text-lg font-bold text-success-800">₹{numberFormat(otherExpenseSummary.paidAmount)}</p>
                             </div>
                             <div className="flex-1 bg-danger-50 p-2 rounded border border-danger-100 text-center">
                                 <p className="text-[10px] text-danger-600 font-bold uppercase">Pending Bills</p>
