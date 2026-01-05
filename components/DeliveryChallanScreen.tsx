@@ -187,10 +187,21 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
     }
 
     const sortedList = listToFilter.sort((a, b) => {
+        // First sort by date descending
         const dateComparison = new Date(b.date).getTime() - new Date(a.date).getTime();
         if (dateComparison !== 0) {
             return dateComparison;
         }
+        
+        // Secondary sort by Party DC No to group similar client items
+        const dcA = a.partyDCNo || '';
+        const dcB = b.partyDCNo || '';
+        const dcComparison = dcB.localeCompare(dcA, undefined, { numeric: true });
+        if (dcComparison !== 0) {
+            return dcComparison;
+        }
+
+        // Final tie-breaker by our internal challan number
         return b.challanNumber.localeCompare(a.challanNumber, undefined, { numeric: true });
     });
 

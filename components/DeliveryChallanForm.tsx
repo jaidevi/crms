@@ -8,7 +8,7 @@ import ProcessTypeModal from './PartyDCProcessModal';
 import type { DeliveryChallan, Client, PurchaseShop, ProcessType, DeliveryChallanNumberConfig, Employee, CompanyDetails } from '../types';
 
 // Helper hook for click outside
-const useClickOutside = (ref: React.RefObject<HTMLElement>, handler: () => void) => {
+const useClickOutside = (ref: React.RefObject<HTMLElement | null>, handler: () => void) => {
     useEffect(() => {
         const listener = (event: MouseEvent | TouchEvent) => {
             if (!ref.current || ref.current.contains(event.target as Node)) {
@@ -77,7 +77,7 @@ const formatDateForInput = (isoDate: string) => {
 const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
     onClose, onSave, clients, onAddClient, purchaseShops, onAddPurchaseShop,
     processTypes, onAddProcessType, deliveryChallanNumberConfig, challanToEdit,
-    employees, onAddEmployee, isOutsourcingScreen
+    existingChallans, employees, onAddEmployee, isOutsourcingScreen
 }) => {
     const [challan, setChallan] = useState<Omit<DeliveryChallan, 'id'>>(BLANK_CHALLAN);
     const [fromParty, setFromParty] = useState(''); // Local state for "From Party" (UI only for now)
@@ -154,6 +154,7 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
         });
 
         if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+        if (errors.duplicate) setErrors(prev => ({ ...prev, duplicate: '' }));
     };
 
     const handleSelectParty = (value: string) => {
@@ -162,6 +163,7 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
         } else {
             setChallan(prev => ({ ...prev, partyName: value }));
             if (errors.partyName) setErrors(prev => ({ ...prev, partyName: '' }));
+            if (errors.duplicate) setErrors(prev => ({ ...prev, duplicate: '' }));
         }
         setIsPartyDropdownOpen(false);
         setPartySearchTerm('');
@@ -171,6 +173,7 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
         setFromParty(value);
         if (errors.fromParty) setErrors(prev => ({ ...prev, fromParty: '' }));
         if (errors.partyName) setErrors(prev => ({ ...prev, partyName: '' }));
+        if (errors.duplicate) setErrors(prev => ({ ...prev, duplicate: '' }));
         setIsFromPartyDropdownOpen(false);
         setFromPartySearchTerm('');
     };
@@ -184,6 +187,7 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                 setChallan(prev => ({ ...prev, process: [...prev.process, value] }));
             }
             setCurrentProcess(''); // Reset selection
+            if (errors.duplicate) setErrors(prev => ({ ...prev, duplicate: '' }));
         }
     };
 
@@ -201,6 +205,7 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
 
     const removeProcess = (proc: string) => {
         setChallan(prev => ({ ...prev, process: prev.process.filter(p => p !== proc) }));
+        if (errors.duplicate) setErrors(prev => ({ ...prev, duplicate: '' }));
     };
 
     const removeSplitProcess = (proc: string) => {
@@ -271,6 +276,7 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
         if (!challan.status) newErrors.status = "Status is required.";
         if (challan.process.length === 0) newErrors.process = "At least one process is required.";
         if (challan.pcs <= 0) newErrors.pcs = "Pcs must be greater than 0.";
+        if (challan.mtr <= 0) newErrors.mtr = "Meter must be greater than 0.";
         
         if (isOutsourcingScreen) {
              if (!fromParty && !challanToEdit) {
@@ -279,6 +285,27 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
              if (fromParty && challan.partyName && fromParty === challan.partyName) {
                  newErrors.partyName = "From Party and To Party cannot be the same.";
              }
+        }
+
+        // Duplicate Check: Same Party, Same Party DC No, Same Date, Same Process, and Same Meter
+        const normalizedProcess = [...challan.process].sort().join(',').toLowerCase();
+        const isDuplicate = existingChallans.some(existing => {
+            // If editing, skip checking against self
+            if (challanToEdit && existing.id === challanToEdit.id) return false;
+
+            const existingNormProcess = (existing.process || []).sort().join(',').toLowerCase();
+            
+            return (
+                existing.partyName.toLowerCase() === challan.partyName.toLowerCase() &&
+                existing.partyDCNo.trim().toLowerCase() === challan.partyDCNo.trim().toLowerCase() &&
+                existing.date === challan.date &&
+                existingNormProcess === normalizedProcess &&
+                Number(existing.mtr) === Number(challan.mtr)
+            );
+        });
+
+        if (isDuplicate) {
+            newErrors.duplicate = "Duplicate entry detected! A challan for this party with the same DC Number, Date, Process, and Meter already exists.";
         }
         
         setErrors(newErrors);
@@ -291,7 +318,7 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
         }
     };
 
-    const commonInputClasses = "block w-full px-3 py-2.5 text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500";
+    const commonInputClasses = "block w-full px-3 py-2.5 text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors";
     const statusOptions = ['Not Delivered', 'Ready to Invoice', 'Delivered', 'Rework', 'Processing', 'Pending'];
     const workingUnitOptions = ['Unit I', 'Unit II'];
 
@@ -317,31 +344,37 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
 
             <div className="fixed inset-0 bg-black bg-opacity-60 z-40 flex justify-center items-start p-4 pt-10" role="dialog">
                 <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl animate-fade-in-down overflow-hidden flex flex-col max-h-[90vh]">
-                    <div className="flex items-center justify-between p-5 border-b shrink-0">
+                    <div className="flex items-center justify-between p-5 border-b shrink-0 bg-gray-50">
                         <h2 className="text-xl font-bold text-gray-800">{challanToEdit ? 'Edit Challan' : (isOutsourcingScreen ? 'Create New Outsourcing Challan' : 'New Delivery Challan')}</h2>
-                        <button onClick={onClose} className="p-1 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+                        <button onClick={onClose} className="p-1 rounded-full text-secondary-400 hover:bg-gray-200 hover:text-gray-600 transition-colors">
                             <CloseIcon className="w-6 h-6" />
                         </button>
                     </div>
                     
                     <div className="p-6 overflow-y-auto flex-grow space-y-8">
-                        
+                        {/* DUPLICATE ALERT BANNER */}
+                        {errors.duplicate && (
+                            <div className="bg-danger-50 border border-danger-200 text-danger-700 px-4 py-3 rounded-lg flex items-center shadow-sm animate-fade-in-down" role="alert">
+                                <SearchIcon className="w-5 h-5 mr-3 flex-shrink-0" />
+                                <span className="text-sm font-semibold">{errors.duplicate}</span>
+                            </div>
+                        )}
+
                         <div className="border border-gray-200 rounded-lg p-4 relative">
                             <h3 className="text-sm font-bold text-gray-900 bg-white px-2 absolute -top-2.5 left-4">Challan Information</h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Challan Number</label>
-                                    <input type="text" name="challanNumber" value={challan.challanNumber} onChange={handleChange} className={`${commonInputClasses} bg-gray-50`} readOnly={!isOutsourcingScreen} />
+                                    <input type="text" name="challanNumber" value={challan.challanNumber} onChange={handleChange} className={`${commonInputClasses} bg-gray-50 font-semibold`} readOnly={!isOutsourcingScreen} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
                                     <div className="relative">
-                                        <button type="button" onClick={() => setDatePickerOpen(p => !p)} className={`block w-full text-left ${commonInputClasses}`}>
+                                        <button type="button" onClick={() => setDatePickerOpen(p => !p)} className={`block w-full text-left ${commonInputClasses} ${errors.date ? 'border-red-500' : ''}`}>
                                             {formatDateForInput(challan.date) || 'Select date'}
                                             <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                         </button>
-                                        {/* Fix: Replaced undefined variable 'p' with 'prev' in setChallan update */}
-                                        {isDatePickerOpen && <DatePicker value={challan.date} onChange={d => { setChallan(prev => ({...prev, date: d})); setDatePickerOpen(false); }} onClose={() => setDatePickerOpen(false)} />}
+                                        {isDatePickerOpen && <DatePicker value={challan.date} onChange={d => { setChallan(prev => ({...prev, date: d})); setDatePickerOpen(false); if(errors.duplicate) setErrors(p => ({...p, duplicate:''})); }} onClose={() => setDatePickerOpen(false)} />}
                                     </div>
                                     {errors.date && <p className="mt-1 text-sm text-red-500">{errors.date}</p>}
                                 </div>
@@ -606,8 +639,9 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
                                     {errors.pcs && <p className="text-xs text-red-500 mt-1">{errors.pcs}</p>}
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Mtr</label>
-                                    <input type="number" name="mtr" value={challan.mtr || ''} onChange={handleChange} className={commonInputClasses} />
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Mtr <span className="text-red-500">*</span></label>
+                                    <input type="number" name="mtr" value={challan.mtr || ''} onChange={handleChange} className={`${commonInputClasses} ${errors.mtr ? 'border-red-500' : ''}`} />
+                                    {errors.mtr && <p className="text-xs text-red-500 mt-1">{errors.mtr}</p>}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Final Meter</label>
@@ -707,7 +741,7 @@ const DeliveryChallanForm: React.FC<DeliveryChallanFormProps> = ({
 
                     <div className="flex items-center justify-end p-5 bg-gray-50 border-t shrink-0 space-x-3">
                         <button onClick={onClose} className="px-4 py-2 bg-white border border-gray-300 text-secondary-700 rounded-md text-sm font-semibold hover:bg-secondary-50">Cancel</button>
-                        <button onClick={handleSubmit} className="px-5 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700">
+                        <button onClick={handleSubmit} className="px-5 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 shadow-md transform active:scale-95 transition-all">
                             {challanToEdit ? 'Update Challan' : 'Save Challan'}
                         </button>
                     </div>
