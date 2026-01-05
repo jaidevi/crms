@@ -1,9 +1,27 @@
 
-import React, { useState, useMemo } from 'react';
-import { CalendarIcon, SearchIcon, PrintIcon, ChevronDownIcon, DownloadIcon } from './Icons';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { CalendarIcon, SearchIcon, PrintIcon, ChevronDownIcon, DownloadIcon, CheckIcon, CloseIcon } from './Icons';
 import DatePicker from './DatePicker';
 import type { Employee, AttendanceRecord, Invoice, Client, PurchaseOrder, PurchaseShop, PaymentReceived, TimberExpense, SupplierPayment, OtherExpense, ExpenseCategory, DeliveryChallan } from '../types';
 import * as XLSX from 'xlsx';
+
+// Helper hook for click outside
+const useClickOutside = (ref: React.RefObject<HTMLElement | null>, handler: () => void) => {
+    useEffect(() => {
+        const listener = (event: MouseEvent | TouchEvent) => {
+            if (!ref.current || ref.current.contains(event.target as Node)) {
+                return;
+            }
+            handler();
+        };
+        document.addEventListener('mousedown', listener);
+        document.addEventListener('touchstart', listener);
+        return () => {
+            document.removeEventListener('mousedown', listener);
+            document.removeEventListener('touchstart', listener);
+        };
+    }, [ref, handler]);
+};
 
 interface ReportsScreenProps {
     employees: Employee[];
@@ -33,7 +51,6 @@ const numberFormat = (num: number) => {
     }).format(num);
 };
 
-// Constant to control rows per page for printed report totals
 const ROWS_PER_PAGE = 22;
 
 const ReportsScreen: React.FC<ReportsScreenProps> = ({ 
@@ -46,31 +63,76 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
 
     const [startDate, setStartDate] = useState(firstDayOfMonth);
     const [endDate, setEndDate] = useState(today);
-    const [selectedEntityId, setSelectedEntityId] = useState('all');
+    
+    // Changed from single ID to array of IDs
+    const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>(['all']);
     const [reportType, setReportType] = useState<'attendance' | 'invoice' | 'purchase' | 'payment_received' | 'timber' | 'other_expense' | 'process'>('attendance');
 
     const [isStartDateOpen, setIsStartDateOpen] = useState(false);
     const [isEndDateOpen, setIsEndDateOpen] = useState(false);
+    const [isMultiSelectOpen, setIsMultiSelectOpen] = useState(false);
+    const [entitySearchTerm, setEntitySearchTerm] = useState('');
+    const multiSelectRef = useRef<HTMLDivElement>(null);
+
+    useClickOutside(multiSelectRef, () => setIsMultiSelectOpen(false));
 
     const sortedEmployees = useMemo(() => [...employees].sort((a, b) => a.name.localeCompare(b.name)), [employees]);
     const sortedClients = useMemo(() => [...clients].sort((a, b) => a.name.localeCompare(b.name)), [clients]);
     const sortedShops = useMemo(() => [...purchaseShops].sort((a, b) => a.name.localeCompare(b.name)), [purchaseShops]);
     const sortedCategories = useMemo(() => [...expenseCategories].sort((a, b) => a.name.localeCompare(b.name)), [expenseCategories]);
 
+    const availableEntities = useMemo(() => {
+        switch (reportType) {
+            case 'attendance': return sortedEmployees.map(e => ({ id: e.id, name: e.name }));
+            case 'invoice':
+            case 'payment_received': return sortedClients.map(c => ({ id: c.id, name: c.name }));
+            case 'purchase':
+            case 'timber': return sortedShops.map(s => ({ id: s.id, name: s.name }));
+            case 'other_expense': return sortedCategories.map(cat => ({ id: cat.id, name: cat.name }));
+            default: return [];
+        }
+    }, [reportType, sortedEmployees, sortedClients, sortedShops, sortedCategories]);
+
+    const filteredEntitiesForSearch = useMemo(() => {
+        if (!entitySearchTerm) return availableEntities;
+        return availableEntities.filter(e => e.name.toLowerCase().includes(entitySearchTerm.toLowerCase()));
+    }, [availableEntities, entitySearchTerm]);
+
+    const toggleEntity = (id: string) => {
+        setSelectedEntityIds(prev => {
+            if (id === 'all') return ['all'];
+            
+            const withoutAll = prev.filter(i => i !== 'all');
+            if (withoutAll.includes(id)) {
+                const next = withoutAll.filter(i => i !== id);
+                return next.length === 0 ? ['all'] : next;
+            } else {
+                return [...withoutAll, id];
+            }
+        });
+    };
+
+    const getSelectedLabel = () => {
+        if (selectedEntityIds.includes('all')) return `All ${reportType === 'attendance' ? 'Employees' : (reportType === 'purchase' || reportType === 'timber' ? 'Shops' : (reportType === 'other_expense' ? 'Categories' : 'Clients'))}`;
+        if (selectedEntityIds.length === 1) {
+            return availableEntities.find(e => e.id === selectedEntityIds[0])?.name || 'Selected';
+        }
+        return `${selectedEntityIds.length} Selected`;
+    };
+
     const attendanceReportData = useMemo(() => {
         if (reportType !== 'attendance' || !startDate || !endDate) return [];
-
         return attendanceRecords.filter(record => {
             const isDateInRange = record.date >= startDate && record.date <= endDate;
-            const isEmployeeMatch = selectedEntityId === 'all' || record.employee_id === selectedEntityId;
-            return isDateInRange && isEmployeeMatch;
+            const isMatch = selectedEntityIds.includes('all') || selectedEntityIds.includes(record.employee_id);
+            return isDateInRange && isMatch;
         }).sort((a, b) => {
             if (a.date !== b.date) return b.date.localeCompare(a.date);
             const empA = employees.find(e => e.id === a.employee_id)?.name || '';
             const empB = employees.find(e => e.id === b.employee_id)?.name || '';
             return empA.localeCompare(empB);
         });
-    }, [attendanceRecords, startDate, endDate, selectedEntityId, employees, reportType]);
+    }, [attendanceRecords, startDate, endDate, selectedEntityIds, employees, reportType]);
 
     const attendanceSummary = useMemo(() => {
         let totalDaysWorked = 0;
@@ -90,7 +152,6 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
             totalOvertime += (rec.morningOvertimeHours || 0) + (rec.eveningOvertimeHours || 0);
             totalMeters += (rec.metersProduced || 0);
 
-            // Salary Calculation
             const isMonthly = (emp.monthlyWage || 0) > 0;
             const wage = isMonthly ? (emp.monthlyWage || 0) : (emp.dailyWage || 0);
             const wageEarnings = isMonthly ? (wage / 30) * currentWorkingDays : wage * currentWorkingDays;
@@ -103,7 +164,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
     const getEmployeeName = (id: string) => employees.find(e => e.id === id)?.name || 'Unknown';
 
     const employeeSummaries = useMemo(() => {
-        if (reportType !== 'attendance' || selectedEntityId !== 'all') return [];
+        if (reportType !== 'attendance') return [];
         const summaries: Record<string, { name: string, workingDays: number, ot: number, meters: number, salary: number }> = {};
         attendanceReportData.forEach(rec => {
             const emp = employees.find(e => e.id === rec.employee_id);
@@ -121,7 +182,6 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
             summaries[rec.employee_id].ot += (rec.morningOvertimeHours || 0) + (rec.eveningOvertimeHours || 0);
             summaries[rec.employee_id].meters += (rec.metersProduced || 0);
 
-            // Per Employee Salary
             const isMonthly = (emp.monthlyWage || 0) > 0;
             const wage = isMonthly ? (emp.monthlyWage || 0) : (emp.dailyWage || 0);
             const wageEarnings = isMonthly ? (wage / 30) * currentWorkingDays : wage * currentWorkingDays;
@@ -129,7 +189,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
             summaries[rec.employee_id].salary += (wageEarnings + prodEarnings);
         });
         return Object.values(summaries).sort((a, b) => a.name.localeCompare(b.name));
-    }, [attendanceReportData, employees, selectedEntityId, reportType]);
+    }, [attendanceReportData, employees, reportType]);
 
     const chunkedEmployeeSummaries = useMemo(() => {
         const chunks = [];
@@ -150,16 +210,16 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
         if (reportType !== 'invoice' || !startDate || !endDate) return [];
         return invoices.filter(inv => {
             const isDateInRange = inv.invoiceDate >= startDate && inv.invoiceDate <= endDate;
-            let isClientMatch = true;
-            if (selectedEntityId !== 'all') {
-                 const selectedClient = clients.find(c => c.id === selectedEntityId);
-                 isClientMatch = selectedClient ? inv.clientName === selectedClient.name : false;
+            let isMatch = selectedEntityIds.includes('all');
+            if (!isMatch) {
+                 const selectedNames = clients.filter(c => selectedEntityIds.includes(c.id)).map(c => c.name);
+                 isMatch = selectedNames.includes(inv.clientName);
             }
-            return isDateInRange && isClientMatch;
+            return isDateInRange && isMatch;
         }).sort((a, b) => {
             return a.invoiceNumber.localeCompare(b.invoiceNumber, undefined, { numeric: true, sensitivity: 'base' });
         });
-    }, [invoices, startDate, endDate, selectedEntityId, clients, reportType]);
+    }, [invoices, startDate, endDate, selectedEntityIds, clients, reportType]);
 
     const invoiceSummary = useMemo(() => {
         return {
@@ -174,14 +234,14 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
         if (reportType !== 'purchase' || !startDate || !endDate) return [];
         return purchaseOrders.filter(po => {
             const isDateInRange = po.poDate >= startDate && po.poDate <= endDate;
-            let isShopMatch = true;
-            if (selectedEntityId !== 'all') {
-                 const selectedShop = purchaseShops.find(s => s.id === selectedEntityId);
-                 isShopMatch = selectedShop ? po.shopName === selectedShop.name : false;
+            let isMatch = selectedEntityIds.includes('all');
+            if (!isMatch) {
+                 const selectedNames = purchaseShops.filter(s => selectedEntityIds.includes(s.id)).map(s => s.name);
+                 isMatch = selectedNames.includes(po.shopName);
             }
-            return isDateInRange && isShopMatch;
+            return isDateInRange && isMatch;
         }).sort((a, b) => new Date(a.poDate).getTime() - new Date(b.poDate).getTime());
-    }, [purchaseOrders, startDate, endDate, selectedEntityId, purchaseShops, reportType]);
+    }, [purchaseOrders, startDate, endDate, selectedEntityIds, purchaseShops, reportType]);
 
     const purchaseSummary = useMemo(() => {
         return {
@@ -195,9 +255,9 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
     const timberReportData = useMemo(() => {
         if (reportType !== 'timber' || !startDate || !endDate) return [];
         
-        const selectedSuppliers = selectedEntityId === 'all' 
+        const selectedSuppliers = selectedEntityIds.includes('all')
             ? purchaseShops.map(s => s.name)
-            : [purchaseShops.find(s => s.id === selectedEntityId)?.name].filter(Boolean) as string[];
+            : purchaseShops.filter(s => selectedEntityIds.includes(s.id)).map(s => s.name);
 
         const ledgerRows: { 
             id: string, 
@@ -288,7 +348,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
             if (b.isOpening) return 1;
             return 0;
         });
-    }, [timberExpenses, supplierPayments, purchaseShops, startDate, endDate, selectedEntityId, reportType]);
+    }, [timberExpenses, supplierPayments, purchaseShops, startDate, endDate, selectedEntityIds, reportType]);
 
     const timberSummary = useMemo(() => {
         const totalPurchases = timberReportData.filter(r => !r.isOpening).reduce((sum, r) => sum + r.amount, 0);
@@ -310,14 +370,14 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
         if (reportType !== 'other_expense' || !startDate || !endDate) return [];
         return otherExpenses.filter(exp => {
             const isDateInRange = exp.date >= startDate && exp.date <= endDate;
-            let isCategoryMatch = true;
-            if (selectedEntityId !== 'all') {
-                const selectedCat = expenseCategories.find(c => c.id === selectedEntityId);
-                isCategoryMatch = selectedCat ? exp.itemName === selectedCat.name : false;
+            let isMatch = selectedEntityIds.includes('all');
+            if (!isMatch) {
+                const selectedNames = expenseCategories.filter(c => selectedEntityIds.includes(c.id)).map(c => c.name);
+                isMatch = selectedNames.includes(exp.itemName);
             }
-            return isDateInRange && isCategoryMatch;
+            return isDateInRange && isMatch;
         }).sort((a, b) => a.date.localeCompare(b.date));
-    }, [otherExpenses, expenseCategories, startDate, endDate, selectedEntityId, reportType]);
+    }, [otherExpenses, expenseCategories, startDate, endDate, selectedEntityIds, reportType]);
 
     const otherExpenseSummary = useMemo(() => {
         return {
@@ -331,14 +391,14 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
         if (reportType !== 'payment_received' || !startDate || !endDate) return [];
         return paymentsReceived.filter(pymt => {
             const isDateInRange = pymt.paymentDate >= startDate && pymt.paymentDate <= endDate;
-            let isClientMatch = true;
-            if (selectedEntityId !== 'all') {
-                 const selectedClient = clients.find(c => c.id === selectedEntityId);
-                 isClientMatch = selectedClient ? pymt.clientName === selectedClient.name : false;
+            let isMatch = selectedEntityIds.includes('all');
+            if (!isMatch) {
+                 const selectedNames = clients.filter(c => selectedEntityIds.includes(c.id)).map(c => c.name);
+                 isMatch = selectedNames.includes(pymt.clientName);
             }
-            return isDateInRange && isClientMatch;
+            return isDateInRange && isMatch;
         }).sort((a, b) => a.paymentDate.localeCompare(b.paymentDate));
-    }, [paymentsReceived, startDate, endDate, selectedEntityId, clients, reportType]);
+    }, [paymentsReceived, startDate, endDate, selectedEntityIds, clients, reportType]);
 
     const paymentReceivedSummary = useMemo(() => {
         return {
@@ -386,7 +446,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
         if (reportType === 'attendance') {
             sheetName = "Attendance";
             fileName = `Attendance_Report_${startDate}_${endDate}.xlsx`;
-            data = selectedEntityId === 'all' ? employeeSummaries.map((s, idx) => ({ 'S.NO': idx + 1, 'Employee Name': s.name, 'Working Days': s.workingDays, 'Meters Produced': s.meters, 'Overtime Hours': s.ot, 'Salary': s.salary })) : attendanceReportData.map((rec, idx) => ({ 'S.NO': idx + 1, 'Date': rec.date, 'Employee': getEmployeeName(rec.employee_id), 'Morning Status': rec.morningStatus, 'Evening Status': rec.eveningStatus, 'Overtime Hours': (rec.morningOvertimeHours || 0) + (rec.eveningOvertimeHours || 0), 'Meters Produced': rec.metersProduced }));
+            data = employeeSummaries.map((s, idx) => ({ 'S.NO': idx + 1, 'Employee Name': s.name, 'Working Days': s.workingDays, 'Meters Produced': s.meters, 'Overtime Hours': s.ot, 'Salary': s.salary }));
         } else if (reportType === 'invoice') {
             sheetName = "Invoices";
             fileName = `Invoice_Report_${startDate}_${endDate}.xlsx`;
@@ -398,8 +458,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
         } else if (reportType === 'payment_received') {
             sheetName = "Payments";
             fileName = `Payment_Received_Report_${startDate}_${endDate}.xlsx`;
-            /* FIX: Changed p.payment_mode to p.paymentMode and p.reference_number to p.referenceNumber */
-            data = paymentReceivedReportData.map((p, idx) => ({ 'S.NO': idx + 1, 'Date': p.paymentDate, 'Client Name': p.clientName, 'Opening Balance': p.openingBalance, 'Amount Received': p.amount, 'Payment Mode': p.paymentMode, 'Reference Number': p.referenceNumber }));
+            data = paymentReceivedReportData.map((p, idx) => ({ 'S.NO': idx + 1, 'Date': p.paymentDate, 'Client Name': p.clientName, 'Amount Received': p.amount, 'Payment Mode': p.paymentMode, 'Reference Number': p.referenceNumber }));
         } else if (reportType === 'timber') {
             sheetName = "Timber";
             fileName = `Timber_Report_${startDate}_${endDate}.xlsx`;
@@ -439,7 +498,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end border-t border-secondary-100 pt-6">
                     <div>
                         <label className="block text-sm font-medium text-secondary-700 mb-1">Report Type</label>
-                        <select value={reportType} onChange={(e) => { setReportType(e.target.value as any); setSelectedEntityId('all'); }} className="block w-full px-3 py-2.5 text-sm rounded-md border-secondary-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                        <select value={reportType} onChange={(e) => { setReportType(e.target.value as any); setSelectedEntityIds(['all']); }} className="block w-full px-3 py-2.5 text-sm rounded-md border-secondary-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
                             <option value="attendance">Attendance & Production</option>
                             <option value="invoice">Invoice Report</option>
                             <option value="purchase">Purchase Report</option>
@@ -469,19 +528,80 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                             {isEndDateOpen && <DatePicker value={endDate} onChange={(d) => { setEndDate(d); setIsEndDateOpen(false); }} onClose={() => setIsEndDateOpen(false)} />}
                         </div>
                     </div>
-                    <div>
+                    
+                    {/* SEARCHABLE MULTI-SELECT DROPDOWN */}
+                    <div className="relative" ref={multiSelectRef}>
                         <label className="block text-sm font-medium text-secondary-700 mb-1">
                             {reportType === 'attendance' ? 'Employee' : 
                              (reportType === 'purchase' || reportType === 'timber') ? 'Shop / Supplier' : 
                              reportType === 'other_expense' ? 'Expense Category' : 'Client'}
                         </label>
-                        <select value={selectedEntityId} onChange={(e) => setSelectedEntityId(e.target.value)} disabled={reportType === 'process'} className="block w-full px-3 py-2.5 text-sm rounded-md border-secondary-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 disabled:bg-secondary-50">
-                            <option value="all">All {reportType === 'attendance' ? 'Employees' : (reportType === 'purchase' || reportType === 'timber' ? 'Shops' : (reportType === 'other_expense' ? 'Categories' : (reportType === 'process' ? 'Processes' : 'Clients')))}</option>
-                            {reportType === 'attendance' ? sortedEmployees.map(emp => (<option key={emp.id} value={emp.id}>{emp.name}</option>)) : 
-                             (reportType === 'purchase' || reportType === 'timber') ? sortedShops.map(shop => (<option key={shop.id} value={shop.id}>{shop.name}</option>)) : 
-                             reportType === 'other_expense' ? sortedCategories.map(cat => (<option key={cat.id} value={cat.id}>{cat.name}</option>)) :
-                             sortedClients.map(client => (<option key={client.id} value={client.id}>{client.name}</option>))}
-                        </select>
+                        <button
+                            type="button"
+                            disabled={reportType === 'process'}
+                            onClick={() => setIsMultiSelectOpen(!isMultiSelectOpen)}
+                            className="block w-full text-left px-3 py-2.5 text-sm rounded-md border border-secondary-300 shadow-sm bg-white flex justify-between items-center disabled:bg-secondary-50"
+                        >
+                            <span className="truncate">{getSelectedLabel()}</span>
+                            <ChevronDownIcon className={`w-4 h-4 text-secondary-400 transition-transform ${isMultiSelectOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {isMultiSelectOpen && (
+                            <div className="absolute z-50 mt-1 w-full bg-white shadow-2xl rounded-md border border-secondary-200 animate-fade-in-down">
+                                <div className="p-2 border-b border-secondary-100 sticky top-0 bg-white z-10">
+                                    <div className="relative">
+                                        <SearchIcon className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                                        <input
+                                            type="text"
+                                            className="w-full pl-8 pr-3 py-1.5 text-xs rounded border border-secondary-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                            placeholder="Search..."
+                                            value={entitySearchTerm}
+                                            onChange={(e) => setEntitySearchTerm(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="max-h-60 overflow-y-auto">
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleEntity('all')}
+                                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between border-b border-secondary-50 ${selectedEntityIds.includes('all') ? 'bg-primary-50 text-primary-700 font-bold' : 'hover:bg-secondary-50 text-secondary-700'}`}
+                                    >
+                                        All Entities
+                                        {selectedEntityIds.includes('all') && <CheckIcon className="w-4 h-4" />}
+                                    </button>
+                                    {filteredEntitiesForSearch.map(entity => (
+                                        <button
+                                            key={entity.id}
+                                            type="button"
+                                            onClick={() => toggleEntity(entity.id)}
+                                            className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between border-b border-secondary-50 ${selectedEntityIds.includes(entity.id) ? 'bg-primary-50 text-primary-700 font-bold' : 'hover:bg-secondary-50 text-secondary-700'}`}
+                                        >
+                                            <span className="truncate">{entity.name}</span>
+                                            {selectedEntityIds.includes(entity.id) && <CheckIcon className="w-4 h-4" />}
+                                        </button>
+                                    ))}
+                                    {filteredEntitiesForSearch.length === 0 && (
+                                        <div className="p-4 text-center text-xs text-secondary-400 italic">No matches found</div>
+                                    )}
+                                </div>
+                                <div className="p-2 border-t border-secondary-100 flex justify-between bg-secondary-50">
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setSelectedEntityIds(['all'])}
+                                        className="text-[10px] font-bold text-primary-600 hover:text-primary-800 uppercase tracking-wider"
+                                    >
+                                        Clear All
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setIsMultiSelectOpen(false)}
+                                        className="text-[10px] font-bold text-secondary-500 hover:text-secondary-700 uppercase tracking-wider"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -558,76 +678,52 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                             </div>
                         </div>
 
-                        {selectedEntityId === 'all' ? (
-                            chunkedEmployeeSummaries.map((chunk, chunkIdx) => (
-                                <div key={chunkIdx} className={`${chunkIdx > 0 ? 'mt-8 pt-8 border-t border-dashed border-secondary-300 print:mt-0 print:pt-0 print:border-none' : ''} print:break-after-page`}>
-                                    <table className="w-full text-[11px] text-left border-collapse table-auto mb-4">
-                                        <thead className="text-[10px] text-secondary-700 uppercase bg-secondary-100">
-                                            <tr>
-                                                <th className="px-3 py-2 border border-secondary-200 w-10 text-center">S.NO</th>
-                                                <th className="px-3 py-2 border border-secondary-200">Employee Name</th>
-                                                <th className="px-3 py-2 border border-secondary-200 text-right">Working Days</th>
-                                                <th className="px-3 py-2 border border-secondary-200 text-right">Meters Produced</th>
-                                                <th className="px-3 py-2 border border-secondary-200 text-right">OT Hours</th>
-                                                <th className="px-3 py-2 border border-secondary-200 text-right">Salary</th>
+                        {chunkedEmployeeSummaries.map((chunk, chunkIdx) => (
+                            <div key={chunkIdx} className={`${chunkIdx > 0 ? 'mt-8 pt-8 border-t border-dashed border-secondary-300 print:mt-0 print:pt-0 print:border-none' : ''} print:break-after-page`}>
+                                <table className="w-full text-[11px] text-left border-collapse table-auto mb-4">
+                                    <thead className="text-[10px] text-secondary-700 uppercase bg-secondary-100">
+                                        <tr>
+                                            <th className="px-3 py-2 border border-secondary-200 w-10 text-center">S.NO</th>
+                                            <th className="px-3 py-2 border border-secondary-200">Employee Name</th>
+                                            <th className="px-3 py-2 border border-secondary-200 text-right">Working Days</th>
+                                            <th className="px-3 py-2 border border-secondary-200 text-right">Meters Produced</th>
+                                            <th className="px-3 py-2 border border-secondary-200 text-right">OT Hours</th>
+                                            <th className="px-3 py-2 border border-secondary-200 text-right">Salary</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {chunk.data.map((summary, index) => (
+                                            <tr key={index} className="border-b border-secondary-200 hover:bg-secondary-50">
+                                                <td className="px-3 py-1.5 border border-secondary-200 text-center">{chunkIdx * ROWS_PER_PAGE + index + 1}</td>
+                                                <td className="px-3 py-1.5 border border-secondary-200 font-medium text-secondary-900">{summary.name}</td>
+                                                <td className="px-3 py-1.5 border border-secondary-200 text-right">{summary.workingDays}</td>
+                                                <td className="px-3 py-1.5 border border-secondary-200 text-right">{summary.meters.toFixed(2)}</td>
+                                                <td className="px-3 py-1.5 border border-secondary-200 text-right">{summary.ot}</td>
+                                                <td className="px-3 py-1.5 border border-secondary-200 text-right font-medium text-primary-700">₹{numberFormat(summary.salary)}</td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            {chunk.data.map((summary, index) => (
-                                                <tr key={index} className="border-b border-secondary-200 hover:bg-secondary-50">
-                                                    <td className="px-3 py-1.5 border border-secondary-200 text-center">{chunkIdx * ROWS_PER_PAGE + index + 1}</td>
-                                                    <td className="px-3 py-1.5 border border-secondary-200 font-medium text-secondary-900">{summary.name}</td>
-                                                    <td className="px-3 py-1.5 border border-secondary-200 text-right">{summary.workingDays}</td>
-                                                    <td className="px-3 py-1.5 border border-secondary-200 text-right">{summary.meters.toFixed(2)}</td>
-                                                    <td className="px-3 py-1.5 border border-secondary-200 text-right">{summary.ot}</td>
-                                                    <td className="px-3 py-1.5 border border-secondary-200 text-right font-medium text-primary-700">₹{numberFormat(summary.salary)}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                        <tfoot className="bg-secondary-50 font-bold">
-                                            <tr>
-                                                <td colSpan={2} className="px-3 py-2 border border-secondary-200 text-right italic">Page Wise Total:</td>
-                                                <td className="px-3 py-2 border border-secondary-200 text-right">{chunk.totals.workingDays}</td>
-                                                <td className="px-3 py-2 border border-secondary-200 text-right">{chunk.totals.meters.toFixed(2)}</td>
-                                                <td className="px-3 py-2 border border-secondary-200 text-right">{chunk.totals.ot}</td>
-                                                <td className="px-3 py-2 border border-secondary-200 text-right">₹{numberFormat(chunk.totals.salary)}</td>
+                                        ))}
+                                    </tbody>
+                                    <tfoot className="bg-secondary-50 font-bold">
+                                        <tr>
+                                            <td colSpan={2} className="px-3 py-2 border border-secondary-200 text-right italic">Page Wise Total:</td>
+                                            <td className="px-3 py-2 border border-secondary-200 text-right">{chunk.totals.workingDays}</td>
+                                            <td className="px-3 py-2 border border-secondary-200 text-right">{chunk.totals.meters.toFixed(2)}</td>
+                                            <td className="px-3 py-2 border border-secondary-200 text-right">{chunk.totals.ot}</td>
+                                            <td className="px-3 py-2 border border-secondary-200 text-right">₹{numberFormat(chunk.totals.salary)}</td>
+                                        </tr>
+                                        {chunkIdx === chunkedEmployeeSummaries.length - 1 && (
+                                            <tr className="bg-primary-50 text-primary-900">
+                                                <td colSpan={2} className="px-3 py-2 border border-secondary-200 text-right uppercase">Grand Total:</td>
+                                                <td className="px-3 py-2 border border-secondary-200 text-right">{attendanceSummary.totalDaysWorked}</td>
+                                                <td className="px-3 py-2 border border-secondary-200 text-right">{attendanceSummary.totalMeters.toFixed(2)}</td>
+                                                <td className="px-3 py-2 border border-secondary-200 text-right">{attendanceSummary.totalOvertime}</td>
+                                                <td className="px-3 py-2 border border-secondary-200 text-right">₹{numberFormat(attendanceSummary.totalSalary)}</td>
                                             </tr>
-                                            {chunkIdx === chunkedEmployeeSummaries.length - 1 && (
-                                                <tr className="bg-primary-50 text-primary-900">
-                                                    <td colSpan={2} className="px-3 py-2 border border-secondary-200 text-right uppercase">Grand Total:</td>
-                                                    <td className="px-3 py-2 border border-secondary-200 text-right">{attendanceSummary.totalDaysWorked}</td>
-                                                    <td className="px-3 py-2 border border-secondary-200 text-right">{attendanceSummary.totalMeters.toFixed(2)}</td>
-                                                    <td className="px-3 py-2 border border-secondary-200 text-right">{attendanceSummary.totalOvertime}</td>
-                                                    <td className="px-3 py-2 border border-secondary-200 text-right">₹{numberFormat(attendanceSummary.totalSalary)}</td>
-                                                </tr>
-                                            )}
-                                        </tfoot>
-                                    </table>
-                                </div>
-                            ))
-                        ) : (
-                            <table className="w-full text-xs text-left border-collapse">
-                                <thead className="bg-secondary-100 uppercase">
-                                    <tr><th className="px-3 py-2 border w-10 text-center">S.NO</th><th className="px-3 py-2 border">Date</th><th className="px-3 py-2 border">Morning</th><th className="px-3 py-2 border">Evening</th><th className="px-3 py-2 border text-right">OT</th><th className="px-3 py-2 border text-right">Meters</th></tr>
-                                </thead>
-                                <tbody>
-                                    {attendanceReportData.map((rec, index) => (
-                                        <tr key={index} className="border-b"><td className="px-3 py-1.5 border text-center">{index + 1}</td><td className="px-3 py-1.5 border">{formatDateForDisplay(rec.date)}</td><td className="px-3 py-1.5 border text-center">{rec.morningStatus}</td><td className="px-3 py-1.5 border text-center">{rec.eveningStatus}</td><td className="px-3 py-1.5 border text-right">{rec.morningOvertimeHours + rec.eveningOvertimeHours}</td><td className="px-3 py-1.5 border text-right">{rec.metersProduced.toFixed(2)}</td></tr>
-                                    ))}
-                                </tbody>
-                                <tfoot className="bg-secondary-50 font-bold">
-                                    <tr>
-                                        <td colSpan={4} className="px-3 py-2 border text-right italic">Grand Total:</td>
-                                        <td className="px-3 py-2 border text-right">{attendanceSummary.totalOvertime}</td>
-                                        <td className="px-3 py-2 border text-right">{attendanceSummary.totalMeters.toFixed(2)}</td>
-                                    </tr>
-                                    <tr className="bg-primary-50 text-primary-900">
-                                        <td colSpan={4} className="px-3 py-2 border text-right uppercase">Estimated Net Salary:</td>
-                                        <td colSpan={2} className="px-3 py-2 border text-right font-bold text-lg">₹{numberFormat(attendanceSummary.totalSalary)}</td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        )}
+                                        )}
+                                    </tfoot>
+                                </table>
+                            </div>
+                        ))}
                     </>
                 )}
 
@@ -701,7 +797,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                             </div>
                             <div className="flex-1 bg-success-50 p-2 rounded border border-success-100 text-center">
                                 <p className="text-[10px] text-success-600 font-bold uppercase">Total Paid</p>
-                                <p className="text-lg font-bold text-success-800">₹{numberFormat(otherExpenseSummary.paidAmount)}</p>
+                                <p className="text-lg font-bold text-secondary-800">₹{numberFormat(otherExpenseSummary.paidAmount)}</p>
                             </div>
                             <div className="flex-1 bg-danger-50 p-2 rounded border border-danger-100 text-center">
                                 <p className="text-[10px] text-danger-600 font-bold uppercase">Pending Bills</p>
