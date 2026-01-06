@@ -172,7 +172,7 @@ export const App: React.FC = () => {
             id: d.id, name: d.name, phone: d.phone, email: d.email, address: d.address, city: d.city, state: d.state, pincode: d.pincode, gstNo: d.gst_no, panNo: d.pan_no, paymentTerms: d.payment_terms, openingBalance: d.opening_balance || 0
         }))),
         fetchTable('employees', setEmployees, (data: any[]) => data.map(d => ({
-            id: d.id, name: d.name, designation: d.designation, phone: d.phone, dailyWage: d.daily_wage || 0, monthlyWage: d.monthly_wage || 0, ratePerMeter: d.rate_per_meter || 0
+            id: d.id, name: d.name, designation: d.designation, phone: d.phone, dailyWage: d.daily_wage || 0, monthlyWage: d.monthly_wage || 0, rate_per_meter: d.rate_per_meter || 0
         }))),
         fetchTable('process_types', setProcessTypes),
         fetchTable('master_items', setMasterItems),
@@ -193,7 +193,7 @@ export const App: React.FC = () => {
         })),
         fetchTable('invoices', setInvoices, (data: any[]) => data.map(d => ({
             id: d.id, invoiceNumber: d.invoice_number, invoiceDate: d.invoice_date, clientName: d.client_name, subTotal: d.sub_total || 0, totalCgst: d.total_cgst || 0, totalSgst: d.total_sgst || 0, totalTaxAmount: d.total_tax_amount || 0, roundedOff: d.rounded_off || 0, totalAmount: d.total_amount || 0, taxType: d.tax_type || 'GST', items: Array.isArray(d.invoice_items) ? d.invoice_items.map((i: any) => ({
-                id: i.id, challanNumber: i.challan_number, challanDate: i.challan_date, process: i.process, description: i.description, designNo: i.design_no, hsnSac: i.hsn_sac,
+                id: i.id, challanNumber: i.challan_number, challanDate: i.challan_date, process: i.process, description: i.description, designNo: i.design_no, hsn_sac: i.hsn_sac,
                 pcs: i.pcs || 0, mtr: i.mtr || 0, rate: i.rate || 0, amount: i.amount || 0, subtotal: i.subtotal || 0, cgst: i.cgst || 0, sgst: i.sgst || 0
             })) : []
         }))),
@@ -207,7 +207,7 @@ export const App: React.FC = () => {
             id: d.id, date: d.date, itemName: d.item_name, amount: d.amount || 0, notes: d.notes, bankName: d.bank_name, chequeDate: d.cheque_date, paymentMode: d.payment_mode, paymentStatus: d.payment_status, paymentTerms: d.payment_terms
         }))),
         fetchTable('timber_expenses', setTimberExpenses, (data: any[]) => data.map(d => ({
-            id: d.id, date: d.date, supplierName: d.supplier_name, openingBalance: d.opening_balance || 0, loadWeight: d.load_weight || 0, vehicleWeight: d.vehicle_weight || 0, cft: d.cft || 0, rate: d.rate || 0, amount: d.amount || 0, notes: d.notes, paymentMode: d.payment_mode, paymentStatus: d.payment_status, bankName: d.bank_name, chequeDate: d.cheque_date, paymentTerms: d.payment_terms
+            id: d.id, date: d.date, supplier_name: d.supplier_name, opening_balance: d.opening_balance || 0, load_weight: d.load_weight || 0, vehicle_weight: d.vehicle_weight || 0, cft: d.cft || 0, rate: d.rate || 0, amount: d.amount || 0, notes: d.notes, payment_mode: d.payment_mode, payment_status: d.payment_status, bank_name: d.bank_name, cheque_date: d.cheque_date, payment_terms: d.payment_terms
         }))),
         fetchTable('supplier_payments', setSupplierPayments, (data: any[]) => data.map(d => ({
             id: d.id, paymentNumber: d.payment_number, date: d.date, supplierName: d.supplier_name, amount: d.amount || 0, paymentMode: d.payment_mode, referenceId: d.reference_id, image: d.image
@@ -836,7 +836,7 @@ export const App: React.FC = () => {
         case 'Salary & Payslips':
             return <SalaryScreen employees={employees} attendanceRecords={attendanceRecords} onUpdateEmployee={handleUpdateEmployee} advances={advances} onSavePayslip={async () => {}} onDeletePayslip={async () => {}} companyDetails={companyDetails} payslips={payslips} />;
         case 'Reports':
-            return <ReportsScreen employees={employees} attendanceRecords={attendanceRecords} invoices={invoices} clients={clients} purchaseOrders={purchaseOrders} purchaseShops={purchaseShops} paymentsReceived={paymentsReceived} timberExpenses={timberExpenses} supplierPayments={supplierPayments} otherExpenses={otherExpenses} expenseCategories={expenseCategories} deliveryChallans={deliveryChallans} />;
+            return <ReportsScreen employees={employees} attendanceRecords={attendanceRecords} invoices={invoices} clients={clients} purchaseOrders={purchaseOrders} purchaseShops={purchaseShops} paymentsReceived={paymentsReceived} timberExpenses={timberExpenses} supplierPayments={supplierPayments} otherExpenses={otherExpenses} expenseCategories={expenseCategories} deliveryChallans={deliveryChallans} processTypes={processTypes} />;
         case 'User Admin':
             return <UserAdminScreen companyDetails={companyDetails} onUpdate={handleUpdateCompanyDetails} />;
         case 'Add Client':

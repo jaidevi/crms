@@ -1,8 +1,7 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { CalendarIcon, SearchIcon, PrintIcon, ChevronDownIcon, DownloadIcon, CheckIcon, CloseIcon } from './Icons';
 import DatePicker from './DatePicker';
-import type { Employee, AttendanceRecord, Invoice, Client, PurchaseOrder, PurchaseShop, PaymentReceived, TimberExpense, SupplierPayment, OtherExpense, ExpenseCategory, DeliveryChallan } from '../types';
+import type { Employee, AttendanceRecord, Invoice, Client, PurchaseOrder, PurchaseShop, PaymentReceived, TimberExpense, SupplierPayment, OtherExpense, ExpenseCategory, DeliveryChallan, ProcessType } from '../types';
 import * as XLSX from 'xlsx';
 
 // Helper hook for click outside
@@ -36,6 +35,7 @@ interface ReportsScreenProps {
     otherExpenses: OtherExpense[];
     expenseCategories: ExpenseCategory[];
     deliveryChallans: DeliveryChallan[];
+    processTypes: ProcessType[];
 }
 
 const formatDateForDisplay = (isoDate: string) => {
@@ -48,15 +48,33 @@ const numberFormat = (num: number, minDec = 2, maxDec = 2) => {
     return new Intl.NumberFormat('en-IN', {
         minimumFractionDigits: minDec,
         maximumFractionDigits: maxDec,
-    }).format(num);
+    }).format(num || 0);
 };
 
 const ROWS_PER_PAGE = 22;
 
+const parsePaymentTerms = (terms: string | undefined): number => {
+    if (!terms) return Infinity;
+    const lowerTerms = terms.toLowerCase();
+    if (lowerTerms.includes('due on receipt')) return 0;
+    const match = lowerTerms.match(/(\d+)/);
+    if (match && match[1]) return parseInt(match[1], 10);
+    return Infinity;
+};
+
+const getDueDate = (date: string, terms: string): string => {
+    if (!date) return '-';
+    const days = parsePaymentTerms(terms);
+    if (days === Infinity) return '-';
+    const d = new Date(date + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    return d.toISOString().split('T')[0];
+};
+
 const ReportsScreen: React.FC<ReportsScreenProps> = ({ 
     employees, attendanceRecords, invoices, clients, purchaseOrders, 
     purchaseShops, paymentsReceived, timberExpenses, supplierPayments,
-    otherExpenses, expenseCategories, deliveryChallans
+    otherExpenses, expenseCategories, deliveryChallans, processTypes
 }) => {
     const today = new Date().toISOString().split('T')[0];
     const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
@@ -64,9 +82,30 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
     const [startDate, setStartDate] = useState(firstDayOfMonth);
     const [endDate, setEndDate] = useState(today);
     
-    // Changed from single ID to array of IDs
     const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>(['all']);
     const [reportType, setReportType] = useState<'attendance' | 'invoice' | 'purchase' | 'payment_received' | 'timber' | 'other_expense' | 'process'>('attendance');
+
+    // Column selection for Other Expenses
+    const otherExpenseColumns = [
+        { id: 'date', label: 'Date' },
+        { id: 'category', label: 'Category' },
+        { id: 'dueDate', label: 'Due Date' },
+        { id: 'notes', label: 'Notes' },
+        { id: 'status', label: 'Status' },
+        { id: 'mode', label: 'Mode' },
+        { id: 'amount', label: 'Amount' },
+    ];
+    const [selectedOtherExpenseCols, setSelectedOtherExpenseCols] = useState<string[]>(['date', 'category', 'status', 'amount']);
+    const [isColPickerOpen, setIsColPickerOpen] = useState(false);
+    const colPickerRef = useRef<HTMLDivElement>(null);
+    useClickOutside(colPickerRef, () => setIsColPickerOpen(false));
+
+    // Process selection for Process Wise Report
+    const [selectedProcessNames, setSelectedProcessNames] = useState<string[]>(['all']);
+    const [isProcessMultiSelectOpen, setIsProcessMultiSelectOpen] = useState(false);
+    const [processSearchTerm, setProcessSearchTerm] = useState('');
+    const processMultiSelectRef = useRef<HTMLDivElement>(null);
+    useClickOutside(processMultiSelectRef, () => setIsProcessMultiSelectOpen(false));
 
     const [isStartDateOpen, setIsStartDateOpen] = useState(false);
     const [isEndDateOpen, setIsEndDateOpen] = useState(false);
@@ -80,11 +119,13 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
     const sortedClients = useMemo(() => [...clients].sort((a, b) => a.name.localeCompare(b.name)), [clients]);
     const sortedShops = useMemo(() => [...purchaseShops].sort((a, b) => a.name.localeCompare(b.name)), [purchaseShops]);
     const sortedCategories = useMemo(() => [...expenseCategories].sort((a, b) => a.name.localeCompare(b.name)), [expenseCategories]);
+    const availableProcessNames = useMemo(() => [...processTypes].sort((a, b) => a.name.localeCompare(b.name)).map(p => p.name), [processTypes]);
 
     const availableEntities = useMemo(() => {
         switch (reportType) {
             case 'attendance': return sortedEmployees.map(e => ({ id: e.id, name: e.name }));
             case 'invoice':
+            case 'process':
             case 'payment_received': return sortedClients.map(c => ({ id: c.id, name: c.name }));
             case 'purchase':
             case 'timber': return sortedShops.map(s => ({ id: s.id, name: s.name }));
@@ -97,6 +138,11 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
         if (!entitySearchTerm) return availableEntities;
         return availableEntities.filter(e => e.name.toLowerCase().includes(entitySearchTerm.toLowerCase()));
     }, [availableEntities, entitySearchTerm]);
+
+    const filteredProcessesForSearch = useMemo(() => {
+        if (!processSearchTerm) return availableProcessNames;
+        return availableProcessNames.filter(p => p.toLowerCase().includes(processSearchTerm.toLowerCase()));
+    }, [availableProcessNames, processSearchTerm]);
 
     const toggleEntity = (id: string) => {
         setSelectedEntityIds(prev => {
@@ -112,12 +158,42 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
         });
     };
 
+    const toggleProcess = (name: string) => {
+        setSelectedProcessNames(prev => {
+            if (name === 'all') return ['all'];
+            
+            const withoutAll = prev.filter(i => i !== 'all');
+            if (withoutAll.includes(name)) {
+                const next = withoutAll.filter(i => i !== name);
+                return next.length === 0 ? ['all'] : next;
+            } else {
+                return [...withoutAll, name];
+            }
+        });
+    };
+
+    const toggleColumn = (id: string) => {
+        setSelectedOtherExpenseCols(prev => {
+            if (prev.includes(id)) {
+                if (prev.length === 1) return prev; // Keep at least one column
+                return prev.filter(i => i !== id);
+            }
+            return [...prev, id];
+        });
+    };
+
     const getSelectedLabel = () => {
         if (selectedEntityIds.includes('all')) return `All ${reportType === 'attendance' ? 'Employees' : (reportType === 'purchase' || reportType === 'timber' ? 'Shops' : (reportType === 'other_expense' ? 'Categories' : 'Clients'))}`;
         if (selectedEntityIds.length === 1) {
             return availableEntities.find(e => e.id === selectedEntityIds[0])?.name || 'Selected';
         }
         return `${selectedEntityIds.length} Selected`;
+    };
+
+    const getProcessLabel = () => {
+        if (selectedProcessNames.includes('all')) return 'All Processes';
+        if (selectedProcessNames.length === 1) return selectedProcessNames[0];
+        return `${selectedProcessNames.length} Selected`;
     };
 
     const attendanceReportData = useMemo(() => {
@@ -160,8 +236,6 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
         });
         return { totalDaysWorked, totalOvertime, totalMeters, totalSalary };
     }, [attendanceReportData, employees]);
-
-    const getEmployeeName = (id: string) => employees.find(e => e.id === id)?.name || 'Unknown';
 
     const employeeSummaries = useMemo(() => {
         if (reportType !== 'attendance') return [];
@@ -245,10 +319,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
 
     const purchaseSummary = useMemo(() => {
         return {
-            totalOrders: purchaseReportData.length,
-            totalAmount: purchaseReportData.reduce((sum, po) => sum + po.totalAmount, 0),
-            paidOrders: purchaseReportData.filter(po => po.status === 'Paid').length,
-            unpaidOrders: purchaseReportData.filter(po => po.status === 'Unpaid').length
+            totalAmount: purchaseReportData.reduce((sum, po) => sum + po.totalAmount, 0)
         };
     }, [purchaseReportData]);
 
@@ -402,7 +473,6 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
 
     const paymentReceivedSummary = useMemo(() => {
         return {
-            totalPayments: paymentReceivedReportData.length,
             totalAmount: paymentReceivedReportData.reduce((sum, p) => sum + p.amount, 0)
         };
     }, [paymentReceivedReportData]);
@@ -412,17 +482,31 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
         
         const totals: Record<string, { process: string, pcs: number, mtr: number }> = {};
         
-        deliveryChallans.filter(c => c.date >= startDate && c.date <= endDate).forEach(c => {
+        // Filter Delivery Challans by Client (Entity) and Date Range
+        const filteredChallans = deliveryChallans.filter(c => {
+            const isDateInRange = c.date >= startDate && c.date <= endDate;
+            let isClientMatch = selectedEntityIds.includes('all');
+            if (!isClientMatch) {
+                const selectedNames = clients.filter(cl => selectedEntityIds.includes(cl.id)).map(cl => cl.name);
+                isClientMatch = selectedNames.includes(c.partyName);
+            }
+            return isDateInRange && isClientMatch;
+        });
+
+        filteredChallans.forEach(c => {
             const pList = (c.splitProcess && c.splitProcess.length > 0) ? c.splitProcess : c.process;
             pList.forEach(p => {
-                if (!totals[p]) totals[p] = { process: p, pcs: 0, mtr: 0 };
-                totals[p].pcs += c.pcs;
-                totals[p].mtr += (c.finalMeter && c.finalMeter > 0) ? c.finalMeter : c.mtr;
+                // Filter by Process selection
+                if (selectedProcessNames.includes('all') || selectedProcessNames.includes(p)) {
+                    if (!totals[p]) totals[p] = { process: p, pcs: 0, mtr: 0 };
+                    totals[p].pcs += c.pcs;
+                    totals[p].mtr += (c.finalMeter && c.finalMeter > 0) ? c.finalMeter : c.mtr;
+                }
             });
         });
         
         return Object.values(totals).sort((a, b) => b.mtr - a.mtr);
-    }, [deliveryChallans, startDate, endDate, reportType]);
+    }, [deliveryChallans, startDate, endDate, reportType, selectedEntityIds, clients, selectedProcessNames]);
 
     const handlePrint = () => { window.print(); };
 
@@ -466,7 +550,17 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
         } else if (reportType === 'other_expense') {
             sheetName = "Expenses";
             fileName = `Expenses_Report_${startDate}_${endDate}.xlsx`;
-            data = otherExpenseReportData.map((e, idx) => ({ 'S.NO': idx + 1, 'Date': e.date, 'Category': e.itemName, 'Status': e.paymentStatus, 'Mode': e.paymentMode, 'Amount': e.amount }));
+            data = otherExpenseReportData.map((e, idx) => {
+                const row: any = { 'S.NO': idx + 1 };
+                if (selectedOtherExpenseCols.includes('date')) row['Date'] = e.date;
+                if (selectedOtherExpenseCols.includes('category')) row['Category'] = e.itemName;
+                if (selectedOtherExpenseCols.includes('dueDate')) row['Due Date'] = getDueDate(e.date, e.paymentTerms);
+                if (selectedOtherExpenseCols.includes('notes')) row['Notes'] = e.notes;
+                if (selectedOtherExpenseCols.includes('status')) row['Status'] = e.paymentStatus;
+                if (selectedOtherExpenseCols.includes('mode')) row['Mode'] = e.paymentMode;
+                if (selectedOtherExpenseCols.includes('amount')) row['Amount'] = e.amount;
+                return row;
+            });
         } else if (reportType === 'process') {
             sheetName = "Process";
             fileName = `Process_Wise_Report_${startDate}_${endDate}.xlsx`;
@@ -495,10 +589,10 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end border-t border-secondary-100 pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 items-end border-t border-secondary-100 pt-6">
                     <div>
                         <label className="block text-sm font-medium text-secondary-700 mb-1">Report Type</label>
-                        <select value={reportType} onChange={(e) => { setReportType(e.target.value as any); setSelectedEntityIds(['all']); }} className="block w-full px-3 py-2.5 text-sm rounded-md border-secondary-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                        <select value={reportType} onChange={(e) => { setReportType(e.target.value as any); setSelectedEntityIds(['all']); setSelectedProcessNames(['all']); }} className="block w-full px-3 py-2.5 text-sm rounded-md border-secondary-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
                             <option value="attendance">Attendance & Production</option>
                             <option value="invoice">Invoice Report</option>
                             <option value="purchase">Purchase Report</option>
@@ -529,16 +623,14 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                         </div>
                     </div>
                     
-                    {/* SEARCHABLE MULTI-SELECT DROPDOWN */}
                     <div className="relative" ref={multiSelectRef}>
                         <label className="block text-sm font-medium text-secondary-700 mb-1">
                             {reportType === 'attendance' ? 'Employee' : 
                              (reportType === 'purchase' || reportType === 'timber') ? 'Shop / Supplier' : 
-                             reportType === 'other_expense' ? 'Expense Category' : 'Client'}
+                             (reportType === 'other_expense') ? 'Expense Category' : 'Client'}
                         </label>
                         <button
                             type="button"
-                            disabled={reportType === 'process'}
                             onClick={() => setIsMultiSelectOpen(!isMultiSelectOpen)}
                             className="block w-full text-left px-3 py-2.5 text-sm rounded-md border border-secondary-300 shadow-sm bg-white flex justify-between items-center disabled:bg-secondary-50"
                         >
@@ -603,6 +695,121 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                             </div>
                         )}
                     </div>
+
+                    {reportType === 'process' && (
+                        <div className="relative" ref={processMultiSelectRef}>
+                            <label className="block text-sm font-medium text-secondary-700 mb-1">Process Name</label>
+                            <button
+                                type="button"
+                                onClick={() => setIsProcessMultiSelectOpen(!isProcessMultiSelectOpen)}
+                                className="block w-full text-left px-3 py-2.5 text-sm rounded-md border border-secondary-300 shadow-sm bg-white flex justify-between items-center"
+                            >
+                                <span className="truncate">{getProcessLabel()}</span>
+                                <ChevronDownIcon className={`w-4 h-4 text-secondary-400 transition-transform ${isProcessMultiSelectOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {isProcessMultiSelectOpen && (
+                                <div className="absolute z-50 mt-1 w-full bg-white shadow-2xl rounded-md border border-secondary-200 animate-fade-in-down">
+                                    <div className="p-2 border-b border-secondary-100 sticky top-0 bg-white z-10">
+                                        <div className="relative">
+                                            <SearchIcon className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                                            <input
+                                                type="text"
+                                                className="w-full pl-8 pr-3 py-1.5 text-xs rounded border border-secondary-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                                placeholder="Search processes..."
+                                                value={processSearchTerm}
+                                                onChange={(e) => setProcessSearchTerm(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="max-h-60 overflow-y-auto">
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleProcess('all')}
+                                            className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between border-b border-secondary-50 ${selectedProcessNames.includes('all') ? 'bg-primary-50 text-primary-700 font-bold' : 'hover:bg-secondary-50 text-secondary-700'}`}
+                                        >
+                                            All Processes
+                                            {selectedProcessNames.includes('all') && <CheckIcon className="w-4 h-4" />}
+                                        </button>
+                                        {filteredProcessesForSearch.map(name => (
+                                            <button
+                                                key={name}
+                                                type="button"
+                                                onClick={() => toggleProcess(name)}
+                                                className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between border-b border-secondary-50 ${selectedProcessNames.includes(name) ? 'bg-primary-50 text-primary-700 font-bold' : 'hover:bg-secondary-50 text-secondary-700'}`}
+                                            >
+                                                <span className="truncate">{name}</span>
+                                                {selectedProcessNames.includes(name) && <CheckIcon className="w-4 h-4" />}
+                                            </button>
+                                        ))}
+                                        {filteredProcessesForSearch.length === 0 && (
+                                            <div className="p-4 text-center text-xs text-secondary-400 italic">No matches found</div>
+                                        )}
+                                    </div>
+                                    <div className="p-2 border-t border-secondary-100 flex justify-between bg-secondary-50">
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setSelectedProcessNames(['all'])}
+                                            className="text-[10px] font-bold text-primary-600 hover:text-primary-800 uppercase tracking-wider"
+                                        >
+                                            Clear All
+                                        </button>
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setIsProcessMultiSelectOpen(false)}
+                                            className="text-[10px] font-bold text-secondary-500 hover:text-secondary-700 uppercase tracking-wider"
+                                        >
+                                            Close
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {reportType === 'other_expense' && (
+                        <div className="relative" ref={colPickerRef}>
+                            <label className="block text-sm font-medium text-secondary-700 mb-1">Display Fields</label>
+                            <button
+                                type="button"
+                                onClick={() => setIsColPickerOpen(!isColPickerOpen)}
+                                className="block w-full text-left px-3 py-2.5 text-sm rounded-md border border-secondary-300 shadow-sm bg-white flex justify-between items-center"
+                            >
+                                <span className="truncate">{selectedOtherExpenseCols.length} Fields Selected</span>
+                                <ChevronDownIcon className={`w-4 h-4 text-secondary-400 transition-transform ${isColPickerOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {isColPickerOpen && (
+                                <div className="absolute z-50 mt-1 w-full bg-white shadow-2xl rounded-md border border-secondary-200 animate-fade-in-down overflow-hidden">
+                                    <div className="p-3 border-b border-secondary-50 bg-secondary-50">
+                                        <span className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest">Select Columns</span>
+                                    </div>
+                                    <div className="max-h-60 overflow-y-auto">
+                                        {otherExpenseColumns.map(col => (
+                                            <button
+                                                key={col.id}
+                                                type="button"
+                                                onClick={() => toggleColumn(col.id)}
+                                                className={`w-full text-left px-4 py-3 text-sm transition-colors flex items-center justify-between border-b border-secondary-50 ${selectedOtherExpenseCols.includes(col.id) ? 'bg-primary-50 text-primary-700 font-bold' : 'hover:bg-secondary-50 text-secondary-700'}`}
+                                            >
+                                                <span>{col.label}</span>
+                                                {selectedOtherExpenseCols.includes(col.id) && <CheckIcon className="w-4 h-4" />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="p-2 border-t border-secondary-100 flex justify-end bg-secondary-50">
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setIsColPickerOpen(false)}
+                                            className="text-[10px] font-bold text-primary-600 hover:text-primary-800 uppercase tracking-wider px-3 py-1"
+                                        >
+                                            Done
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -641,7 +848,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                                     </tr>
                                 ))}
                                 {processReportData.length === 0 && (
-                                    <tr><td colSpan={4} className="px-3 py-8 text-center text-secondary-500 italic">No production data found for the selected range.</td></tr>
+                                    <tr><td colSpan={4} className="px-3 py-8 text-center text-secondary-500 italic">No production data found matching the selected criteria.</td></tr>
                                 )}
                             </tbody>
                             <tfoot className="bg-secondary-50 font-bold">
@@ -797,7 +1004,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                             </div>
                             <div className="flex-1 bg-success-50 p-2 rounded border border-success-100 text-center">
                                 <p className="text-[10px] text-success-600 font-bold uppercase">Total Paid</p>
-                                <p className="text-lg font-bold text-success-800">₹{numberFormat(otherExpenseSummary.paidAmount)}</p>
+                                <p className="text-lg font-bold text-secondary-800">₹{numberFormat(otherExpenseSummary.paidAmount)}</p>
                             </div>
                             <div className="flex-1 bg-danger-50 p-2 rounded border border-danger-100 text-center">
                                 <p className="text-[10px] text-danger-600 font-bold uppercase">Pending Bills</p>
@@ -809,34 +1016,47 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                             <table className="w-full text-[11px] text-left border-collapse">
                                 <thead className="bg-secondary-100 uppercase">
                                     <tr>
-                                        <th className="px-3 py-2 border w-10 text-center">S.NO</th>
-                                        <th className="px-3 py-2 border">Date</th>
-                                        <th className="px-3 py-2">Category / Item</th>
-                                        <th className="px-3 py-2">Mode</th>
-                                        <th className="px-3 py-2">Status</th>
-                                        <th className="px-3 py-2 text-right">Amount</th>
+                                        <th className="px-3 py-2 border w-10 text-center font-bold">S.NO</th>
+                                        {selectedOtherExpenseCols.includes('date') && <th className="px-3 py-2 border font-bold">Date</th>}
+                                        {selectedOtherExpenseCols.includes('category') && <th className="px-3 py-2 border font-bold">Category / Item</th>}
+                                        {selectedOtherExpenseCols.includes('dueDate') && <th className="px-3 py-2 border font-bold">Due Date</th>}
+                                        {selectedOtherExpenseCols.includes('notes') && <th className="px-3 py-2 border font-bold">Notes</th>}
+                                        {selectedOtherExpenseCols.includes('mode') && <th className="px-3 py-2 border font-bold">Mode</th>}
+                                        {selectedOtherExpenseCols.includes('status') && <th className="px-3 py-2 border font-bold">Status</th>}
+                                        {selectedOtherExpenseCols.includes('amount') && <th className="px-3 py-2 border text-right font-bold">Amount</th>}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {otherExpenseReportData.map((e, index) => (
-                                        <tr key={e.id} className="border-b">
+                                        <tr key={e.id} className="border-b hover:bg-secondary-50 transition-colors">
                                             <td className="px-3 py-1.5 border text-center">{index + 1}</td>
-                                            <td className="px-3 py-1.5 border">{formatDateForDisplay(e.date)}</td>
-                                            <td className="px-3 py-1.5 border font-medium">{e.itemName}</td>
-                                            <td className="px-3 py-1.5 border">{e.paymentMode}</td>
-                                            <td className="px-3 py-1.5 border">
-                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${e.paymentStatus === 'Paid' ? 'bg-success-100 text-success-800' : 'bg-danger-100 text-danger-800'}`}>
-                                                    {e.paymentStatus}
-                                                </span>
-                                            </td>
-                                            <td className="px-3 py-1.5 border text-right font-bold">₹{numberFormat(e.amount)}</td>
+                                            {selectedOtherExpenseCols.includes('date') && <td className="px-3 py-1.5 border">{formatDateForDisplay(e.date)}</td>}
+                                            {selectedOtherExpenseCols.includes('category') && <td className="px-3 py-1.5 border font-medium">{e.itemName}</td>}
+                                            {selectedOtherExpenseCols.includes('dueDate') && <td className="px-3 py-1.5 border">{formatDateForDisplay(getDueDate(e.date, e.paymentTerms))}</td>}
+                                            {selectedOtherExpenseCols.includes('notes') && <td className="px-3 py-1.5 border">{e.notes || '-'}</td>}
+                                            {selectedOtherExpenseCols.includes('mode') && <td className="px-3 py-1.5 border">{e.paymentMode}</td>}
+                                            {selectedOtherExpenseCols.includes('status') && (
+                                                <td className="px-3 py-1.5 border">
+                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${e.paymentStatus === 'Paid' ? 'bg-success-100 text-success-800' : 'bg-danger-100 text-danger-800'}`}>
+                                                        {e.paymentStatus}
+                                                    </span>
+                                                </td>
+                                            )}
+                                            {selectedOtherExpenseCols.includes('amount') && <td className="px-3 py-1.5 border text-right font-bold text-secondary-900">₹{numberFormat(e.amount)}</td>}
                                         </tr>
                                     ))}
+                                    {otherExpenseReportData.length === 0 && (
+                                        <tr><td colSpan={selectedOtherExpenseCols.length + 1} className="px-3 py-8 text-center text-secondary-500 italic">No expenses found for the selected criteria.</td></tr>
+                                    )}
                                 </tbody>
                                 <tfoot className="bg-secondary-50 font-bold">
                                     <tr>
-                                        <td colSpan={5} className="px-3 py-2 border text-right italic">Grand Total:</td>
-                                        <td className="px-3 py-2 border text-right">₹{numberFormat(otherExpenseSummary.totalAmount)}</td>
+                                        <td colSpan={selectedOtherExpenseCols.length} className="px-3 py-2 border text-right italic">Grand Total:</td>
+                                        {selectedOtherExpenseCols.includes('amount') ? (
+                                            <td className="px-3 py-2 border text-right">₹{numberFormat(otherExpenseSummary.totalAmount)}</td>
+                                        ) : (
+                                            <td className="px-3 py-2 border text-right font-bold">₹{numberFormat(otherExpenseSummary.totalAmount)}</td>
+                                        )}
                                     </tr>
                                 </tfoot>
                             </table>
@@ -887,7 +1107,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                                     <th className="px-3 py-2 border">PO #</th>
                                     <th className="px-3 py-2 border">Shop</th>
                                     <th className="px-3 py-2 border">Status</th>
-                                    <th className="px-3 py-2 border text-right">Amount</th>
+                                    <th className="px-3 py-2 text-right">Amount</th>
                                 </tr>
                             </thead>
                             <tbody>
