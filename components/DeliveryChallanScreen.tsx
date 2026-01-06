@@ -1,7 +1,6 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import DeliveryChallanForm from './DeliveryChallanForm';
-import { PlusIcon, SearchIcon, EditIcon, TrashIcon, CameraIcon, PrintIcon, DownloadIcon } from './Icons';
+import { PlusIcon, SearchIcon, EditIcon, TrashIcon, CameraIcon, PrintIcon, DownloadIcon, CheckIcon } from './Icons';
 import type { DeliveryChallan, Client, ProcessType, DeliveryChallanNumberConfig, Invoice, CompanyDetails, Employee, PurchaseShop } from '../types';
 import ConfirmationModal from './ConfirmationModal';
 import InvoiceView from './InvoiceView';
@@ -91,8 +90,8 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
     onAddEmployee,
     isOutsourcingScreen = false
 }) => {
-  const [activeTab, setActiveTab] = useState<'pending' | 'delivered' | 'invoices' | 'outsourcing' | 'rework'>(
-      isOutsourcingScreen ? 'outsourcing' : 'delivered'
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'delivered' | 'invoices' | 'outsourcing' | 'rework'>(
+      isOutsourcingScreen ? 'outsourcing' : 'all'
   );
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -104,7 +103,7 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
   const [challanToPrint, setChallanToPrint] = useState<DeliveryChallan | null>(null);
   
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 10;
+  const ITEMS_PER_PAGE = 20;
 
   const formatPartyNameForDisplay = (partyName: string) => {
     if (partyName.includes('|') && partyName.includes('FROM:')) {
@@ -118,8 +117,6 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
     setCurrentPage(1);
     if (isOutsourcingScreen) {
         setActiveTab('outsourcing');
-    } else if (activeTab === 'outsourcing') {
-        setActiveTab('delivered');
     }
   }, [activeTab, searchTerm, isOutsourcingScreen]);
 
@@ -136,30 +133,28 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
     );
   }, [invoices]);
 
-  const { pendingCount, deliveredCount, outsourcingCount, reworkCount } = useMemo(() => {
-    const counts = { pending: 0, delivered: 0, outsourcing: 0, rework: 0 };
+  const { totalCount, pendingCount, deliveredCount, outsourcingCount, reworkCount } = useMemo(() => {
+    const counts = { total: 0, pending: 0, delivered: 0, outsourcing: 0, rework: 0 };
     for (const challan of deliveryChallans) {
-        if (invoicedChallanNumbers.has(challan.challanNumber.trim())) {
-            continue;
-        }
+        counts.total++;
+        
+        const isInvoiced = invoicedChallanNumbers.has(challan.challanNumber.trim());
 
-        if (challan.status === 'Rework') {
+        if (challan.status === 'Rework' && !isInvoiced) {
             counts.rework++;
-            continue;
         }
-        if (challan.status === 'Ready to Invoice' || challan.status === 'Delivered') {
+        if ((challan.status === 'Ready to Invoice' || challan.status === 'Delivered') && !isInvoiced) {
             counts.delivered++;
-            continue;
         }
-        if (challan.isOutsourcing && (challan.status !== 'Ready to Invoice' && challan.status !== 'Delivered')) {
+        if (challan.isOutsourcing && !isInvoiced) {
             counts.outsourcing++;
-            continue;
         }
-        if (!challan.isOutsourcing && challan.status === 'Not Delivered') {
+        if (!challan.isOutsourcing && challan.status === 'Not Delivered' && !isInvoiced) {
             counts.pending++;
         }
     }
     return { 
+        totalCount: counts.total,
         pendingCount: counts.pending, 
         deliveredCount: counts.delivered, 
         outsourcingCount: counts.outsourcing, 
@@ -170,6 +165,9 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
   const filteredChallans = useMemo(() => {
     let listToFilter: DeliveryChallan[];
     switch (activeTab) {
+        case 'all':
+            listToFilter = [...deliveryChallans];
+            break;
         case 'pending':
             listToFilter = deliveryChallans.filter(c => !c.isOutsourcing && c.status === 'Not Delivered' && !invoicedChallanNumbers.has(c.challanNumber.trim()));
             break;
@@ -187,21 +185,12 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
     }
 
     const sortedList = listToFilter.sort((a, b) => {
-        // First sort by date descending
         const dateComparison = new Date(b.date).getTime() - new Date(a.date).getTime();
-        if (dateComparison !== 0) {
-            return dateComparison;
-        }
-        
-        // Secondary sort by Party DC No to group similar client items
+        if (dateComparison !== 0) return dateComparison;
         const dcA = a.partyDCNo || '';
         const dcB = b.partyDCNo || '';
         const dcComparison = dcB.localeCompare(dcA, undefined, { numeric: true });
-        if (dcComparison !== 0) {
-            return dcComparison;
-        }
-
-        // Final tie-breaker by our internal challan number
+        if (dcComparison !== 0) return dcComparison;
         return b.challanNumber.localeCompare(a.challanNumber, undefined, { numeric: true });
     });
 
@@ -221,14 +210,11 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
   }, [deliveryChallans, searchTerm, activeTab, invoicedChallanNumbers]);
   
   const filteredInvoices = useMemo(() => {
-    // Modified sort to prioritize numerical ascending order on the Labour Bill ID.
     const sortedList = [...invoices].sort((a, b) => {
         return a.invoiceNumber.localeCompare(b.invoiceNumber, undefined, { numeric: true, sensitivity: 'base' });
     });
     
-    if (!searchTerm) {
-        return sortedList;
-    }
+    if (!searchTerm) return sortedList;
     const lowercasedTerm = searchTerm.toLowerCase();
     return sortedList.filter(invoice => 
         invoice.invoiceNumber.toLowerCase().includes(lowercasedTerm) ||
@@ -275,18 +261,6 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
     } else {
         await onAddChallan(challanData);
     }
-    
-    if (isOutsourcingScreen) {
-        setActiveTab('outsourcing');
-    } else {
-        if (challanData.status === 'Rework') {
-            setActiveTab('rework');
-        } else if (challanData.status === 'Not Delivered') {
-            setActiveTab('pending');
-        } else {
-            setActiveTab('delivered');
-        }
-    }
     handleCloseChallanForm();
   };
   
@@ -302,10 +276,6 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
 
   const handleDownloadExcel = () => {
     if (activeTab === 'invoices') {
-         if (filteredInvoices.length === 0) {
-             alert("No invoices to export.");
-             return;
-         }
          const data = filteredInvoices.map(inv => ({
              'Invoice #': inv.invoiceNumber,
              'Date': formatDateForDisplay(inv.invoiceDate),
@@ -318,15 +288,12 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
          XLSX.utils.book_append_sheet(wb, ws, "Invoices");
          XLSX.writeFile(wb, `Invoices_${new Date().toISOString().split('T')[0]}.xlsx`);
     } else {
-        if (filteredChallans.length === 0) {
-            alert("No challans to export.");
-            return;
-        }
         const data = filteredChallans.map(challan => ({
             'Challan No': challan.challanNumber,
             'Date': formatDateForDisplay(challan.date),
             'Party Name': formatPartyNameForDisplay(challan.partyName),
             'Status': challan.status,
+            'Invoiced': invoicedChallanNumbers.has(challan.challanNumber.trim()) ? 'Yes' : 'No',
             'Party DC No': challan.partyDCNo || '',
             'Process': challan.process.join(', '),
             'Design No': challan.designNo || '',
@@ -334,10 +301,6 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
             'Meters': challan.mtr,
             'Final Mtr': challan.finalMeter || 0,
             'Width': challan.width || '',
-            'Shrinkage': challan.shrinkage || '',
-            'Pin': challan.pin || '',
-            'Pick': challan.pick || '',
-            'Percentage': challan.percentage || '',
             'Worker': challan.workerName || '',
             'Unit': challan.workingUnit || ''
         }));
@@ -406,78 +369,77 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
                     <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Search..."
+                        placeholder="Search by any field..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full md:w-64 pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                 </div>
                 <button onClick={handleDownloadExcel} className="flex items-center justify-center bg-green-600 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-green-700 whitespace-nowrap">
-                  <DownloadIcon className="w-5 h-5 mr-2" />
-                  Excel
+                  <DownloadIcon className="w-5 h-5 mr-2" /> Excel
                 </button>
                 <button onClick={handleOpenFormForNewChallan} className="flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-blue-700 whitespace-nowrap">
-                  <PlusIcon className="w-5 h-5 mr-2" />
-                  {isOutsourcingScreen ? 'New Outsourcing' : 'New Challan'}
+                  <PlusIcon className="w-5 h-5 mr-2" /> {isOutsourcingScreen ? 'New Outsourcing' : 'New Challan'}
                 </button>
             </div>
         </div>
 
-        <div>
-            <div className="border-b border-gray-200">
-                <nav className="-mb-px flex space-x-6" aria-label="Tabs">
-                    {!isOutsourcingScreen && (
-                        <>
-                            <button onClick={() => setActiveTab('pending')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'pending' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                                Pending <span className="bg-yellow-100 text-yellow-800 text-xs font-medium ml-2 px-2 py-0.5 rounded-full">{pendingCount}</span>
-                            </button>
-                            <button onClick={() => setActiveTab('delivered')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'delivered' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                                Ready to Invoice <span className="bg-green-100 text-green-800 text-xs font-medium ml-2 px-2 py-0.5 rounded-full">{deliveredCount}</span>
-                            </button>
-                            <button onClick={() => setActiveTab('rework')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'rework' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                                Rework <span className="bg-orange-100 text-orange-800 text-xs font-medium ml-2 px-2 py-0.5 rounded-full">{reworkCount}</span>
-                            </button>
-                            <button onClick={() => setActiveTab('invoices')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'invoices' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                                Generated Invoices <span className="bg-blue-100 text-blue-800 text-xs font-medium ml-2 px-2 py-0.5 rounded-full">{invoices.length}</span>
-                            </button>
-                        </>
-                    )}
-                    {isOutsourcingScreen && (
-                        <button onClick={() => setActiveTab('outsourcing')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'outsourcing' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                            Outsourcing Jobs <span className="bg-indigo-100 text-indigo-800 text-xs font-medium ml-2 px-2 py-0.5 rounded-full">{outsourcingCount}</span>
+        <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-6 overflow-x-auto pb-1" aria-label="Tabs">
+                {!isOutsourcingScreen && (
+                    <>
+                        <button onClick={() => setActiveTab('all')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'all' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                            All Challans <span className="bg-gray-100 text-gray-600 text-xs font-bold ml-2 px-2 py-0.5 rounded-full">{totalCount}</span>
                         </button>
-                    )}
-                </nav>
-            </div>
+                        <button onClick={() => setActiveTab('pending')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'pending' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                            Pending <span className="bg-yellow-100 text-yellow-800 text-xs font-bold ml-2 px-2 py-0.5 rounded-full">{pendingCount}</span>
+                        </button>
+                        <button onClick={() => setActiveTab('delivered')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'delivered' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                            Ready to Invoice <span className="bg-green-100 text-green-800 text-xs font-bold ml-2 px-2 py-0.5 rounded-full">{deliveredCount}</span>
+                        </button>
+                        <button onClick={() => setActiveTab('rework')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'rework' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                            Rework <span className="bg-orange-100 text-orange-800 text-xs font-bold ml-2 px-2 py-0.5 rounded-full">{reworkCount}</span>
+                        </button>
+                        <button onClick={() => setActiveTab('invoices')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'invoices' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                            Generated Invoices <span className="bg-blue-100 text-blue-800 text-xs font-bold ml-2 px-2 py-0.5 rounded-full">{invoices.length}</span>
+                        </button>
+                    </>
+                )}
+                {isOutsourcingScreen && (
+                    <button onClick={() => setActiveTab('outsourcing')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'outsourcing' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                        Outsourcing Jobs <span className="bg-indigo-100 text-indigo-800 text-xs font-bold ml-2 px-2 py-0.5 rounded-full">{outsourcingCount}</span>
+                    </button>
+                )}
+            </nav>
         </div>
         
         {activeTab === 'invoices' ? (
              <div className="overflow-x-auto border rounded-lg">
                 <table className="w-full text-sm text-left text-gray-500">
-                     <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                     <thead className="text-[11px] text-gray-700 uppercase bg-gray-50 font-bold tracking-wider">
                         <tr>
-                            <th scope="col" className="px-6 py-3 w-10 text-center">S.NO</th>
-                            <th scope="col" className="px-6 py-3">Invoice #</th>
-                            <th scope="col" className="px-6 py-3">Date</th>
-                            <th scope="col" className="px-6 py-3">Client</th>
-                            <th scope="col" className="px-6 py-3 text-right">Amount</th>
-                            <th scope="col" className="px-6 py-3 text-center">Actions</th>
+                            <th scope="col" className="px-6 py-4 w-10 text-center">S.NO</th>
+                            <th scope="col" className="px-6 py-4">Invoice #</th>
+                            <th scope="col" className="px-6 py-4">Date</th>
+                            <th scope="col" className="px-6 py-4">Client</th>
+                            <th scope="col" className="px-6 py-4 text-right">Amount</th>
+                            <th scope="col" className="px-6 py-4 text-center">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-gray-100">
                         {paginatedInvoices.map((invoice, idx) => (
-                            <tr key={invoice.id} className="bg-white border-b hover:bg-gray-50">
+                            <tr key={invoice.id} className="bg-white hover:bg-gray-50 transition-colors">
                                 <td className="px-6 py-4 text-center">{(currentPage - 1) * ITEMS_PER_PAGE + idx + 1}</td>
                                 <td className="px-6 py-4">
-                                    <button onClick={() => setViewingInvoice(invoice)} className="font-medium text-blue-600 hover:underline">
+                                    <button onClick={() => setViewingInvoice(invoice)} className="font-semibold text-blue-600 hover:underline">
                                         {invoice.invoiceNumber}
                                     </button>
                                 </td>
                                 <td className="px-6 py-4">{formatDateForDisplay(invoice.invoiceDate)}</td>
-                                <td className="px-6 py-4">{invoice.clientName}</td>
-                                <td className="px-6 py-4 text-right font-medium">₹{invoice.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                <td className="px-6 py-4 font-medium text-gray-900">{invoice.clientName}</td>
+                                <td className="px-6 py-4 text-right font-bold text-gray-900">₹{invoice.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                 <td className="px-6 py-4 text-center">
-                                    <button onClick={() => setInvoiceToDelete(invoice)} className="p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50" title="Delete Invoice">
+                                    <button onClick={() => setInvoiceToDelete(invoice)} className="p-1.5 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors" title="Delete Invoice">
                                         <TrashIcon className="w-5 h-5" />
                                     </button>
                                 </td>
@@ -486,9 +448,7 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
                     </tbody>
                 </table>
                 {filteredInvoices.length === 0 && (
-                     <div className="text-center p-8 text-gray-500">
-                        No invoices found.
-                    </div>
+                     <div className="text-center p-12 text-gray-500 italic">No invoices found.</div>
                 )}
                 <PaginationControls
                     currentPage={currentPage}
@@ -500,40 +460,40 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
                 />
             </div>
         ) : (
-            <div className="overflow-x-auto border rounded-lg">
+            <div className="overflow-x-auto border rounded-lg shadow-sm">
               <table className="w-full text-sm text-left text-gray-500">
-                <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                <thead className="text-[11px] text-gray-700 uppercase bg-gray-50 font-bold tracking-wider">
                   <tr>
-                    <th scope="col" className="px-4 py-3">Challan #</th>
-                    <th scope="col" className="px-4 py-3">Date</th>
-                    <th scope="col" className="px-4 py-3">Party Name</th>
-                    <th scope="col" className="px-4 py-3">Status</th>
-                    <th scope="col" className="px-4 py-3">Party DC No</th>
-                    <th scope="col" className="px-4 py-3">Process</th>
-                    <th scope="col" className="px-4 py-3">Design No</th>
-                    <th scope="col" className="px-4 py-3 text-right">Pcs</th>
-                    <th scope="col" className="px-4 py-3 text-right">Mtr</th>
-                    <th scope="col" className="px-4 py-3 text-right">Final Mtr</th>
-                    <th scope="col" className="px-4 py-3 text-right">Width</th>
-                    <th scope="col" className="px-4 py-3">Shrinkage</th>
-                    <th scope="col" className="px-4 py-3 text-right">Percentage</th>
-                    <th scope="col" className="px-4 py-3">Pin</th>
-                    <th scope="col" className="px-4 py-3">Pick</th>
-                    <th scope="col" className="px-4 py-3">Worker Name</th>
-                    <th scope="col" className="px-4 py-3">Working Unit</th>
-                    <th scope="col" className="px-4 py-3 text-center">Images</th>
-                    <th scope="col" className="px-4 py-3 text-center">Actions</th>
+                    <th scope="col" className="px-4 py-4">Challan #</th>
+                    <th scope="col" className="px-4 py-4">Date</th>
+                    <th scope="col" className="px-4 py-4">Party Name</th>
+                    <th scope="col" className="px-4 py-4">Status</th>
+                    <th scope="col" className="px-4 py-4">Party DC No</th>
+                    <th scope="col" className="px-4 py-4">Process</th>
+                    <th scope="col" className="px-4 py-4">Design No</th>
+                    <th scope="col" className="px-4 py-4 text-right">Pcs</th>
+                    <th scope="col" className="px-4 py-4 text-right">Mtr</th>
+                    <th scope="col" className="px-4 py-4 text-right">Final Mtr</th>
+                    <th scope="col" className="px-4 py-4 text-center">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {paginatedChallans.map((challan) => (
-                    <tr key={challan.id} className="bg-white border-b hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">{challan.challanNumber}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">{formatDateForDisplay(challan.date)}</td>
-                      <td className="px-4 py-3 font-medium">{formatPartyNameForDisplay(challan.partyName)}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <div>
-                            <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
+                <tbody className="divide-y divide-gray-100">
+                  {paginatedChallans.map((challan) => {
+                    const isInvoiced = invoicedChallanNumbers.has(challan.challanNumber.trim());
+                    return (
+                        <tr key={challan.id} className={`bg-white hover:bg-gray-50 transition-colors ${isInvoiced ? 'opacity-75' : ''}`}>
+                        <td className="px-4 py-4 font-bold text-gray-900 whitespace-nowrap">
+                            {challan.challanNumber}
+                            {isInvoiced && activeTab === 'all' && (
+                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 uppercase">
+                                    <CheckIcon className="w-3 h-3 mr-0.5" /> Invoiced
+                                </span>
+                            )}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">{formatDateForDisplay(challan.date)}</td>
+                        <td className="px-4 py-4 font-medium text-gray-800">{formatPartyNameForDisplay(challan.partyName)}</td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                            <span className={`inline-block px-2.5 py-1 text-[10px] font-bold uppercase rounded-md shadow-sm ${
                                 (challan.status === 'Ready to Invoice' || challan.status === 'Delivered') ? 'bg-green-100 text-green-800' : 
                                 challan.status === 'Not Delivered' ? 'bg-yellow-100 text-yellow-800' :
                                 challan.status === 'Rework' ? 'bg-orange-100 text-orange-800' :
@@ -541,78 +501,34 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
                             }`}>
                                 {challan.status}
                             </span>
-                        </div>
-                        {challan.isOutsourcing && (
-                            <div className="mt-1">
-                                <span className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800">
-                                    Outsourcing
-                                </span>
-                            </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">{challan.partyDCNo || '-'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">{challan.process.join(', ')}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">{challan.designNo}</td>
-                      <td className="px-4 py-3 text-right whitespace-nowrap">{challan.pcs}</td>
-                      <td className="px-4 py-3 text-right whitespace-nowrap">{challan.mtr}</td>
-                      <td className="px-4 py-3 text-right whitespace-nowrap">{challan.finalMeter || '-'}</td>
-                      <td className="px-4 py-3 text-right whitespace-nowrap">{challan.width || '-'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">{challan.shrinkage || '-'}</td>
-                      <td className="px-4 py-3 text-right whitespace-nowrap">{challan.percentage || '-'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">{challan.pin || '-'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">{challan.pick || '-'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">{challan.workerName || '-'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">{challan.workingUnit || '-'}</td>
-                      <td className="px-4 py-3 text-center">
-                         <div className="flex items-center justify-center gap-3">
-                            {challan.dcImage && challan.dcImage.length > 0 ? (
-                              <div className="relative group">
-                                <div className="flex items-center">
-                                    <CameraIcon className="w-5 h-5 text-blue-500" />
-                                    {challan.dcImage.length > 1 && <span className="text-xs text-blue-500 ml-1">({challan.dcImage.length})</span>}
-                                </div>
-                                <div className="absolute bottom-full right-0 mb-2 w-32 h-32 bg-white border rounded-md shadow-lg p-1 hidden group-hover:block z-10">
-                                  <img src={challan.dcImage[0]} alt="DC Preview" className="w-full h-full object-contain" />
-                                </div>
-                              </div>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                            {challan.sampleImage && challan.sampleImage.length > 0 ? (
-                              <div className="relative group">
-                                <div className="flex items-center">
-                                    <CameraIcon className="w-5 h-5 text-green-500" />
-                                    {challan.sampleImage.length > 1 && <span className="text-xs text-green-500 ml-1">({challan.sampleImage.length})</span>}
-                                </div>
-                                <div className="absolute bottom-full right-0 mb-2 w-32 h-32 bg-white border rounded-md shadow-lg p-1 hidden group-hover:block z-10">
-                                  <img src={challan.sampleImage[0]} alt="Sample Preview" className="w-full h-full object-contain" />
-                                </div>
-                              </div>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                            <button onClick={() => handleOpenFormForEditChallan(challan)} className="p-1 text-gray-400 hover:text-blue-500 rounded-full hover:bg-blue-50" title="Edit Challan">
-                                <EditIcon className="w-5 h-5" />
-                            </button>
-                            <button onClick={() => setChallanToDelete(challan)} className="p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50" title="Delete Challan">
-                                <TrashIcon className="w-5 h-5" />
-                            </button>
-                             {activeTab === 'outsourcing' && (
-                                <button onClick={() => setChallanToPrint(challan)} className="p-1 text-gray-400 hover:text-green-500 rounded-full hover:bg-green-50" title="Print Challan">
-                                    <PrintIcon className="w-5 h-5" />
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-gray-600 font-medium">{challan.partyDCNo || '-'}</td>
+                        <td className="px-4 py-4 text-gray-600 max-w-[150px] truncate" title={challan.process.join(', ')}>{challan.process.join(', ')}</td>
+                        <td className="px-4 py-4 whitespace-nowrap text-indigo-600 font-bold">{challan.designNo || '-'}</td>
+                        <td className="px-4 py-4 text-right font-medium text-gray-900">{challan.pcs}</td>
+                        <td className="px-4 py-4 text-right font-medium text-gray-900">{challan.mtr}</td>
+                        <td className="px-4 py-4 text-right font-bold text-primary-700">{challan.finalMeter || '-'}</td>
+                        <td className="px-4 py-4 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                                <button onClick={() => handleOpenFormForEditChallan(challan)} className="p-1.5 text-gray-400 hover:text-blue-500 rounded-full hover:bg-blue-50 transition-colors" title="Edit Challan">
+                                    <EditIcon className="w-5 h-5" />
                                 </button>
-                            )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                                <button onClick={() => setChallanToDelete(challan)} className="p-1.5 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors" title="Delete Challan">
+                                    <TrashIcon className="w-5 h-5" />
+                                </button>
+                                {(activeTab === 'outsourcing' || challan.isOutsourcing) && (
+                                    <button onClick={() => setChallanToPrint(challan)} className="p-1.5 text-gray-400 hover:text-green-500 rounded-full hover:bg-green-50 transition-colors" title="Print Challan">
+                                        <PrintIcon className="w-5 h-5" />
+                                    </button>
+                                )}
+                            </div>
+                        </td>
+                        </tr>
+                    );
+                  })}
                 </tbody>
               </table>
-              {filteredChallans.length === 0 && <div className="text-center p-8 text-gray-500">No challans found for this tab.</div>}
+              {filteredChallans.length === 0 && <div className="text-center p-12 text-gray-500 italic">No challans found matching current filters.</div>}
               <PaginationControls
                 currentPage={currentPage}
                 totalPages={totalChallanPages}
