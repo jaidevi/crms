@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { CloseIcon, CalendarIcon, PlusIcon, TrashIcon } from './Icons';
 import DatePicker from './DatePicker';
@@ -24,6 +23,7 @@ interface PurchaseOrderFormProps {
 const BLANK_ORDER: PurchaseOrder = {
     id: '',
     poNumber: '',
+    billNo: '',
     poDate: new Date().toISOString().split('T')[0],
     shopName: '',
     items: [],
@@ -57,6 +57,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
     
     // State
     const [poNumber, setPoNumber] = useState('');
+    const [billNo, setBillNo] = useState('');
     const [poDate, setPoDate] = useState(BLANK_ORDER.poDate);
     const [shopName, setShopName] = useState('');
     const [items, setItems] = useState<LineItem[]>([]);
@@ -79,6 +80,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
     useEffect(() => {
         if (orderToEdit) {
             setPoNumber(orderToEdit.poNumber);
+            setBillNo(orderToEdit.billNo || '');
             setPoDate(orderToEdit.poDate);
             setShopName(orderToEdit.shopName);
             setItems(orderToEdit.items);
@@ -91,6 +93,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
             setChequeDate(orderToEdit.chequeDate || '');
         } else {
             setPoNumber(`${poNumberConfig.prefix}${poNumberConfig.nextNumber}`);
+            setBillNo('');
             setPoDate(new Date().toISOString().split('T')[0]);
             setShopName('');
             setItems([{ id: Date.now().toString(), name: '', quantity: 1, rate: 0, amount: 0 }]);
@@ -144,7 +147,6 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
     const handleItemNameChange = (id: string, val: string) => {
         if (val === '_add_new_') {
             setShowAddItemModal(true);
-            // Ideally we would want to know which row triggered this to auto-select after adding
         } else {
             const masterItem = masterItems.find(m => m.name === val);
             setItems(prev => prev.map(item => {
@@ -159,7 +161,6 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
     const totalAmount = useMemo(() => items.reduce((sum, item) => sum + item.amount, 0), [items]);
 
     const handleSaveShop = (name: string) => {
-        /* FIX: Added missing openingBalance property */
         const newShop: Omit<PurchaseShop, 'id'> = {
             name, phone: '', email: '', address: '', city: '', state: '', pincode: '', gstNo: '', panNo: '', paymentTerms: 'Due on receipt', openingBalance: 0
         };
@@ -177,7 +178,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
     const handleSaveMasterItem = async (itemData: { name: string, rate: number }) => {
         const newItem = await onAddMasterItem(itemData);
         if (newItem) {
-            // User can now select it from dropdowns.
+            // New item added to master
         }
         setShowAddItemModal(false);
     };
@@ -204,6 +205,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
         const orderData: PurchaseOrder = {
             id: orderToEdit ? orderToEdit.id : '',
             poNumber,
+            billNo,
             poDate,
             shopName,
             items,
@@ -251,10 +253,14 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
 
                     <div className="p-6 overflow-y-auto flex-grow space-y-6">
                         {/* PO Info */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                             <div>
                                 <label className="block text-sm font-medium text-secondary-700 mb-1">PO Number</label>
                                 <input type="text" value={poNumber} readOnly className={`${commonInputClasses} bg-secondary-50`} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-secondary-700 mb-1">Bill No</label>
+                                <input type="text" value={billNo} onChange={(e) => setBillNo(e.target.value)} className={commonInputClasses} placeholder="Vendor Bill #" />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-secondary-700 mb-1">Date</label>

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback } from 'react';
 import PurchaseOrderForm from './PurchaseOrderForm';
 import EmployeeAdvanceForm from './EmployeeAdvanceForm';
@@ -51,7 +50,7 @@ const toYMDString = (date: Date): string => {
 };
 
 // Type for sortable column keys
-type SortableKeys = 'poNumber' | 'poDate' | 'shopName' | 'dueDate' | 'totalAmount';
+type SortableKeys = 'poNumber' | 'billNo' | 'poDate' | 'shopName' | 'dueDate' | 'totalAmount';
 type TimberSortableKeys = 'date' | 'supplierName' | 'amount' | 'paidAmount' | 'balanceAmount' | 'paidDate';
 
 interface SortConfig {
@@ -139,6 +138,7 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
       filteredData = filteredData.filter(
         (order) =>
           order.poNumber.toLowerCase().includes(lowercasedTerm) ||
+          (order.billNo && order.billNo.toLowerCase().includes(lowercasedTerm)) ||
           order.shopName.toLowerCase().includes(lowercasedTerm) ||
           order.gstNo.toLowerCase().includes(lowercasedTerm)
       );
@@ -411,7 +411,7 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                   <div className="relative flex-grow w-full md:w-auto">
                     <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary-400" />
-                    <input type="text" placeholder="Search by PO#, Shop Name, or GST..." value={poSearchTerm} onChange={(e) => setPoSearchTerm(e.target.value)} className="w-full md:w-64 pl-10 pr-4 py-2.5 text-sm border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    <input type="text" placeholder="Search by PO#, Bill#, Shop, or GST..." value={poSearchTerm} onChange={(e) => setPoSearchTerm(e.target.value)} className="w-full md:w-64 pl-10 pr-4 py-2.5 text-sm border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500" />
                   </div>
                   <button onClick={() => { setOrderToEdit(null); setShowPOForm(true); }} className="flex items-center justify-center bg-primary-600 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-primary-700 w-full md:w-auto">
                     <PlusIcon className="w-5 h-5 mr-2" />New Purchase Order
@@ -423,6 +423,9 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
                             <tr>
                                 <th scope="col" className="px-6 py-3 cursor-pointer hover:bg-secondary-100" onClick={() => requestSort('poNumber')}>
                                     <div className="flex items-center">PO Number {getSortIndicator('poNumber')}</div>
+                                </th>
+                                <th scope="col" className="px-6 py-3 cursor-pointer hover:bg-secondary-100" onClick={() => requestSort('billNo')}>
+                                    <div className="flex items-center">Bill No {getSortIndicator('billNo')}</div>
                                 </th>
                                 <th scope="col" className="px-6 py-3 cursor-pointer hover:bg-secondary-100" onClick={() => requestSort('poDate')}>
                                     <div className="flex items-center">Date {getSortIndicator('poDate')}</div>
@@ -448,6 +451,7 @@ const PurchaseOrderScreen: React.FC<PurchaseOrderScreenProps> = ({
                                 return (
                                 <tr key={order.poNumber} className="bg-white border-b hover:bg-secondary-50">
                                     <th scope="row" className="px-6 py-4 font-medium text-secondary-900 whitespace-nowrap">{order.poNumber}</th>
+                                    <td className="px-6 py-4">{order.billNo || '-'}</td>
                                     <td className="px-6 py-4">{formatDateForDisplay(order.poDate)}</td>
                                     <td className="px-6 py-4">{order.shopName}</td>
                                     <td className="px-6 py-4">

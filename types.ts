@@ -1,4 +1,3 @@
-
 export type PaymentMode = 'Cash' | 'Cheque' | 'NEFT' | 'GPay' | 'Credit Card' | 'Bank Transfer' | 'Other';
 export type OrderStatus = 'Paid' | 'Unpaid' | 'Partially Paid';
 export type AttendanceStatus = 'Present' | 'Absent' | 'Leave' | 'Holiday';
@@ -87,6 +86,7 @@ export interface LineItem {
 export interface PurchaseOrder {
   id: string;
   poNumber: string;
+  billNo?: string;
   poDate: string;
   shopName: string;
   items: LineItem[];
@@ -152,7 +152,6 @@ export interface TimberExpense {
   id: string;
   date: string;
   supplierName: string;
-  /* FIX: Added openingBalance to TimberExpense interface */
   openingBalance: number;
   loadWeight: number;
   vehicleWeight: number;

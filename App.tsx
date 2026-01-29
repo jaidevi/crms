@@ -114,8 +114,6 @@ export const App: React.FC = () => {
                   query = supabase.from(table).select('*');
               }
 
-              // Use .range() to fetch all records in batches of 1000
-              // .order() ensures consistent pagination across chunks
               const { data, error } = await query
                   .order('id', { ascending: true })
                   .range(from, from + pageSize - 1);
@@ -208,7 +206,7 @@ export const App: React.FC = () => {
         fetchTable('master_items', setMasterItems),
         fetchTable('expense_categories', setExpenseCategories),
         fetchTable('purchase_orders', setPurchaseOrders, (data: any[]) => data.map(d => ({
-            id: d.id, poNumber: d.po_number, poDate: d.po_date, shopName: d.shop_name, totalAmount: d.total_amount || 0, gstNo: d.gst_no, paymentMode: d.payment_mode, status: d.status, paymentTerms: d.payment_terms, referenceId: d.reference_id, bankName: d.bank_name, chequeDate: d.cheque_date, items: Array.isArray(d.purchase_order_items) ? d.purchase_order_items.map((i: any) => ({
+            id: d.id, poNumber: d.po_number, billNo: d.bill_no, poDate: d.po_date, shopName: d.shop_name, totalAmount: d.total_amount || 0, gstNo: d.gst_no, paymentMode: d.payment_mode, status: d.status, paymentTerms: d.payment_terms, referenceId: d.reference_id, bankName: d.bank_name, chequeDate: d.cheque_date, items: Array.isArray(d.purchase_order_items) ? d.purchase_order_items.map((i: any) => ({
                 id: i.id, name: i.name, quantity: i.quantity || 0, rate: i.rate || 0, amount: i.amount || 0
             })) : []
         }))),
@@ -259,6 +257,85 @@ export const App: React.FC = () => {
     }
   }, [session, guestMode, loadAllData]);
 
+  // Purchase Order Handlers
+  const handleAddOrder = async (newOrder: PurchaseOrder) => {
+      const { data, error } = await supabase.from('purchase_orders').insert([{
+          po_number: newOrder.poNumber,
+          bill_no: newOrder.billNo,
+          po_date: newOrder.poDate,
+          shop_name: newOrder.shopName,
+          total_amount: newOrder.totalAmount,
+          gst_no: newOrder.gstNo,
+          payment_mode: newOrder.paymentMode,
+          status: newOrder.status,
+          payment_terms: newOrder.paymentTerms,
+          reference_id: newOrder.referenceId,
+          bank_name: newOrder.bankName,
+          cheque_date: newOrder.chequeDate || null
+      }]).select();
+
+      if (!error && data) {
+          const poId = data[0].id;
+          const items = newOrder.items.map(item => ({
+              po_id: poId,
+              name: item.name,
+              quantity: item.quantity,
+              rate: item.rate,
+              amount: item.amount
+          }));
+          await supabase.from('purchase_order_items').insert(items);
+          
+          const nextNum = poNumberConfig.nextNumber + 1;
+          await supabase.from('numbering_configs').update({ next_number: nextNum }).eq('id', 'po');
+          setPoNumberConfig(prev => ({ ...prev, nextNumber: nextNum }));
+          
+          setPurchaseOrders(prev => [...prev, { ...newOrder, id: poId }]);
+      } else if (error) {
+          alert("Error saving order: " + error.message);
+      }
+  };
+
+  const handleUpdateOrder = async (poNumberToUpdate: string, updatedOrder: PurchaseOrder) => {
+      const { error } = await supabase.from('purchase_orders').update({
+          bill_no: updatedOrder.billNo,
+          po_date: updatedOrder.poDate,
+          shop_name: updatedOrder.shopName,
+          total_amount: updatedOrder.totalAmount,
+          gst_no: updatedOrder.gstNo,
+          payment_mode: updatedOrder.paymentMode,
+          status: updatedOrder.status,
+          payment_terms: updatedOrder.paymentTerms,
+          reference_id: updatedOrder.referenceId,
+          bank_name: updatedOrder.bankName,
+          cheque_date: updatedOrder.chequeDate || null
+      }).eq('po_number', poNumberToUpdate);
+
+      if (!error) {
+          // Sync items: easiest is delete and re-insert for this implementation
+          const po = purchaseOrders.find(p => p.poNumber === poNumberToUpdate);
+          if (po) {
+              await supabase.from('purchase_order_items').delete().eq('po_id', po.id);
+              const items = updatedOrder.items.map(item => ({
+                  po_id: po.id,
+                  name: item.name,
+                  quantity: item.quantity,
+                  rate: item.rate,
+                  amount: item.amount
+              }));
+              await supabase.from('purchase_order_items').insert(items);
+          }
+          setPurchaseOrders(prev => prev.map(p => p.poNumber === poNumberToUpdate ? updatedOrder : p));
+      } else if (error) {
+          alert("Error updating order: " + error.message);
+      }
+  };
+
+  const handleDeleteOrder = async (poNumberToDelete: string) => {
+      const { error } = await supabase.from('purchase_orders').delete().eq('po_number', poNumberToDelete);
+      if (!error) setPurchaseOrders(prev => prev.filter(p => p.poNumber !== poNumberToDelete));
+      else alert("Error deleting order: " + error.message);
+  };
+
   // Attendance Save Handler
   const handleSaveAttendance = async (records: Omit<AttendanceRecord, 'id'>[]) => {
       const recordsToUpsert = records.map(r => ({
@@ -279,7 +356,6 @@ export const App: React.FC = () => {
 
       if (error) throw error;
       
-      // Force immediate re-fetch to sync state
       await fetchTable('attendance', setAttendanceRecords, (data: any[]) => data.map(d => ({
           id: d.id, employee_id: d.employee_id, date: d.date, morningStatus: d.morning_status || 'Present', eveningStatus: d.evening_status || 'Present', morningOvertimeHours: d.morning_overtime_hours || 0, eveningOvertimeHours: d.evening_overtime_hours || 0, metersProduced: d.meters_produced || 0, createdAt: d.created_at, updatedAt: d.updated_at
       })));
@@ -349,7 +425,6 @@ export const App: React.FC = () => {
     if (!error && data) {
         setSupplierPayments(prev => [...prev, { ...payment, id: data[0].id }]);
         
-        // Increment the numbering config
         const nextNum = supplierPaymentConfig.nextNumber + 1;
         await supabase.from('numbering_configs').update({ next_number: nextNum }).eq('id', 'supplier_payment');
         setSupplierPaymentConfig(prev => ({ ...prev, nextNumber: nextNum }));
@@ -384,7 +459,7 @@ export const App: React.FC = () => {
     }
   };
 
-  // Payment Received Handlers (Fix for reported issue)
+  // Payment Received Handlers
   const handleAddPaymentReceived = async (payment: Omit<PaymentReceived, 'id'>) => {
       const { data, error } = await supabase.from('payments_received').insert([{
           client_name: payment.clientName,
@@ -835,7 +910,7 @@ export const App: React.FC = () => {
             return <DashboardScreen invoices={invoices} paymentsReceived={paymentsReceived} deliveryChallans={deliveryChallans} purchaseOrders={purchaseOrders} otherExpenses={otherExpenses} advances={advances} />;
         case 'Expenses':
             return <PurchaseOrderScreen 
-                purchaseOrders={purchaseOrders} onAddOrder={() => {}} onUpdateOrder={() => {}} onDeleteOrder={() => {}}
+                purchaseOrders={purchaseOrders} onAddOrder={handleAddOrder} onUpdateOrder={handleUpdateOrder} onDeleteOrder={handleDeleteOrder}
                 purchaseShops={purchaseShops} onAddPurchaseShop={handleAddPurchaseShop} bankNames={bankNames} onAddBankName={(name) => setBankNames(p => [...p, name])}
                 poNumberConfig={poNumberConfig} masterItems={masterItems} onAddMasterItem={handleAddMasterItem}
                 advances={advances} employees={employees} onAddAdvance={handleAddAdvance} onUpdateAdvance={handleUpdateAdvance} onDeleteAdvance={handleDeleteAdvance}
