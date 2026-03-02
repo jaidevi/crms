@@ -500,6 +500,7 @@ export const App: React.FC = () => {
 
   const handleDeletePaymentReceived = async (id: string) => {
       const { error } = await supabase.from('payments_received').delete().eq('id', id);
+      
       if (!error) {
           setPaymentsReceived(prev => prev.filter(p => p.id !== id));
       } else {
@@ -907,7 +908,7 @@ export const App: React.FC = () => {
   const renderActiveScreen = () => {
     switch (activeScreen) {
         case 'Dashboard':
-            return <DashboardScreen invoices={invoices} paymentsReceived={paymentsReceived} deliveryChallans={deliveryChallans} purchaseOrders={purchaseOrders} otherExpenses={otherExpenses} advances={advances} />;
+            return <DashboardScreen invoices={invoices} paymentsReceived={paymentsReceived} deliveryChallans={deliveryChallans} purchaseOrders={purchaseOrders} otherExpenses={otherExpenses} advances={advances} clients={clients} />;
         case 'Expenses':
             return <PurchaseOrderScreen 
                 purchaseOrders={purchaseOrders} onAddOrder={handleAddOrder} onUpdateOrder={handleUpdateOrder} onDeleteOrder={handleDeleteOrder}
@@ -957,7 +958,7 @@ export const App: React.FC = () => {
         case 'Settings':
             return <SettingsScreen poConfig={poNumberConfig} onUpdatePoConfig={setPoNumberConfig} dcConfig={deliveryChallanNumberConfig} onUpdateDcConfig={setDeliveryChallanNumberConfig} outsourcingDcConfig={outsourcingChallanNumberConfig} onUpdateOutsourcingDcConfig={setOutsourcingChallanNumberConfig} invConfig={invoiceNumberConfig} ngstInvConfig={ngstInvoiceNumberConfig} onUpdateInvConfig={(type, cfg) => type === 'GST' ? setInvoiceNumberConfig(cfg) : setNgstInvoiceNumberConfig(cfg)} />;
         default:
-            return <DashboardScreen invoices={invoices} paymentsReceived={paymentsReceived} deliveryChallans={deliveryChallans} purchaseOrders={purchaseOrders} otherExpenses={otherExpenses} advances={advances} />;
+            return <DashboardScreen invoices={invoices} paymentsReceived={paymentsReceived} deliveryChallans={deliveryChallans} purchaseOrders={purchaseOrders} otherExpenses={otherExpenses} advances={advances} clients={clients} />;
     }
   };
 

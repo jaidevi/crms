@@ -49,6 +49,7 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
     const [toDate, setToDate] = useState<string>('');
     const [invoiceType, setInvoiceType] = useState<'process' | 'design'>('process');
     const [taxType, setTaxType] = useState<'GST' | 'NGST'>('GST');
+    const [invoiceSearchTerm, setInvoiceSearchTerm] = useState('');
 
     const [isFromDatePickerOpen, setFromDatePickerOpen] = useState(false);
     const [isToDatePickerOpen, setToDatePickerOpen] = useState(false);
@@ -92,12 +93,19 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
         return sorted.filter(c => c.name.toLowerCase().includes(clientSearchTerm.toLowerCase()));
     }, [clients, clientSearchTerm]);
 
-    // Sort invoices in ascending order by invoice number
-    const sortedInvoices = useMemo(() => {
-        return [...invoices].sort((a, b) => {
-            return a.invoiceNumber.localeCompare(b.invoiceNumber, undefined, { numeric: true, sensitivity: 'base' });
+    // Sort and filter invoices
+    const filteredInvoices = useMemo(() => {
+        const sorted = [...invoices].sort((a, b) => {
+            return b.invoiceNumber.localeCompare(a.invoiceNumber, undefined, { numeric: true, sensitivity: 'base' });
         });
-    }, [invoices]);
+
+        if (!invoiceSearchTerm) return sorted;
+        const lowerTerm = invoiceSearchTerm.toLowerCase();
+        return sorted.filter(inv => 
+            inv.invoiceNumber.toLowerCase().includes(lowerTerm) ||
+            inv.clientName.toLowerCase().includes(lowerTerm)
+        );
+    }, [invoices, invoiceSearchTerm]);
 
     const handleSearch = () => {
         if (!selectedClient || !fromDate || !toDate) {
@@ -522,8 +530,18 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
 
                 {activeTab === 'generated' && (
                     <div className="p-6">
-                        <div className="mb-4">
+                        <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                             <h2 className="text-lg font-semibold text-gray-800">Generated Invoices</h2>
+                            <div className="relative w-full md:w-80">
+                                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search by Invoice # or Client..."
+                                    value={invoiceSearchTerm}
+                                    onChange={(e) => setInvoiceSearchTerm(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm text-left text-gray-500">
@@ -538,7 +556,7 @@ const InvoicesScreen: React.FC<InvoicesScreenProps> = ({ clients, deliveryChalla
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {sortedInvoices.map(invoice => (
+                                    {filteredInvoices.map(invoice => (
                                         <tr key={invoice.id} className="bg-white border-b hover:bg-gray-50">
                                             <td className="px-6 py-4">
                                                 <button onClick={() => setViewingInvoiceId(invoice.id)} className="font-medium text-blue-600 hover:underline">

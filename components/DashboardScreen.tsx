@@ -1,7 +1,7 @@
 
 import React, { useMemo } from 'react';
 import { RupeeIcon, PackageIcon, ShoppingCartIcon, CustomersIcon, InvoiceIcon, PaymentsIcon } from './Icons';
-import type { Invoice, PaymentReceived, DeliveryChallan, PurchaseOrder, OtherExpense, EmployeeAdvance } from '../types';
+import type { Invoice, PaymentReceived, DeliveryChallan, PurchaseOrder, OtherExpense, EmployeeAdvance, Client } from '../types';
 
 interface DashboardScreenProps {
     invoices: Invoice[];
@@ -10,6 +10,7 @@ interface DashboardScreenProps {
     purchaseOrders: PurchaseOrder[];
     otherExpenses: OtherExpense[];
     advances: EmployeeAdvance[];
+    clients: Client[];
 }
 
 const formatCurrency = (value: number) => {
@@ -57,20 +58,22 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     deliveryChallans,
     purchaseOrders,
     otherExpenses,
-    advances
+    advances,
+    clients
 }) => {
 
     const salesKpis = useMemo(() => {
         const totalRevenue = invoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
         const totalPayments = paymentsReceived.reduce((sum, p) => sum + p.amount, 0);
-        const amountDue = totalRevenue - totalPayments;
+        const totalInitialOpeningBalance = (clients || []).reduce((sum, c) => sum + (c.openingBalance || 0), 0);
+        const amountDue = totalInitialOpeningBalance + totalRevenue - totalPayments;
         return {
             totalRevenue,
             totalPayments,
             amountDue,
             invoiceCount: invoices.length
         };
-    }, [invoices, paymentsReceived]);
+    }, [invoices, paymentsReceived, clients]);
 
     const productionKpis = useMemo(() => {
         const invoicedChallanNumbers = new Set(

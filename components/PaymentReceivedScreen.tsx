@@ -7,8 +7,8 @@ import type { PaymentReceived, Client, Invoice } from '../types';
 
 interface PaymentReceivedScreenProps {
     payments: PaymentReceived[];
-    onAddPayment: (payment: Omit<PaymentReceived, 'id'>) => void;
-    onUpdatePayment: (payment: PaymentReceived) => void;
+    onAddPayment: (payment: Omit<PaymentReceived, 'id'>) => Promise<void> | void;
+    onUpdatePayment: (payment: PaymentReceived) => Promise<void> | void;
     onDeletePayment: (id: string) => void;
     clients: Client[];
     onAddClient: (newClient: Omit<Client, 'id'>) => void;
@@ -28,7 +28,9 @@ const PaymentReceivedScreen: React.FC<PaymentReceivedScreenProps> = ({ payments,
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredPayments = useMemo(() => {
-        const sorted = [...payments].sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
+        // Show last added payment first (insertion order reverse)
+        const sorted = [...payments].reverse();
+        
         if (!searchTerm) {
             return sorted;
         }
@@ -54,14 +56,20 @@ const PaymentReceivedScreen: React.FC<PaymentReceivedScreenProps> = ({ payments,
         setPaymentToEdit(null);
     };
 
-    const handleSavePayment = (paymentData: PaymentReceived) => {
-        if (paymentToEdit) {
-            onUpdatePayment(paymentData);
-        } else {
-            const { id, ...newPaymentData } = paymentData;
-            onAddPayment(newPaymentData);
+    const handleSavePayment = async (paymentData: PaymentReceived) => {
+        try {
+            if (paymentToEdit) {
+                await onUpdatePayment(paymentData);
+            } else {
+                const { id, ...newPaymentData } = paymentData;
+                await onAddPayment(newPaymentData);
+            }
+            handleCloseForm();
+        } catch (error) {
+            console.error("Error in handleSavePayment:", error);
+            // Re-throw to be caught by the form's handleSubmit
+            throw error;
         }
-        handleCloseForm();
     };
 
     const handleDeleteClick = (payment: PaymentReceived) => {
@@ -85,6 +93,7 @@ const PaymentReceivedScreen: React.FC<PaymentReceivedScreenProps> = ({ payments,
                     onAddClient={onAddClient}
                     paymentToEdit={paymentToEdit}
                     invoices={invoices}
+                    payments={payments}
                 />
             )}
             {paymentToDelete && (
@@ -128,8 +137,9 @@ const PaymentReceivedScreen: React.FC<PaymentReceivedScreenProps> = ({ payments,
                             <tr>
                                 <th scope="col" className="px-6 py-3">Date</th>
                                 <th scope="col" className="px-6 py-3">Client Name</th>
-                                <th scope="col" className="px-6 py-3 text-right">Opening Bal</th>
+                                <th scope="col" className="px-6 py-3 text-right">Total Balance</th>
                                 <th scope="col" className="px-6 py-3 text-right">Amount Received</th>
+                                <th scope="col" className="px-6 py-3 text-right">Pending Amount</th>
                                 <th scope="col" className="px-6 py-3 text-center">Proof</th>
                                 <th scope="col" className="px-6 py-3">Mode</th>
                                 <th scope="col" className="px-6 py-3">Reference #</th>
@@ -137,13 +147,39 @@ const PaymentReceivedScreen: React.FC<PaymentReceivedScreenProps> = ({ payments,
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredPayments.map((payment) => (
-                                <tr key={payment.id} className="bg-white border-b hover:bg-gray-50">
-                                    <td className="px-6 py-4">{formatDateForDisplay(payment.paymentDate)}</td>
-                                    <td className="px-6 py-4 font-medium text-gray-900">{payment.clientName}</td>
-                                    <td className="px-6 py-4 text-right font-medium text-secondary-500">₹{payment.openingBalance.toFixed(2)}</td>
-                                    <td className="px-6 py-4 text-right font-medium text-primary-600">₹{payment.amount.toFixed(2)}</td>
-                                    <td className="px-6 py-4 text-center">
+                            {filteredPayments.map((payment) => {
+                                // Calculate the balance at the time of this payment
+                                // This ensures historical records show the correct balance even if data was migrated
+                                const client = clients.find(c => c.name === payment.clientName);
+                                const baseOpeningBalance = client ? client.openingBalance : 0;
+                                
+                                const clientInvoices = invoices.filter(inv => 
+                                    inv.clientName === payment.clientName && 
+                                    inv.invoiceDate <= payment.paymentDate
+                                );
+                                
+                                // Previous payments are those with earlier date, or same date but earlier ID
+                                const prevPayments = payments.filter(p => 
+                                    p.clientName === payment.clientName && 
+                                    (p.paymentDate < payment.paymentDate || (p.paymentDate === payment.paymentDate && p.id < payment.id))
+                                );
+                                
+                                const totalInvoices = clientInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
+                                const totalPrevPayments = prevPayments.reduce((sum, p) => sum + p.amount, 0);
+                                
+                                // Formula: Initial Balance + Invoices up to now - Previous Payments
+                                const displayOpeningBal = (client ? client.openingBalance : 0) + totalInvoices - totalPrevPayments;
+
+                                return (
+                                    <tr key={payment.id} className="bg-white border-b hover:bg-gray-50">
+                                        <td className="px-6 py-4">{formatDateForDisplay(payment.paymentDate)}</td>
+                                        <td className="px-6 py-4 font-medium text-gray-900">{payment.clientName}</td>
+                                        <td className="px-6 py-4 text-right font-medium text-secondary-500">₹{displayOpeningBal.toFixed(2)}</td>
+                                        <td className="px-6 py-4 text-right font-medium text-primary-600">₹{payment.amount.toFixed(2)}</td>
+                                        <td className={`px-6 py-4 text-right font-bold ${(displayOpeningBal - payment.amount) > 0 ? 'text-danger-600' : 'text-success-600'}`}>
+                                            ₹{(displayOpeningBal - payment.amount).toFixed(2)}
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
                                         {payment.image ? (
                                             <div className="relative group inline-block">
                                                 <CameraIcon className="w-5 h-5 text-blue-500 mx-auto cursor-help" />
@@ -167,8 +203,9 @@ const PaymentReceivedScreen: React.FC<PaymentReceivedScreenProps> = ({ payments,
                                             </button>
                                         </div>
                                     </td>
-                                </tr>
-                            ))}
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                     {filteredPayments.length === 0 && (

@@ -211,7 +211,7 @@ const DeliveryChallanScreen: React.FC<DeliveryChallanScreenProps> = ({
   
   const filteredInvoices = useMemo(() => {
     const sortedList = [...invoices].sort((a, b) => {
-        return a.invoiceNumber.localeCompare(b.invoiceNumber, undefined, { numeric: true, sensitivity: 'base' });
+        return b.invoiceNumber.localeCompare(a.invoiceNumber, undefined, { numeric: true, sensitivity: 'base' });
     });
     
     if (!searchTerm) return sortedList;

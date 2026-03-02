@@ -396,7 +396,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({
                     id: `OB-${supplier}`,
                     date: startDate,
                     supplierName: supplier,
-                    description: 'Balance Brought Forward',
+                    description: 'Total Balance Brought Forward',
                     amount: 0,
                     paidAmount: 0,
                     paidDate: '',

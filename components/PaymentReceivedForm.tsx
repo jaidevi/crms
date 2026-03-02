@@ -25,11 +25,12 @@ const useClickOutside = (ref: React.RefObject<HTMLElement | null>, handler: () =
 
 interface PaymentReceivedFormProps {
     onClose: () => void;
-    onSave: (payment: PaymentReceived) => void;
+    onSave: (payment: PaymentReceived) => Promise<void> | void;
     clients: Client[];
     onAddClient: (newClient: Omit<Client, 'id'>) => void;
     paymentToEdit?: PaymentReceived | null;
     invoices: Invoice[];
+    payments: PaymentReceived[];
 }
 
 const BLANK_PAYMENT: Omit<PaymentReceived, 'id'> = {
@@ -49,7 +50,7 @@ const formatDateForInput = (isoDate: string) => {
     return `${day}-${month}-${year}`;
 };
 
-const PaymentReceivedForm: React.FC<PaymentReceivedFormProps> = ({ onClose, onSave, clients, onAddClient, paymentToEdit, invoices }) => {
+const PaymentReceivedForm: React.FC<PaymentReceivedFormProps> = ({ onClose, onSave, clients, onAddClient, paymentToEdit, invoices, payments }) => {
     const isEditing = !!paymentToEdit;
     const [payment, setPayment] = useState<Omit<PaymentReceived, 'id'>>(BLANK_PAYMENT);
     const [isDatePickerOpen, setDatePickerOpen] = useState(false);
@@ -70,6 +71,8 @@ const PaymentReceivedForm: React.FC<PaymentReceivedFormProps> = ({ onClose, onSa
     // Track adjustment amounts per invoice in local state
     const [adjustments, setAdjustments] = useState<Record<string, number>>({});
 
+    const [isSaving, setIsSaving] = useState(false);
+
     useEffect(() => {
         if (paymentToEdit) {
             const { id, ...rest } = paymentToEdit;
@@ -86,17 +89,53 @@ const PaymentReceivedForm: React.FC<PaymentReceivedFormProps> = ({ onClose, onSa
         }
     }, [paymentToEdit]);
 
-    const filteredInvoices = useMemo(() => {
-        if (!payment.clientName) return [];
-        return invoices.filter(inv => inv.clientName === payment.clientName)
-            .sort((a, b) => b.invoiceDate.localeCompare(a.invoiceDate));
-    }, [payment.clientName, invoices]);
+    // Calculate outstanding balances for initial opening balance and invoices
+    const { outstandingInitialBalance, outstandingInvoices } = useMemo(() => {
+        if (!payment.clientName) return { outstandingInitialBalance: 0, outstandingInvoices: [] };
+        
+        const selectedClient = clients.find(c => c.name === payment.clientName);
+        if (!selectedClient) return { outstandingInitialBalance: 0, outstandingInvoices: [] };
+
+        // Sort by date ascending for FIFO allocation
+        const clientInvoices = invoices.filter(inv => inv.clientName === payment.clientName)
+            .sort((a, b) => a.invoiceDate.localeCompare(b.invoiceDate));
+        
+        const clientPayments = payments.filter(p => p.clientName === payment.clientName && (!paymentToEdit || p.id !== paymentToEdit.id));
+        const totalPayments = clientPayments.reduce((sum, p) => sum + p.amount, 0);
+
+        let pool = totalPayments;
+        
+        // 1. Apply to Initial Opening Balance
+        const initialBal = selectedClient.openingBalance || 0;
+        const remainingInitialBalance = Math.max(0, initialBal - pool);
+        pool = Math.max(0, pool - initialBal);
+
+        // 2. Apply to Invoices
+        const invoicesWithBalance = [];
+        for (const inv of clientInvoices) {
+            const remainingInvoiceBalance = Math.max(0, inv.totalAmount - pool);
+            pool = Math.max(0, pool - inv.totalAmount);
+            
+            if (remainingInvoiceBalance > 0) {
+                invoicesWithBalance.push({
+                    ...inv,
+                    outstandingAmount: remainingInvoiceBalance
+                });
+            }
+        }
+
+        return { 
+            outstandingInitialBalance: remainingInitialBalance, 
+            outstandingInvoices: invoicesWithBalance 
+        };
+    }, [payment.clientName, clients, invoices, payments, paymentToEdit]);
 
     const filteredClients = useMemo(() => {
-        const sorted = [...clients].sort((a, b) => a.name.localeCompare(b.name));
-        if (!clientSearchTerm) return sorted;
+        // Show last added client first (insertion order reverse)
+        const reversed = [...clients].reverse();
+        if (!clientSearchTerm) return reversed;
         const lowerTerm = clientSearchTerm.toLowerCase();
-        return sorted.filter(c => c.name.toLowerCase().includes(lowerTerm));
+        return reversed.filter(c => c.name.toLowerCase().includes(lowerTerm));
     }, [clients, clientSearchTerm]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -111,11 +150,22 @@ const PaymentReceivedForm: React.FC<PaymentReceivedFormProps> = ({ onClose, onSa
             setShowAddClientModal(true);
         } else {
             const selectedClient = clients.find(c => c.name === clientName);
-            setPayment(prev => ({ 
-                ...prev, 
-                clientName: clientName,
-                openingBalance: selectedClient ? selectedClient.openingBalance : 0
-            }));
+            if (selectedClient) {
+                const clientInvoices = invoices.filter(inv => inv.clientName === clientName);
+                const clientPayments = payments.filter(p => p.clientName === clientName && (!paymentToEdit || p.id !== paymentToEdit.id));
+                
+                const totalInvoices = clientInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
+                const totalPayments = clientPayments.reduce((sum, p) => sum + p.amount, 0);
+                
+                // Formula: Initial Opening Balance + Total Invoices - Total Payments
+                const calculatedOpeningBalance = (selectedClient.openingBalance || 0) + totalInvoices - totalPayments;
+
+                setPayment(prev => ({ 
+                    ...prev, 
+                    clientName: clientName,
+                    openingBalance: calculatedOpeningBalance
+                }));
+            }
             setAdjustments({}); // Reset adjustments on client change
             if (errors.clientName) setErrors(prev => ({ ...prev, clientName: '' }));
         }
@@ -123,13 +173,42 @@ const PaymentReceivedForm: React.FC<PaymentReceivedFormProps> = ({ onClose, onSa
         setClientSearchTerm('');
     };
 
-    const handleAdjustmentChange = (invoiceId: string, value: string) => {
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value === '' ? 0 : Number(e.target.value);
+        setPayment(prev => ({ ...prev, amount: value }));
+        
+        // Waterfall logic: Apply to Initial Opening Balance first, then to Invoices
+        const newAdjustments: Record<string, number> = {};
+        let remaining = value;
+
+        // 1. Apply to Initial Opening Balance
+        if (outstandingInitialBalance > 0) {
+            const toOpening = Math.min(remaining, outstandingInitialBalance);
+            newAdjustments['opening_balance'] = toOpening;
+            remaining = Math.max(0, remaining - toOpening);
+        } else {
+            newAdjustments['opening_balance'] = 0;
+        }
+
+        // 2. Apply to Outstanding Invoices (Oldest First)
+        for (const inv of outstandingInvoices) {
+            if (remaining <= 0) {
+                newAdjustments[inv.id] = 0;
+                continue;
+            }
+            const toInv = Math.min(remaining, inv.outstandingAmount);
+            newAdjustments[inv.id] = toInv;
+            remaining = Math.max(0, remaining - toInv);
+        }
+        setAdjustments(newAdjustments);
+    };
+
+    const handleAdjustmentChange = (id: string, value: string) => {
         const amount = value === '' ? 0 : Number(value);
-        const newAdjustments = { ...adjustments, [invoiceId]: amount };
+        const newAdjustments = { ...adjustments, [id]: amount };
         setAdjustments(newAdjustments);
         
-        // Update total amount received based on sum of adjustments
-        // FIX: Added explicit type (sum: number) to reduce callback to fix "Operator '+' cannot be applied to types 'unknown' and 'number'"
+        // Total amount is the sum of all adjustments (including opening balance)
         const newTotal = Object.values(newAdjustments).reduce((sum: number, val) => sum + (val as number), 0);
         setPayment(prev => ({ ...prev, amount: newTotal }));
     };
@@ -161,18 +240,24 @@ const PaymentReceivedForm: React.FC<PaymentReceivedFormProps> = ({ onClose, onSa
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = () => {
-        if (!validate()) return;
+    const handleSubmit = async () => {
+        if (!validate() || isSaving) return;
         
-        // Ensure numeric fields are cast as numbers
-        const finalPayment: PaymentReceived = { 
-            ...payment, 
-            id: paymentToEdit?.id || `pr-temp-${Date.now()}`,
-            amount: Number(payment.amount),
-            openingBalance: Number(payment.openingBalance)
-        } as PaymentReceived;
-        
-        onSave(finalPayment);
+        setIsSaving(true);
+        try {
+            // Ensure numeric fields are cast as numbers
+            const finalPayment: PaymentReceived = { 
+                ...payment, 
+                id: paymentToEdit?.id || `pr-temp-${Date.now()}`,
+                amount: Number(payment.amount),
+                openingBalance: Number(payment.openingBalance)
+            } as PaymentReceived;
+            
+            await onSave(finalPayment);
+        } catch (error) {
+            console.error("Error saving payment:", error);
+            setIsSaving(false);
+        }
     };
 
     const modalTitle = isEditing ? 'Edit Payment' : 'Record New Payment';
@@ -182,15 +267,15 @@ const PaymentReceivedForm: React.FC<PaymentReceivedFormProps> = ({ onClose, onSa
     return (
         <>
             {showAddClientModal && <AddShopModal onClose={() => setShowAddClientModal(false)} onSave={handleSaveClient} existingClientNames={clients.map(c => c.name)} />}
-            <div className="fixed inset-0 bg-black bg-opacity-60 z-40 flex justify-center items-start p-4 pt-10 sm:pt-20" role="dialog">
-                <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl animate-fade-in-down overflow-hidden">
-                    <div className="flex items-center justify-between p-5 border-b">
+            <div className="fixed inset-0 bg-black bg-opacity-60 z-40 flex justify-center items-center p-4" role="dialog">
+                <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-full flex flex-col animate-fade-in-down overflow-hidden">
+                    <div className="flex items-center justify-between p-5 border-b flex-shrink-0">
                         <h2 className="text-xl font-bold text-secondary-800">{modalTitle}</h2>
                         <button onClick={onClose} className="p-1 rounded-full text-secondary-400 hover:bg-secondary-100 hover:text-secondary-600">
                             <CloseIcon className="w-6 h-6" />
                         </button>
                     </div>
-                    <div className="p-6 max-h-[80vh] overflow-y-auto space-y-6">
+                    <div className="p-6 overflow-y-auto space-y-6 flex-1">
                         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                              <div className="lg:col-span-2" ref={clientDropdownRef}>
                                 <label htmlFor="clientSearch" className="block text-sm font-medium text-secondary-700 mb-1">Client Name <span className="text-danger-500">*</span></label>
@@ -262,8 +347,24 @@ const PaymentReceivedForm: React.FC<PaymentReceivedFormProps> = ({ onClose, onSa
                                 {errors.paymentDate && <p className="mt-1 text-sm text-danger-500">{errors.paymentDate}</p>}
                             </div>
                             <div>
-                                <label htmlFor="amount" className="block text-sm font-medium text-secondary-700 mb-1 font-bold text-primary-700">Amount Received <span className="text-danger-500">*</span></label>
-                                <input id="amount" name="amount" type="number" step="0.01" value={payment.amount === 0 ? '' : payment.amount} onChange={handleChange} className={`${commonInputClasses} ${errors.amount ? 'border-danger-500' : ''} bg-primary-50 font-bold border-primary-200 text-lg`} placeholder="0.00" />
+                                <div className="flex justify-between items-center mb-1">
+                                    <label htmlFor="amount" className="block text-sm font-medium text-secondary-700 font-bold text-primary-700">Amount Received <span className="text-danger-500">*</span></label>
+                                    {payment.clientName && (
+                                        <span className="text-xs font-semibold text-secondary-500">
+                                            Total Balance: <span className={payment.openingBalance > 0 ? 'text-danger-600' : 'text-success-600'}>₹{payment.openingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                        </span>
+                                    )}
+                                </div>
+                                <input 
+                                    id="amount" 
+                                    name="amount" 
+                                    type="number" 
+                                    step="0.01" 
+                                    value={payment.amount === 0 ? '' : payment.amount} 
+                                    onChange={handleAmountChange} 
+                                    className={`${commonInputClasses} ${errors.amount ? 'border-danger-500' : ''} bg-primary-50 font-bold border-primary-200 text-lg`} 
+                                    placeholder="0.00" 
+                                />
                                 {errors.amount && <p className="mt-1 text-sm text-danger-500">{errors.amount}</p>}
                             </div>
                         </div>
@@ -283,17 +384,37 @@ const PaymentReceivedForm: React.FC<PaymentReceivedFormProps> = ({ onClose, onSa
                                         <tr>
                                             <th scope="col" className="px-6 py-3 font-bold">Invoice Number</th>
                                             <th scope="col" className="px-6 py-3 text-center font-bold">Invoice Date</th>
-                                            <th scope="col" className="px-6 py-3 text-right font-bold">Invoice Amount</th>
+                                            <th scope="col" className="px-6 py-3 text-right font-bold">Outstanding Amount</th>
                                             <th scope="col" className="px-6 py-3 text-right w-48 font-bold text-primary-600">Payment Amount</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-secondary-100">
-                                        {filteredInvoices.length > 0 ? (
-                                            filteredInvoices.map((inv) => (
+                                        {outstandingInitialBalance > 0.01 && (
+                                            <tr className="bg-primary-50/30 hover:bg-primary-50 transition-colors border-b border-primary-100">
+                                                <td className="px-6 py-4 font-bold text-primary-800">Total Balance</td>
+                                                <td className="px-6 py-4 text-center text-secondary-400">-</td>
+                                                <td className="px-6 py-4 text-right font-semibold text-primary-700">₹{outstandingInitialBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                                <td className="px-6 py-2">
+                                                    <div className="flex items-center">
+                                                        <span className="text-primary-400 mr-2">₹</span>
+                                                        <input 
+                                                            type="number"
+                                                            step="0.01"
+                                                            value={adjustments['opening_balance'] || ''}
+                                                            onChange={(e) => handleAdjustmentChange('opening_balance', e.target.value)}
+                                                            className="w-full px-3 py-1.5 text-right text-sm border border-primary-200 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none font-bold text-primary-700 bg-white"
+                                                            placeholder="0.00"
+                                                        />
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                        {outstandingInvoices.length > 0 ? (
+                                            outstandingInvoices.map((inv) => (
                                                 <tr key={inv.id} className="bg-white hover:bg-secondary-50 transition-colors">
                                                     <td className="px-6 py-4 font-medium text-secondary-900">{inv.invoiceNumber}</td>
                                                     <td className="px-6 py-4 text-center">{formatDateForInput(inv.invoiceDate)}</td>
-                                                    <td className="px-6 py-4 text-right font-semibold">₹{inv.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                                    <td className="px-6 py-4 text-right font-semibold">₹{inv.outstandingAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                                                     <td className="px-6 py-2">
                                                         <div className="flex items-center">
                                                             <span className="text-secondary-400 mr-2">₹</span>
@@ -310,11 +431,13 @@ const PaymentReceivedForm: React.FC<PaymentReceivedFormProps> = ({ onClose, onSa
                                                 </tr>
                                             ))
                                         ) : (
-                                            <tr>
-                                                <td colSpan={4} className="px-6 py-10 text-center text-secondary-400 italic">
-                                                    No outstanding invoices found for this client.
-                                                </td>
-                                            </tr>
+                                            outstandingInitialBalance <= 0.01 && (
+                                                <tr>
+                                                    <td colSpan={4} className="px-6 py-10 text-center text-secondary-400 italic">
+                                                        No outstanding invoices found for this client.
+                                                    </td>
+                                                </tr>
+                                            )
                                         )}
                                     </tbody>
                                 </table>
@@ -365,10 +488,25 @@ const PaymentReceivedForm: React.FC<PaymentReceivedFormProps> = ({ onClose, onSa
                             </div>
                         </div>
                     </div>
-                    <div className="flex items-center justify-end p-5 bg-secondary-50 border-t space-x-3">
-                        <button onClick={onClose} className="px-4 py-2 bg-white border border-secondary-300 text-secondary-700 rounded-md text-sm font-semibold hover:bg-secondary-100 transition-colors">Cancel</button>
-                        <button onClick={handleSubmit} className="px-6 py-2 bg-primary-600 text-white rounded-md text-sm font-bold hover:bg-primary-700 shadow-md transform active:scale-95 transition-all">
-                            {isEditing ? 'Update Payment' : 'Save Payment'}
+                    <div className="flex items-center justify-end p-5 bg-secondary-50 border-t space-x-3 flex-shrink-0">
+                        <button type="button" onClick={onClose} className="px-4 py-2 bg-white border border-secondary-300 text-secondary-700 rounded-md text-sm font-semibold hover:bg-secondary-100 transition-colors">Cancel</button>
+                        <button 
+                            type="button" 
+                            onClick={handleSubmit} 
+                            disabled={isSaving}
+                            className={`px-6 py-2 bg-primary-600 text-white rounded-md text-sm font-bold shadow-md transform transition-all ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:bg-primary-700 active:scale-95'}`}
+                        >
+                            {isSaving ? (
+                                <div className="flex items-center">
+                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Saving...
+                                </div>
+                            ) : (
+                                isEditing ? 'Update Payment' : 'Save Payment'
+                            )}
                         </button>
                     </div>
                 </div>

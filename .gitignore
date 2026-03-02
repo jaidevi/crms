@@ -7,9 +7,11 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Build and history
 node_modules
 dist
 dist-ssr
+migrated_prompt_history
 *.local
 
 # Editor directories and files

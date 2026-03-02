@@ -205,7 +205,7 @@ const PurchaseShopModal: React.FC<PurchaseShopModalProps> = ({ onClose, onSave, 
                                 </select>
                             </div>
                             <div>
-                                <label htmlFor="openingBalance" className="block text-sm font-medium text-gray-700 mb-1">Opening Balance</label>
+                                <label htmlFor="openingBalance" className="block text-sm font-medium text-gray-700 mb-1">Total Balance</label>
                                 <input id="openingBalance" name="openingBalance" type="number" step="0.01" value={shop.openingBalance || ''} onChange={handleChange} className={inputClasses} placeholder="0.00" />
                             </div>
                         </div>

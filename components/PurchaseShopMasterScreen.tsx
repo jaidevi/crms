@@ -97,7 +97,7 @@ const PurchaseShopMasterScreen: React.FC<PurchaseShopMasterScreenProps> = ({ sho
                 <th scope="col" className="px-6 py-3">GST No</th>
                 <th scope="col" className="px-6 py-3">PAN No</th>
                 <th scope="col" className="px-6 py-3">Payment Terms</th>
-                <th scope="col" className="px-6 py-3 text-right">Opening Bal</th>
+                <th scope="col" className="px-6 py-3 text-right">Total Balance</th>
                 <th scope="col" className="px-6 py-3 text-center">Actions</th>
               </tr>
             </thead>

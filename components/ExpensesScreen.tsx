@@ -42,7 +42,8 @@ const ExpensesScreen: React.FC<ExpensesScreenProps> = ({
             ...adv,
             employeeName: employeeMap.get(adv.employeeId) || 'Unknown Employee',
         }));
-        const sorted = [...displayAdvances].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const reversed = [...displayAdvances].reverse();
+        const sorted = reversed.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         if (!advanceSearchTerm) return sorted;
         const lowercasedTerm = advanceSearchTerm.toLowerCase();
         return sorted.filter(p =>
@@ -78,7 +79,8 @@ const ExpensesScreen: React.FC<ExpensesScreenProps> = ({
     // --- Purchase Order Logic ---
     const [purchaseSearchTerm, setPurchaseSearchTerm] = useState('');
     const filteredPurchaseOrders = useMemo(() => {
-        const sorted = [...purchaseOrders].sort((a, b) => new Date(b.poDate).getTime() - new Date(a.poDate).getTime());
+        const reversed = [...purchaseOrders].reverse();
+        const sorted = reversed.sort((a, b) => new Date(b.poDate).getTime() - new Date(a.poDate).getTime());
         if (!purchaseSearchTerm) return sorted;
         const lowercasedTerm = purchaseSearchTerm.toLowerCase();
         return sorted.filter(po =>
